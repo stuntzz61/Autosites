@@ -656,16 +656,23 @@ async def cb_list_page(call: types.CallbackQuery):
     rows = list_manager_requests(call.from_user.id, offset=(page-1)*per_page, limit=per_page)
     await call.message.edit_reply_markup(requests_list_inline(rows, page, total, per_page))
 
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith(CB_OPEN))
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith(CB_OPEN), state="*")
 async def cb_open_request(call: types.CallbackQuery):
-    req_id = call.data[len(CB_OPEN):]
-    rec = get_request(req_id)
-    if not rec: return await call.message.edit_text("Заявка не найдена.")
-    user = get_user_by_tgid(call.from_user.id)
-    is_owner = bool(user and rec.get("manager_id") and str(rec["manager_id"]) == str(user["id"]))
-    is_admin = (get_mode(call.from_user.id) == "admin")
-    txt = format_request_card(rec, show_private=(is_owner or is_admin))
-    await call.message.edit_text(txt, reply_markup=request_card_inline(rec["id"], is_owner, is_admin))
+    await call.answer()  # закрыть индикатор
+    try:
+        req_id = call.data[len(CB_OPEN):]
+        rec = get_request(req_id)
+        if not rec:
+            return await call.message.answer("Заявка не найдена.")
+        user = get_user_by_tgid(call.from_user.id)
+        is_owner = bool(user and rec.get("manager_id") and str(rec["manager_id"]) == str(user["id"]))
+        is_admin = (get_mode(call.from_user.id) == "admin")
+        txt = format_request_card(rec, show_private=(is_owner or is_admin))
+        await call.message.edit_text(txt, reply_markup=request_card_inline(rec["id"], is_owner, is_admin))
+    except Exception as e:
+        log.exception("cb_open_request failed")
+        await call.message.answer(f"⚠️ Ошибка открытия: {e}")
+
 
 @dp.callback_query_handler(lambda c: c.data and c.data == CB_BACK_TO_LIST)
 async def cb_back_list(call: types.CallbackQuery):
