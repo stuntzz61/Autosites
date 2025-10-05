@@ -426,6 +426,7 @@ async def cmd_start(message: types.Message):
         kb.add(BTN_REG, BTN_ADMIN_LOGIN)
         await message.answer("Здравствуйте! Вы ещё не зарегистрированы.", reply_markup=kb)
 
+
 # ----------------- register -----------------
 @dp.message_handler(commands=["register"])
 @dp.message_handler(lambda m: m.text == BTN_REG)
@@ -461,6 +462,16 @@ async def reg_age(message: types.Message, state: FSMContext):
         return await message.answer("Возраст должен быть числом 1–119. Попробуйте снова:")
     await state.update_data(age=int(txt)); await RegForm.next()
     await message.answer("Укажите ваш <b>контакт</b> (телефон/email/@username):")
+
+@dp.message_handler(commands=["testcb"])
+async def cmd_testcb(message: types.Message):
+    kb = InlineKeyboardMarkup().add(InlineKeyboardButton("ping", callback_data="ping"))
+    await message.answer("test:", reply_markup=kb)
+
+@dp.callback_query_handler(lambda c: c.data == "ping", state="*")
+async def cb_ping(call: types.CallbackQuery):
+    await call.answer()
+    await call.message.answer("pong ✅")
 
 @dp.message_handler(state=RegForm.contact)
 async def reg_contact(message: types.Message, state: FSMContext):
@@ -656,11 +667,13 @@ async def cb_list_page(call: types.CallbackQuery):
     rows = list_manager_requests(call.from_user.id, offset=(page-1)*per_page, limit=per_page)
     await call.message.edit_reply_markup(requests_list_inline(rows, page, total, per_page))
 
+
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith(CB_OPEN), state="*")
 async def cb_open_request(call: types.CallbackQuery):
-    await call.answer()  # закрыть индикатор
+    await call.answer()  # закрыть "часики"
+    req_id = call.data[len(CB_OPEN):]
+    log.info(f"CB_OPEN -> {req_id}")   # <— увидишь это в логах
     try:
-        req_id = call.data[len(CB_OPEN):]
         rec = get_request(req_id)
         if not rec:
             return await call.message.answer("Заявка не найдена.")
@@ -672,8 +685,7 @@ async def cb_open_request(call: types.CallbackQuery):
     except Exception as e:
         log.exception("cb_open_request failed")
         await call.message.answer(f"⚠️ Ошибка открытия: {e}")
-
-
+        
 @dp.callback_query_handler(lambda c: c.data and c.data == CB_BACK_TO_LIST)
 async def cb_back_list(call: types.CallbackQuery):
     page, per_page = 1, 10
@@ -907,9 +919,28 @@ async def cmd_export_all(message: types.Message):
 
 # ----------------- on_startup -----------------
 async def on_startup(dp):
-    init_db()
+    # критически важно: отключить возможный старый webhook
+    try:
+        await bot.delete_webhook(drop_pending_updates=False)
+        log.info("Webhook deleted (if any).")
+    except Exception:
+        log.exception("delete_webhook failed")
     await bot.set_my_commands(GUEST_CMDS)
     log.info("Bot is running…")
-
+# === DEBUG: ловим любые callback_query ===
+@dp.callback_query_handler(state="*")
+async def _cb_debug_all(call: types.CallbackQuery):
+    log.warning(f"[CB_DEBUG] data={call.data!r} from user={call.from_user.id}")
+    await call.answer()
+    # Вернём один раз сообщение, чтобы видеть, что кнопка живая
+    try:
+        await call.message.answer(f"DEBUG: callback = <code>{html.escape(call.data or '')}</code>")
+    except Exception:
+        pass
 if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+    executor.start_polling(
+        dp,
+        skip_updates=True,
+        on_startup=on_startup,
+        allowed_updates=['message', 'callback_query']  # важно
+    )
