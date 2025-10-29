@@ -1,9 +1,7 @@
-# app/handlers/photos.py
 from io import BytesIO
 from uuid import uuid4
 import re
 import asyncio
-from typing import List
 from aiogram import types, Dispatcher, Bot
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -28,7 +26,7 @@ def _sanitize_filename(name: str) -> str:
     return base + ext
 
 def register(dp: Dispatcher, bot: Bot):
-    # /photos (по-прежнему можно вызывать вручную, но мы теперь заводим collecting автоматически из формы)
+    # /photos
     async def start_collecting_photos(message: types.Message, state: FSMContext):
         await Photos.collecting.set()
         await message.answer(
@@ -36,7 +34,7 @@ def register(dp: Dispatcher, bot: Bot):
             "Когда закончишь — отправь /done."
         )
 
-    # /done — завершаем сбор фото и двигаемся к «Услуги»
+    # /done
     async def finish_collecting(message: types.Message, state: FSMContext):
         req_id = get_current_request_id_by_tgid(message.chat.id)
         payload = get_request_payload(req_id) if req_id else {}
@@ -55,14 +53,21 @@ def register(dp: Dispatcher, bot: Bot):
             "Введите по одной в строке в формате: <i>Название — кратко — от цена</i>."
         )
 
-    # Подсказка, если прислали текст, а не изображение
+    # Если прислали текст на этапе сбора фото
     async def on_text_during_collecting(message: types.Message, state: FSMContext):
         await message.answer("Это не похоже на изображение.\nПришли фото (или файл-изображение). Завершить — /done.")
+
     # Фото/картинка во время сбора
     async def on_photo(message: types.Message, state: FSMContext):
-        req_id = get_current_request_id_by_tgid(message.chat.id)
+        # пробуем взять req_id из FSM (установлен в q_structure)
+        st = await state.get_data()
+        req_id = st.get("edit_req_id") or get_current_request_id_by_tgid(message.chat.id)
         if not req_id:
             return await message.reply("Не нашёл активную заявку. Сначала создай заявку /new.")
+
+        payload = get_request_payload(req_id)
+        if not payload:
+            return await message.reply("Эта заявка уже удалена. Создай новую /new и повтори загрузку.")
 
         # 1) определить источник
         if message.photo:
@@ -93,13 +98,13 @@ def register(dp: Dispatcher, bot: Bot):
             return await message.reply("Слишком большой файл (>20 МБ). Пришли картинку поменьше.")
 
         # 3) ключ в S3
-        payload = get_request_payload(req_id)
-        company = (payload.get("site") or {}).get("company")
+        site = payload.get("site") or {}
+        company = site.get("company") or ""
         company_slug = slugify(company, fallback=str(message.chat.id))
         request_slug = slugify(req_id, fallback="req")
         key = f"uploads/{company_slug}/{request_slug}/original/{uuid4().hex}_{_sanitize_filename(filename)}"
 
-        # 4) загрузить в S3 (boto3 → thread pool)
+        # 4) загрузить в S3
         loop = asyncio.get_running_loop()
         try:
             url = await loop.run_in_executor(
@@ -132,7 +137,6 @@ def register(dp: Dispatcher, bot: Bot):
         await message.reply(f"✅ Загружено: {filename}")
 
     # Регистрация хэндлеров
-
     dp.register_message_handler(start_collecting_photos, commands=["photos", "add_photos"], state="*")
     dp.register_message_handler(finish_collecting, commands=["done"], state=Photos.collecting)
     dp.register_message_handler(on_text_during_collecting, content_types=[types.ContentType.TEXT], state=Photos.collecting)

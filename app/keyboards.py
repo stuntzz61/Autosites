@@ -49,3 +49,5 @@ def more_details_inline(req_id: str) -> InlineKeyboardMarkup:
     ikb.add(InlineKeyboardButton("➕ Первый экран", callback_data=f"{CB_MORE_HERO}{req_id}"))
     ikb.add(InlineKeyboardButton("Готово", callback_data=CB_DONE))
     return ikb
+
+edit_fields_inline = more_details_inline

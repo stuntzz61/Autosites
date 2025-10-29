@@ -1,20 +1,19 @@
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from app.handlers.photos import Photos
+
 from app.constants import BTN_BACK, BTN_EXIT
 from app.states import RequestForm
-from app.db import create_request_by_tgid, update_request_site_json, get_request_payload
-from app.utils import slugify, default_seo_title, parse_services, parse_portfolio, parse_testimonials, parse_faq
-from app.handlers.photos import Photos
 from app.db import (
     get_mode, get_user_by_tgid, create_request_by_tgid,
-    update_request_site_json,
+    update_request_site_json, get_request, get_current_request_id_by_tgid,
 )
 from app.utils import (
     default_seo_title, parse_services, parse_portfolio,
-    parse_testimonials, parse_faq,
+    parse_testimonials, parse_faq, slugify,
 )
 from app.keyboards import more_details_inline
+from app.handlers.photos import Photos
+import json
 
 def register(dp, bot):
     # ------- prompts -------
@@ -110,6 +109,7 @@ def register(dp, bot):
     from app.constants import BTN_NEW
     dp.register_message_handler(cmd_new_request, lambda m: m.text == BTN_NEW, state="*")
 
+    # ------- вопросы анкеты по порядку -------
     async def q_client_name(message: types.Message, state: FSMContext):
         await state.update_data(client_name=message.text.strip()); await RequestForm.next()
         await prompt_for_state(RequestForm.client_company, message)
@@ -137,62 +137,63 @@ def register(dp, bot):
     async def q_work_hours(message: types.Message, state: FSMContext):
         await state.update_data(work_hours=message.text.strip()); await RequestForm.next()
         await prompt_for_state(RequestForm.structure, message)
-    async def q_structure(message: types.Message, state: FSMContext):
-        await state.update_data(structure=message.text.strip())
 
-       async def q_structure(message: types.Message, state: FSMContext):
-    await state.update_data(structure=message.text.strip())
-
-    # ← СОЗДАЁМ ЧЕРНОВИК ЗАЯВКИ ПРЯМО СЕЙЧАС
-    data = await state.get_data()
-    payload = _build_payload_from_state(data)
-    req_id = create_request_by_tgid(message.from_user.id, payload)  # это же сделает её текущей
-    await state.update_data(edit_req_id=req_id)
-
+    # helper — собрать payload из FSM
     def _build_payload_from_state(data: dict) -> dict:
-    structure = [s.strip() for s in (data.get("structure") or "").replace(";", ",").split(",") if s.strip()]
-    company = data.get("site_company","")
-    business = data.get("business_type","")
-    short = (data.get("short_desc") or "")
-    return {
-        "client": {
-            "name": data.get("client_name"),
-            "company": data.get("client_company"),
-            "contact": data.get("client_contact"),
-        },
-        "site": {
-            "company": company,
-            "business_type": data.get("business_type"),
-            "color_palette": data.get("color_palette"),
-            "site_contacts": data.get("site_contacts"),
-            "summary": short,
-            "work_hours": data.get("work_hours"),
-            "structure": structure,
-            "assets": {"images": []},  # важно: массив существует
-            "hero": {
-                "title": default_seo_title(company, business),
-                "subtitle": short[:120],
-                "primaryCta": {"label":"Оставить заявку","href":"#contact"},
-                "secondaryCta": {"label":"Портфолио","href":"#portfolio"},
-                "image": "/public/illustrations/hero.svg"
+        structure = [s.strip() for s in (data.get("structure") or "").replace(";", ",").split(",") if s.strip()]
+        company = data.get("site_company","")
+        business = data.get("business_type","")
+        short = (data.get("short_desc") or "")
+        return {
+            "client": {
+                "name": data.get("client_name"),
+                "company": data.get("client_company"),
+                "contact": data.get("client_contact"),
             },
-            "seo": {
-                "title": default_seo_title(company, business),
-                "description": short[:160]
+            "site": {
+                "company": company,
+                "business_type": data.get("business_type"),
+                "color_palette": data.get("color_palette"),
+                "site_contacts": data.get("site_contacts"),
+                "summary": short,
+                "work_hours": data.get("work_hours"),
+                "structure": structure,
+                "assets": {"images": []},
+                "hero": {
+                    "title": default_seo_title(company, business),
+                    "subtitle": short[:120],
+                    "primaryCta": {"label":"Оставить заявку","href":"#contact"},
+                    "secondaryCta": {"label":"Портфолио","href":"#portfolio"},
+                    "image": "/public/illustrations/hero.svg"
+                },
+                "seo": {
+                    "title": default_seo_title(company, business),
+                    "description": short[:160]
+                }
             }
         }
-    }
-    # и сразу в этап фото
-    await Photos.collecting.set()
-    await message.answer(
-        f"Создал черновик заявки <code>{req_id}</code> для <b>{payload['site'].get('company') or '—'}</b>.\n\n"
-        "Пришлите одно или несколько изображений (можно по одному). "
-        "Когда закончите — отправьте <code>/done</code>.\n"
-        "⚠️ Без хотя бы одного фото генерацию не запустим."
-    )
+
+    # ключевой шаг: создаём черновик перед фото
+    async def q_structure(message: types.Message, state: FSMContext):
+        await state.update_data(structure=message.text.strip())
+        data = await state.get_data()
+        payload = _build_payload_from_state(data)
+        req_id = create_request_by_tgid(message.from_user.id, payload)
+        await state.update_data(edit_req_id=req_id)
+
+        await Photos.collecting.set()
+        await message.answer(
+            f"Создал черновик заявки <code>{req_id}</code> для <b>{payload['site'].get('company') or '—'}</b>.\n\n"
+            "Теперь загрузим <b>фото</b>. Пришлите одно или несколько изображений (можно по одному). "
+            "Когда закончите — отправьте <code>/done</code>.\n"
+            "⚠️ Без хотя бы одного фото генерацию не запустим."
+        )
+
     async def q_images(message: types.Message, state: FSMContext):
+        # резервный сценарий, если где-то явно вызвали состояние images
         await state.update_data(images=message.text.strip()); await RequestForm.next()
         await prompt_for_state(RequestForm.services, message)
+
     dp.register_message_handler(q_client_name, state=RequestForm.client_name)
     dp.register_message_handler(q_client_company, state=RequestForm.client_company)
     dp.register_message_handler(q_client_contact, state=RequestForm.client_contact)
@@ -206,63 +207,50 @@ def register(dp, bot):
     dp.register_message_handler(q_images, state=RequestForm.images)
 
     async def q_services(message: types.Message, state: FSMContext):
-        data = await state.get_data()
+        st = await state.get_data()
+        req_id = st.get("edit_req_id") or get_current_request_id_by_tgid(message.from_user.id)
         services = parse_services(message.text or "")
-        payload = {
-            "client": {
-                "name": data.get("client_name"),
-                "company": data.get("client_company"),
-                "contact": data.get("client_contact"),
-            },
-            "site": {
-                "company": data.get("site_company"),
-                "business_type": data.get("business_type"),
-                "color_palette": data.get("color_palette"),
-                "site_contacts": data.get("site_contacts"),
-                "summary": data.get("short_desc"),
-                "work_hours": data.get("work_hours"),
-                "structure": [s.strip() for s in (data.get("structure") or "").replace(";", ",").split(",") if s.strip()],
-                "images": data.get("images"),
-                "services": services,
-                "hero": {
-                    "title": default_seo_title(data.get("site_company",""), data.get("business_type","")),
-                    "subtitle": (data.get("short_desc") or "")[:120],
-                    "primaryCta": {"label":"Оставить заявку","href":"#contact"},
-                    "secondaryCta": {"label":"Портфолио","href":"#portfolio"},
-                    "image": "/public/illustrations/hero.svg"
-                },
-                "seo": {
-                    "title": default_seo_title(data.get("site_company",""), data.get("business_type","")),
-                    "description": (data.get("short_desc") or "")[:160]
-                }
-            }
-        }
-        try:
+
+        if not req_id:
+            # крайний случай — не нашли черновик: создадим
+            payload = _build_payload_from_state(st)
+            payload["site"]["services"] = services
             req_id = create_request_by_tgid(message.from_user.id, payload)
-            await state.finish()
-            from app.constants import BTN_NEW, BTN_MY, BTN_RESET, BTN_ADMIN_LOGIN
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_NEW); kb.add(BTN_MY); kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
-            s_cnt = len(services)
-            extras = "⚠️ Услуг меньше 3 — желательно добавить." if s_cnt < 3 else "✅ Услуг достаточно."
-            await message.answer("✅ Заявка сохранена! " + extras + "\n\nПри желании можно добавить детали (необязательно):", reply_markup=kb)
-            await message.answer("Выберите, что добавить:", reply_markup=more_details_inline(req_id))
-        except Exception:
-            await state.finish()
-            from app.constants import BTN_NEW, BTN_MY, BTN_RESET, BTN_ADMIN_LOGIN
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_NEW); kb.add(BTN_MY); kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
-            await message.answer("⚠️ Не удалось сохранить заявку. Попробуйте ещё раз.", reply_markup=kb)
+        else:
+            payload = get_request(req_id)
+            payload = json.loads(payload.get("payload_json") or "{}") if payload else {}
+            site = (payload.get("site") or {})
+            site["services"] = services
+            # подстраховка hero/seo
+            company = site.get("company",""); business = site.get("business_type",""); short = site.get("summary","")
+            site.setdefault("hero", {
+                "title": default_seo_title(company, business),
+                "subtitle": short[:120],
+                "primaryCta": {"label":"Оставить заявку","href":"#contact"},
+                "secondaryCta": {"label":"Портфолио","href":"#portfolio"},
+                "image": "/public/illustrations/hero.svg"
+            })
+            site.setdefault("seo", {
+                "title": default_seo_title(company, business),
+                "description": short[:160]
+            })
+            update_request_site_json(req_id, site)
+
+        await state.finish()
+        from app.constants import BTN_NEW, BTN_MY, BTN_RESET, BTN_ADMIN_LOGIN
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(BTN_NEW); kb.add(BTN_MY); kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
+        extras = "⚠️ Услуг меньше 3 — желательно добавить." if len(services) < 3 else "✅ Услуг достаточно."
+        await message.answer(f"✅ Заявка обновлена! {extras}\n\nПри желании можно добавить детали (необязательно):", reply_markup=kb)
+        await message.answer("Выберите, что добавить:", reply_markup=more_details_inline(req_id))
     dp.register_message_handler(q_services, state=RequestForm.services)
 
     # ------- extra fields callbacks -------
-    async def _load_site(req_id: str) -> dict:
-        from app.db import get_request
+    async def _load_site(req_id: str) -> dict | None:
         rec = get_request(req_id)
         if not rec:
-            raise RuntimeError("Заявка не найдена")
-        import json
-        data = json.loads(rec.get("site_params_json") or "{}")
+            return None
+        data = json.loads(rec.get("payload_json") or "{}")
         return data.get("site") or {}
 
     from app.constants import (
@@ -301,7 +289,6 @@ def register(dp, bot):
         await RequestForm.seo_description.set()
         await call.message.answer("Поисковое описание (1–2 предложения). Можно вставить/исправить готовое.")
     dp.register_callback_query_handler(cb_more_seo, lambda c: c.data and c.data.startswith(CB_MORE_SEO), state="*")
-
     async def cb_more_hero(call: types.CallbackQuery, state: FSMContext):
         req_id = call.data[len(CB_MORE_HERO):]
         await state.update_data(edit_req_id=req_id)
@@ -312,47 +299,67 @@ def register(dp, bot):
     async def save_portfolio(message: types.Message, state: FSMContext):
         st = await state.get_data(); req_id = st.get("edit_req_id")
         site = await _load_site(req_id)
+        if site is None:
+            await state.finish()
+            return await message.answer("Эта заявка уже удалена.")
         site["portfolio"] = parse_portfolio(message.text or "")
         update_request_site_json(req_id, site)
         await state.finish()
         await message.answer("✅ Портфолио сохранено.", reply_markup=more_details_inline(req_id))
+
     async def save_testimonials(message: types.Message, state: FSMContext):
         st = await state.get_data(); req_id = st.get("edit_req_id")
         site = await _load_site(req_id)
+        if site is None:
+            await state.finish()
+            return await message.answer("Эта заявка уже удалена.")
         site["testimonials"] = parse_testimonials(message.text or "")
         update_request_site_json(req_id, site)
         await state.finish()
         await message.answer("✅ Отзывы сохранены.", reply_markup=more_details_inline(req_id))
+
     async def save_faq(message: types.Message, state: FSMContext):
         st = await state.get_data(); req_id = st.get("edit_req_id")
         site = await _load_site(req_id)
+        if site is None:
+            await state.finish()
+            return await message.answer("Эта заявка уже удалена.")
         site["faq"] = parse_faq(message.text or "")
         update_request_site_json(req_id, site)
         await state.finish()
         await message.answer("✅ FAQ сохранён.", reply_markup=more_details_inline(req_id))
+
     async def save_seo(message: types.Message, state: FSMContext):
         st = await state.get_data(); req_id = st.get("edit_req_id")
         site = await _load_site(req_id)
+        if site is None:
+            await state.finish()
+            return await message.answer("Эта заявка уже удалена.")
         company = (site.get("company") or "")
         business = (site.get("business_type") or "")
         site.setdefault("seo", {})
         site["seo"]["title"] = default_seo_title(company, business)
-        site["seo"]["description"] = (message.text or "").strip() or site["seo"]["description"]
+        site["seo"]["description"] = (message.text or "").strip() or site["seo"].get("description") or ""
         update_request_site_json(req_id, site)
         await state.finish()
         await message.answer("✅ Поисковое описание сохранено.", reply_markup=more_details_inline(req_id))
+
     async def save_hero_title(message: types.Message, state: FSMContext):
         await state.update_data(hero_t=message.text.strip())
         await RequestForm.hero_subtitle.set()
         await message.answer("Короткое описание под заголовком:")
+
     async def save_hero_subtitle(message: types.Message, state: FSMContext):
         st = await state.get_data(); req_id = st.get("edit_req_id")
-        title = st.get("hero_t") or ""
-        subtitle = (message.text or "").strip()
         site = await _load_site(req_id)
+        if site is None:
+            await state.finish()
+            return await message.answer("Эта заявка уже удалена.")
+        title = st.get("hero_t") or site.get("hero", {}).get("title", "")
+        subtitle = (message.text or "").strip()
         site.setdefault("hero", {})
-        site["hero"]["title"] = title or site.get("hero", {}).get("title")
-        site["hero"]["subtitle"] = subtitle or site.get("hero", {}).get("subtitle")
+        site["hero"]["title"] = title
+        site["hero"]["subtitle"] = subtitle or site["hero"].get("subtitle")
         site["hero"]["primaryCta"] = {"label":"Оставить заявку","href":"#contact"}
         site["hero"]["secondaryCta"] = {"label":"Портфолио","href":"#portfolio"}
         site["hero"].setdefault("image", "/public/illustrations/hero.svg")
