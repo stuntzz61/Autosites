@@ -101,7 +101,7 @@ def register(dp: Dispatcher, bot: Bot):
         site = payload.get("site") or {}
         company = site.get("company") or ""
         company_slug = slugify(company, fallback=str(message.chat.id))
-        request_slug = slugify(req_id, fallback="req")
+        request_slug = slugify(str(req_id), fallback="req")
         key = f"uploads/{company_slug}/{request_slug}/original/{uuid4().hex}_{_sanitize_filename(filename)}"
 
         # 4) загрузить в S3

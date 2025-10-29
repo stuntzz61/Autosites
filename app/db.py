@@ -51,7 +51,7 @@ def set_mode(tg_id: int, mode: str):
         cur.execute(Q.SET_MODE, (tg_id, mode))
 
 
-# --- Projects / Requests listing (админ/менеджер) ---
+# --- Requests listing (менеджер/админ) ---
 
 def list_manager_requests(tg_id: int, offset=0, limit=10):
     with get_db() as conn, conn.cursor() as cur:
@@ -131,7 +131,7 @@ def get_current_request_id_by_tgid(tgid: int) -> Optional[str]:
             return None
         req_id = row["request_id"]
         # валидация: указатель не должен указывать на удалённую
-        cur.execute("SELECT 1 FROM requests WHERE id = %s", (req_id,))
+        cur.execute("SELECT 1 FROM requests WHERE id = %s::uuid", (req_id,))
         if cur.fetchone():
             return req_id
         # мусор — подчистим
@@ -183,11 +183,7 @@ def create_request_by_tgid(tgid: int, payload: dict, *, initial_status: str = "a
 
     with get_db() as conn, conn.cursor() as cur:
         cur.execute(
-            """
-            INSERT INTO requests (project_id, payload_json, status)
-            VALUES (%s, %s::jsonb, %s)
-            RETURNING id
-            """,
+            Q.INSERT_REQUEST,  # (project_id, payload_json, status) RETURNING id
             (project_id, json.dumps(payload, ensure_ascii=False), initial_status),
         )
         req_id = cur.fetchone()["id"]
@@ -237,14 +233,31 @@ def delete_request(req_id: str, manager_id: Optional[str] = None) -> bool:
             cur.execute("DELETE FROM requests WHERE id = %s::uuid", (req_id,))
         else:
             cur.execute(
-                """
-                DELETE FROM requests r
-                USING projects p
-                WHERE r.id = %s::uuid
-                  AND r.project_id = p.id
-                  AND p.manager_id = %s::uuid
-                """,
+                Q.DELETE_REQUEST_WITH_MANAGER,
                 (req_id, manager_id),
             )
         ok = cur.rowcount > 0
     return ok
+
+
+# --- Admin helpers ---
+
+def admin_counts():
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.ADMIN_PANEL_USERS_COUNT)
+        users_count = cur.fetchone()["n"]
+        cur.execute(Q.ADMIN_PANEL_REQUESTS_COUNT)
+        reqs_count = cur.fetchone()["n"]
+    return users_count, reqs_count
+
+
+def admin_users():
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.ADMIN_USERS_SELECT)
+        return cur.fetchall()
+
+
+def admin_export_all():
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.ADMIN_EXPORT_ALL_SELECT)
+        return cur.fetchall()

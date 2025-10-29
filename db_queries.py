@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-SQL-запросы для Telegram-бота.
-"""
 import json
 
 GET_USER_BY_TGID = "SELECT * FROM users WHERE tg_id=%s"
@@ -82,7 +79,7 @@ RETURNING id
 
 # --- Requests insert/update ---
 
-# Обновил: теперь со статусом как параметр и с RETURNING id
+# ВАЖНО: теперь 3 параметра и RETURNING id
 INSERT_REQUEST = """
 INSERT INTO requests (project_id, payload_json, status)
 VALUES (%s, %s::jsonb, %s)
@@ -123,8 +120,7 @@ JOIN projects p ON p.id = r.project_id
 ORDER BY r.created_at DESC
 """
 
-# Последняя «активная» заявка менеджера по tg_id
-# Обновил статусы под твою схему
+# Последняя «активная» заявка менеджера по tg_id (обновлён список статусов)
 GET_LATEST_REQUEST_ID_BY_TGID = """
 SELECT r.id
 FROM requests r
@@ -146,7 +142,7 @@ SET payload_json = %s::jsonb
 WHERE id = %s::uuid
 """
 
-# Атомарно дописать массив картинок в JSON, не читая его в Python
+# Атомарно дописать массив картинок в JSON
 APPEND_IMAGES_JSONB = """
 UPDATE requests
 SET payload_json =
