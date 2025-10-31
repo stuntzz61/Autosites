@@ -5,7 +5,7 @@ from app.constants import BTN_BACK, BTN_EXIT
 from app.states import RequestForm
 from app.db import (
     get_mode, get_user_by_tgid, create_request_by_tgid,
-    update_request_site_json, get_request, get_current_request_id_by_tgid,
+    update_request_site_json, get_request, get_request_payload, get_current_request_id_by_tgid,
 )
 from app.utils import (
     default_seo_title, parse_services, parse_portfolio,
@@ -13,7 +13,6 @@ from app.utils import (
 )
 from app.keyboards import more_details_inline
 from app.handlers.photos import Photos
-import json
 
 def register(dp, bot):
     # ------- prompts -------
@@ -217,8 +216,11 @@ def register(dp, bot):
             payload["site"]["services"] = services
             req_id = create_request_by_tgid(message.from_user.id, payload)
         else:
-            payload = get_request(req_id)
-            payload = json.loads(payload.get("payload_json") or "{}") if payload else {}
+            rec = get_request(req_id)
+            if not rec:
+                await state.finish()
+                return await message.answer("Заявка не найдена.", reply_markup=types.ReplyKeyboardRemove())
+            payload = get_request_payload(req_id)
             site = (payload.get("site") or {})
             site["services"] = services
             # подстраховка hero/seo
@@ -250,7 +252,7 @@ def register(dp, bot):
         rec = get_request(req_id)
         if not rec:
             return None
-        data = json.loads(rec.get("payload_json") or "{}")
+        data = get_request_payload(req_id)
         return data.get("site") or {}
 
     from app.constants import (
