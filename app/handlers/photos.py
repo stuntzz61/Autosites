@@ -113,7 +113,7 @@ def register(dp: Dispatcher, bot: Bot):
                     key=key,
                     data=data,
                     content_type=mime,
-                    metadata={"source": "telegram-bot", "chat_id": str(message.chat.id), "request_id": req_id},
+                    metadata={"source": "telegram-bot", "chat_id": str(message.chat.id), "request_id": str(req_id)},
                 ),
             )
         except Exception as e:
