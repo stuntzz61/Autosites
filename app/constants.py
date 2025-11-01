@@ -67,3 +67,12 @@ EDITABLE_FIELDS = {
     "hero_title":"Заголовок на первом экране",
     "hero_subtitle":"Короткое описание под заголовком"
 }
+# app/constants.py
+
+STATUS_DRAFT = "draft"
+STATUS_COLLECTING_INFO = "collecting_info"
+STATUS_COLLECTING_PHOTOS = "collecting_photos"
+STATUS_READY_TO_GENERATE = "ready_to_generate"
+STATUS_QUEUED = "queued"
+STATUS_GENERATED_OK = "generated_ok"       # опционально
+STATUS_GENERATED_ERROR = "generated_error" # опционально

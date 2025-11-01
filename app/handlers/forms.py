@@ -6,13 +6,18 @@ from app.states import RequestForm
 from app.db import (
     get_mode, get_user_by_tgid, create_request_by_tgid,
     update_request_site_json, get_request, get_request_payload, get_current_request_id_by_tgid,
+    set_request_status,
 )
 from app.utils import (
     default_seo_title, parse_services, parse_portfolio,
-    parse_testimonials, parse_faq, slugify,
+    parse_testimonials, parse_faq, slugify, has_min_requirements,
 )
 from app.keyboards import more_details_inline
 from app.handlers.photos import Photos
+from app.constants import (
+    STATUS_COLLECTING_PHOTOS,
+    STATUS_READY_TO_GENERATE,
+)
 
 def register(dp, bot):
     # ------- prompts -------
@@ -172,6 +177,16 @@ def register(dp, bot):
             }
         }
 
+    # helper — если заявка уже соответствует минимальным требованиям, помечаем как готовую к генерации
+    def _reeval_status(req_id: str) -> None:
+        try:
+            payload = get_request_payload(req_id) or {}
+            if has_min_requirements(payload):
+                set_request_status(req_id, STATUS_READY_TO_GENERATE)
+        except Exception:
+            # не валим UX из-за статуса
+            pass
+
     # ключевой шаг: создаём черновик перед фото
     async def q_structure(message: types.Message, state: FSMContext):
         await state.update_data(structure=message.text.strip())
@@ -179,6 +194,8 @@ def register(dp, bot):
         payload = _build_payload_from_state(data)
         req_id = create_request_by_tgid(message.from_user.id, payload)
         await state.update_data(edit_req_id=req_id)
+        # Сразу переводим заявку в сбор фото
+        set_request_status(req_id, STATUS_COLLECTING_PHOTOS)
 
         await Photos.collecting.set()
         await message.answer(
@@ -215,6 +232,7 @@ def register(dp, bot):
             payload = _build_payload_from_state(st)
             payload["site"]["services"] = services
             req_id = create_request_by_tgid(message.from_user.id, payload)
+            _reeval_status(req_id)
         else:
             rec = get_request(req_id)
             if not rec:
@@ -237,6 +255,7 @@ def register(dp, bot):
                 "description": short[:160]
             })
             update_request_site_json(req_id, site)
+            _reeval_status(req_id)
 
         await state.finish()
         from app.constants import BTN_NEW, BTN_MY, BTN_RESET, BTN_ADMIN_LOGIN
@@ -291,6 +310,7 @@ def register(dp, bot):
         await RequestForm.seo_description.set()
         await call.message.answer("Поисковое описание (1–2 предложения). Можно вставить/исправить готовое.")
     dp.register_callback_query_handler(cb_more_seo, lambda c: c.data and c.data.startswith(CB_MORE_SEO), state="*")
+
     async def cb_more_hero(call: types.CallbackQuery, state: FSMContext):
         req_id = call.data[len(CB_MORE_HERO):]
         await state.update_data(edit_req_id=req_id)
@@ -306,6 +326,7 @@ def register(dp, bot):
             return await message.answer("Эта заявка уже удалена.")
         site["portfolio"] = parse_portfolio(message.text or "")
         update_request_site_json(req_id, site)
+        _reeval_status(req_id)
         await state.finish()
         await message.answer("✅ Портфолио сохранено.", reply_markup=more_details_inline(req_id))
 
@@ -317,6 +338,7 @@ def register(dp, bot):
             return await message.answer("Эта заявка уже удалена.")
         site["testimonials"] = parse_testimonials(message.text or "")
         update_request_site_json(req_id, site)
+        _reeval_status(req_id)
         await state.finish()
         await message.answer("✅ Отзывы сохранены.", reply_markup=more_details_inline(req_id))
 
@@ -328,6 +350,7 @@ def register(dp, bot):
             return await message.answer("Эта заявка уже удалена.")
         site["faq"] = parse_faq(message.text or "")
         update_request_site_json(req_id, site)
+        _reeval_status(req_id)
         await state.finish()
         await message.answer("✅ FAQ сохранён.", reply_markup=more_details_inline(req_id))
 
@@ -343,6 +366,7 @@ def register(dp, bot):
         site["seo"]["title"] = default_seo_title(company, business)
         site["seo"]["description"] = (message.text or "").strip() or site["seo"].get("description") or ""
         update_request_site_json(req_id, site)
+        _reeval_status(req_id)
         await state.finish()
         await message.answer("✅ Поисковое описание сохранено.", reply_markup=more_details_inline(req_id))
 
@@ -366,6 +390,7 @@ def register(dp, bot):
         site["hero"]["secondaryCta"] = {"label":"Портфолио","href":"#portfolio"}
         site["hero"].setdefault("image", "/public/illustrations/hero.svg")
         update_request_site_json(req_id, site)
+        _reeval_status(req_id)
         await state.finish()
         await message.answer("✅ Первый экран сохранён.", reply_markup=more_details_inline(req_id))
 

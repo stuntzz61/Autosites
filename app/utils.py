@@ -108,11 +108,40 @@ def convert_uuids_to_strings(obj):
     else:
         return obj
 
+# app/utils.py
+import json
+from typing import Any, Dict, List
+
+
 def build_request_payload(rec: dict) -> dict:
-    data_json = json.loads(rec.get("site_params_json") or "{}")
+    """
+    Возвращает полезную нагрузку заявки **из payload_json** (если есть),
+    иначе — пытается прочитать legacy site_params_json.
+    """
+    raw = rec.get("payload_json") or rec.get("site_params_json") or {}
+    data_json = json.loads(raw) if isinstance(raw, str) else (raw or {})
+
     return {
-        "request_id": str(rec["id"]) if rec.get("id") else None,
-        "manager_id": str(rec.get("manager_id")) if rec.get("manager_id") else None,
-        "client": data_json.get("client", {}),
-        "site": data_json.get("site", {}),
+        "request_id": str(rec.get("id") or ""),
+        "manager_id": str(rec.get("manager_id") or ""),
+        "client": data_json.get("client") or {},
+        "site": data_json.get("site") or {},
     }
+
+
+def get_images(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    site = payload.get("site") or {}
+    assets = site.get("assets") or {}
+    return assets.get("images") or []
+
+
+def has_min_requirements(payload: Dict[str, Any]) -> bool:
+    """
+    Минимально необходимое для генерации: название компании и ≥1 фото.
+    """
+    site = payload.get("site") or {}
+    company = (site.get("company") or "").strip()
+    if not company:
+        return False
+    imgs = get_images(payload)
+    return len(imgs) >= 1

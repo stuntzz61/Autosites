@@ -5,9 +5,13 @@ from typing import Any, Dict, List, Optional
 
 import psycopg
 from psycopg.rows import dict_row
-
+from app.utils import build_request_payload
 from app.config import DB_URL
 import db_queries as Q  # SQL-константы
+from app.constants import (
+    STATUS_DRAFT, STATUS_COLLECTING_INFO, STATUS_COLLECTING_PHOTOS,
+    STATUS_READY_TO_GENERATE, STATUS_QUEUED,
+)
 
 log = logging.getLogger("bot")
 
@@ -197,12 +201,14 @@ def update_request_site_json(req_id: str, site_obj: Dict[str, Any]):
         cur.execute(Q.UPDATE_REQUEST_SITE_JSON, (json.dumps(site_obj, ensure_ascii=False), req_id))
 
 
-def get_request_payload(req_id: str) -> Dict[str, Any]:
-    with get_db() as conn, conn.cursor() as cur:
-        cur.execute(Q.GET_REQUEST_PAYLOAD, (req_id,))
-        row = cur.fetchone()
-        return (row["payload_json"] if row and row.get("payload_json") else {}) or {}
-
+def get_request_payload(request_id: str) -> Dict[str, Any]:
+    """
+    Возвращает payload заявки как dict (client/site/…).
+    """
+    rec = get_request(request_id)
+    if not rec:
+        return {}
+    return build_request_payload(rec)
 
 def save_request_payload(req_id: str, payload: Dict[str, Any]) -> None:
     with get_db() as conn, conn.cursor() as cur:
@@ -218,11 +224,24 @@ def append_images_to_request(req_id: str, images: List[Dict[str, Any]]) -> None:
         cur.execute(Q.APPEND_IMAGES_JSONB, (json.dumps(images, ensure_ascii=False), req_id))
 
 
-def set_request_status(req_id: str, new_status: str) -> None:
-    with get_db() as conn, conn.cursor() as cur:
-        cur.execute("UPDATE requests SET status = %s WHERE id = %s::uuid", (new_status, req_id))
+def set_request_status(request_id: str, status: str) -> None:
+    """
+    Записывает статус в payload_json.site.meta.status через update_request_site_json.
+    """
+    rec = get_request(request_id)
+    if not rec:
+        return
 
+    # Текущий payload и текущее site-содержимое
+    payload = build_request_payload(rec)
+    site = payload.get("site") or {}
+    meta = site.get("meta") or {}
+    meta["status"] = status
+    site["meta"] = meta
 
+    # Важно: update_request_site_json ДОЛЖЕН заменять ветку site целиком.
+    update_request_site_json(request_id, site)
+    
 def delete_request(req_id: str, manager_id: Optional[str] = None) -> bool:
     """
     Жёстко удаляет заявку. current_request чистится автоматически (FK ON DELETE CASCADE).
