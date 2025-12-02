@@ -498,5 +498,95 @@ ORDER BY r.created_at DESC
 LIMIT 1
 """
 
+# ==================== BROADCAST ====================
+
+GET_ALL_ACTIVE_MANAGERS = """
+SELECT u.id, u.tg_id, u.first_name, u.last_name, u.contact
+FROM users u
+LEFT JOIN manager_settings ms ON ms.user_id = u.id
+WHERE u.role = 'manager'
+  AND COALESCE(u.approval_status, 'approved') = 'approved'
+  AND COALESCE(ms.is_blocked, false) = false
+ORDER BY u.first_name, u.last_name
+"""
+
+GET_MANAGERS_BY_IDS = """
+SELECT id, tg_id, first_name, last_name
+FROM users
+WHERE id = ANY(%s::uuid[])
+"""
+
+# ==================== SEARCH ====================
+
+SEARCH_REQUESTS = """
+SELECT r.id,
+       COALESCE(r.payload_json->'client'->>'name', '') AS client_name,
+       COALESCE(r.payload_json->'site'->>'company', '') AS company_name,
+       COALESCE(r.payload_json->'site'->>'business_type', '') AS business_type,
+       COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) AS status,
+       r.created_at,
+       u.first_name as manager_first_name,
+       u.last_name as manager_last_name
+FROM requests r
+JOIN projects p ON p.id = r.project_id
+JOIN users u ON u.id = p.manager_id
+WHERE (
+    LOWER(r.payload_json->'client'->>'name') LIKE LOWER(%s)
+    OR LOWER(r.payload_json->'site'->>'company') LIKE LOWER(%s)
+    OR LOWER(r.payload_json->'client'->>'company') LIKE LOWER(%s)
+    OR LOWER(r.payload_json->'site'->>'business_type') LIKE LOWER(%s)
+)
+ORDER BY r.created_at DESC
+LIMIT %s
+"""
+
+# ==================== MASS OPERATIONS ====================
+
+MASS_ARCHIVE_REQUESTS = """
+UPDATE requests
+SET payload_json = jsonb_set(
+    COALESCE(payload_json, '{}'::jsonb),
+    '{site,meta,status}',
+    '"archived"'::jsonb,
+    true
+)
+WHERE id = ANY(%s::uuid[])
+"""
+
+MASS_DELETE_REQUESTS = """
+DELETE FROM requests WHERE id = ANY(%s::uuid[])
+"""
+
+# ==================== STATISTICS FOR EXPORT ====================
+
+GET_STATS_FOR_EXPORT = """
+SELECT
+    DATE(r.created_at) as date,
+    COUNT(*) as total_requests,
+    COUNT(*) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) = 'generated_ok') as completed,
+    COUNT(*) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) = 'archived') as archived,
+    COUNT(*) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) IN ('draft', 'awaiting_photos', 'ready')) as pending
+FROM requests r
+WHERE r.created_at >= CURRENT_DATE - INTERVAL '%s days'
+GROUP BY DATE(r.created_at)
+ORDER BY date DESC
+"""
+
+GET_MANAGERS_STATS_FOR_EXPORT = """
+SELECT
+    u.first_name || ' ' || u.last_name as manager_name,
+    COUNT(r.id) as total_requests,
+    COUNT(r.id) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) = 'generated_ok') as completed,
+    COUNT(r.id) FILTER (WHERE r.created_at >= CURRENT_DATE - INTERVAL '7 days') as this_week,
+    COUNT(r.id) FILTER (WHERE r.created_at >= CURRENT_DATE) as today
+FROM users u
+LEFT JOIN projects p ON p.manager_id = u.id
+LEFT JOIN requests r ON r.project_id = p.id
+WHERE u.role = 'manager'
+GROUP BY u.id, u.first_name, u.last_name
+HAVING COUNT(r.id) > 0
+ORDER BY total_requests DESC
+"""
+
 def as_json_str(obj):
     return json.dumps(obj, ensure_ascii=False)

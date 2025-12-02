@@ -8,6 +8,7 @@ from app.constants import (
     GUEST_CMDS, MANAGER_CMDS, ADMIN_CMDS, DEBUG_CMDS,
     BTN_REG, BTN_ADMIN_LOGIN, BTN_NEW, BTN_MY, BTN_ARCHIVE, BTN_RESET,
     BTN_PANEL, BTN_STATS, BTN_MANAGERS, BTN_PENDING, BTN_REQS, BTN_LOGOUT,
+    BTN_BROADCAST, BTN_SEARCH, BTN_MASS_OPS, BTN_EXPORT,
     MSG_WELCOME_GUEST, MSG_WELCOME_MANAGER, MSG_WELCOME_ADMIN,
     MSG_BLOCKED_USER, MSG_PENDING_APPROVAL, MSG_NEW_REGISTRATION_ADMIN,
 )
@@ -69,7 +70,9 @@ def register(dp, bot):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add(BTN_PANEL, BTN_STATS)
         kb.add(BTN_MANAGERS, pending_text)
-        kb.add(BTN_REQS, BTN_LOGOUT)
+        kb.add(BTN_BROADCAST, BTN_SEARCH)
+        kb.add(BTN_REQS, BTN_EXPORT)
+        kb.add(BTN_MASS_OPS, BTN_LOGOUT)
         return kb
 
     def get_guest_keyboard():

@@ -12,6 +12,7 @@ from functools import wraps
 
 from app.constants import (
     BTN_PANEL, BTN_STATS, BTN_MANAGERS, BTN_PENDING, BTN_REQS, BTN_LOGOUT,
+    BTN_BROADCAST, BTN_SEARCH, BTN_MASS_OPS, BTN_EXPORT,
     CB_ADMIN_MANAGER, CB_ADMIN_BLOCK, CB_ADMIN_UNBLOCK, CB_ADMIN_STATS,
     CB_ADMIN_DELETE_USER, CB_APPROVE_USER, CB_REJECT_USER,
     CB_OPEN, STATUS_LABELS,
@@ -73,7 +74,9 @@ def register(dp, bot):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add(BTN_PANEL, BTN_STATS)
         kb.add(BTN_MANAGERS, pending_text)
-        kb.add(BTN_REQS, BTN_LOGOUT)
+        kb.add(BTN_BROADCAST, BTN_SEARCH)
+        kb.add(BTN_REQS, BTN_EXPORT)
+        kb.add(BTN_MASS_OPS, BTN_LOGOUT)
         return kb
 
     # ==================== ГЛАВНАЯ ПАНЕЛЬ ====================

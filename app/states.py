@@ -54,3 +54,23 @@ class PhotoUpload(StatesGroup):
     """Пошаговая загрузка фото по категориям"""
     choosing_category = State()
     uploading = State()
+
+
+class AdminBroadcast(StatesGroup):
+    """Рассылка сообщений от администратора"""
+    selecting_recipients = State()  # Выбор получателей
+    composing_message = State()      # Написание сообщения
+    adding_photo = State()           # Добавление фото (опционально)
+    confirming = State()             # Подтверждение перед отправкой
+
+
+class SearchRequest(StatesGroup):
+    """Поиск заявок"""
+    waiting_query = State()
+
+
+class MassOperation(StatesGroup):
+    """Массовые операции над заявками"""
+    selecting_requests = State()
+    selecting_action = State()
+    confirming = State()

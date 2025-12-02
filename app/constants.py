@@ -51,6 +51,10 @@ BTN_MANAGERS = "👥 Менеджеры"
 BTN_PENDING = "⏳ Ожидают одобрения"
 BTN_USERS = "👤 Пользователи"
 BTN_REQS = "📦 Все заявки"
+BTN_BROADCAST = "📢 Рассылка"
+BTN_SEARCH = "🔍 Поиск"
+BTN_MASS_OPS = "⚡ Массовые операции"
+BTN_EXPORT = "📊 Экспорт"
 BTN_LOGOUT = "🚪 Выход"
 
 # Форма
@@ -101,6 +105,33 @@ CB_ADMIN_EDIT_USER = "adm_edit_user_"
 CB_APPROVE_USER = "approve_"
 CB_REJECT_USER = "reject_"
 CB_PENDING_LIST = "pending_list"
+
+# Рассылка
+CB_BROADCAST = "broadcast"
+CB_BROADCAST_ALL = "bc_all"
+CB_BROADCAST_SELECT = "bc_select"
+CB_BC_MANAGER = "bc_mgr_"
+CB_BC_CONFIRM = "bc_confirm"
+CB_BC_CANCEL = "bc_cancel"
+CB_BC_ADD_PHOTO = "bc_add_photo"
+CB_BC_SKIP_PHOTO = "bc_skip_photo"
+CB_BC_DONE = "bc_done"
+
+# Поиск
+CB_SEARCH = "search"
+CB_SEARCH_RESULT = "sr_"
+
+# Массовые операции
+CB_MASS_OPS = "mass_ops"
+CB_MASS_SELECT = "mass_sel_"
+CB_MASS_ARCHIVE = "mass_archive"
+CB_MASS_DELETE = "mass_delete"
+CB_MASS_CONFIRM = "mass_confirm"
+CB_MASS_CANCEL = "mass_cancel"
+
+# Экспорт
+CB_EXPORT_EXCEL = "export_excel"
+CB_EXPORT_PDF = "export_pdf"
 
 # ==================== РЕДАКТИРУЕМЫЕ ПОЛЯ ====================
 

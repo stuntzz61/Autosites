@@ -7,6 +7,11 @@ from app.constants import (
     CB_EDIT_FIELD, CB_PHOTO_CAT, CB_ARCHIVE_REQ, CB_CLOSE_REQ,
     CB_ADMIN_MANAGER, CB_ADMIN_BLOCK, CB_ADMIN_UNBLOCK, CB_ADMIN_STATS,
     CB_ADMIN_DELETE_USER, CB_APPROVE_USER, CB_REJECT_USER,
+    CB_BROADCAST, CB_BROADCAST_ALL, CB_BROADCAST_SELECT, CB_BC_MANAGER,
+    CB_BC_CONFIRM, CB_BC_CANCEL, CB_BC_ADD_PHOTO, CB_BC_SKIP_PHOTO, CB_BC_DONE,
+    CB_SEARCH, CB_SEARCH_RESULT,
+    CB_MASS_OPS, CB_MASS_SELECT, CB_MASS_ARCHIVE, CB_MASS_DELETE, CB_MASS_CONFIRM, CB_MASS_CANCEL,
+    CB_EXPORT_EXCEL, CB_EXPORT_PDF,
     PHOTO_CATEGORIES, STATUS_LABELS,
     BTN_BACK, BTN_EXIT, BTN_SKIP,
     get_company_emoji,
@@ -326,4 +331,119 @@ def manager_full_card_inline(manager_id: str, is_blocked: bool) -> InlineKeyboar
 
     ikb.add(InlineKeyboardButton("⬅️ К списку", callback_data="admin_managers"))
 
+    return ikb
+
+
+# ==================== РАССЫЛКА ====================
+
+def broadcast_start_inline() -> InlineKeyboardMarkup:
+    """Выбор типа рассылки"""
+    ikb = InlineKeyboardMarkup(row_width=1)
+    ikb.add(
+        InlineKeyboardButton("📢 Всем менеджерам", callback_data=CB_BROADCAST_ALL),
+        InlineKeyboardButton("👤 Выбрать получателей", callback_data=CB_BROADCAST_SELECT),
+        InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"),
+    )
+    return ikb
+
+
+def broadcast_managers_select_inline(managers: list, selected_ids: set = None) -> InlineKeyboardMarkup:
+    """Выбор менеджеров для рассылки (с чекбоксами)"""
+    selected_ids = selected_ids or set()
+    ikb = InlineKeyboardMarkup(row_width=1)
+
+    for m in managers:
+        name = f"{m.get('first_name', '')} {m.get('last_name', '')}".strip() or "—"
+        mid = str(m['id'])
+        check = "✅" if mid in selected_ids else "⬜"
+        ikb.add(InlineKeyboardButton(f"{check} {_truncate(name, 25)}", callback_data=f"{CB_BC_MANAGER}{mid}"))
+
+    if selected_ids:
+        ikb.add(InlineKeyboardButton(f"✅ Готово ({len(selected_ids)} выбрано)", callback_data=CB_BC_DONE))
+
+    ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data=CB_BROADCAST))
+    return ikb
+
+
+def broadcast_confirm_inline(with_photo: bool = False) -> InlineKeyboardMarkup:
+    """Подтверждение рассылки"""
+    ikb = InlineKeyboardMarkup(row_width=2)
+
+    if not with_photo:
+        ikb.add(InlineKeyboardButton("📷 Добавить фото", callback_data=CB_BC_ADD_PHOTO))
+
+    ikb.add(
+        InlineKeyboardButton("✅ Отправить", callback_data=CB_BC_CONFIRM),
+        InlineKeyboardButton("❌ Отмена", callback_data=CB_BC_CANCEL),
+    )
+    return ikb
+
+
+def broadcast_photo_inline() -> InlineKeyboardMarkup:
+    """Добавление фото к рассылке"""
+    ikb = InlineKeyboardMarkup(row_width=1)
+    ikb.add(
+        InlineKeyboardButton("⏭ Без фото", callback_data=CB_BC_SKIP_PHOTO),
+        InlineKeyboardButton("❌ Отмена", callback_data=CB_BC_CANCEL),
+    )
+    return ikb
+
+
+# ==================== ПОИСК ====================
+
+def search_results_inline(results: list) -> InlineKeyboardMarkup:
+    """Результаты поиска"""
+    ikb = InlineKeyboardMarkup(row_width=1)
+
+    for r in results[:15]:
+        company = r.get('company_name') or r.get('client_name') or '—'
+        status = r.get('status', 'draft')
+        emoji = get_company_emoji(r.get('business_type', ''))
+        status_label = STATUS_LABELS.get(status, '')[:2]
+
+        title = f"{emoji} {_truncate(company, 20)} {status_label}"
+        ikb.add(InlineKeyboardButton(title, callback_data=f"{CB_OPEN}{r['id']}"))
+
+    if not results:
+        ikb.add(InlineKeyboardButton("Ничего не найдено", callback_data="noop"))
+
+    ikb.add(InlineKeyboardButton("🔍 Новый поиск", callback_data=CB_SEARCH))
+    ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"))
+    return ikb
+
+
+# ==================== МАССОВЫЕ ОПЕРАЦИИ ====================
+
+def mass_ops_start_inline() -> InlineKeyboardMarkup:
+    """Начало массовых операций"""
+    ikb = InlineKeyboardMarkup(row_width=1)
+    ikb.add(
+        InlineKeyboardButton("🗄 Архивировать все готовые", callback_data=f"{CB_MASS_ARCHIVE}_completed"),
+        InlineKeyboardButton("🗑 Удалить ошибочные", callback_data=f"{CB_MASS_DELETE}_errors"),
+        InlineKeyboardButton("📦 Архивировать старые (30+ дней)", callback_data=f"{CB_MASS_ARCHIVE}_old"),
+        InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"),
+    )
+    return ikb
+
+
+def mass_ops_confirm_inline(action: str, count: int) -> InlineKeyboardMarkup:
+    """Подтверждение массовой операции"""
+    ikb = InlineKeyboardMarkup(row_width=2)
+    ikb.add(
+        InlineKeyboardButton(f"✅ Да, выполнить ({count})", callback_data=f"{CB_MASS_CONFIRM}_{action}"),
+        InlineKeyboardButton("❌ Отмена", callback_data=CB_MASS_CANCEL),
+    )
+    return ikb
+
+
+# ==================== ЭКСПОРТ ====================
+
+def export_options_inline() -> InlineKeyboardMarkup:
+    """Варианты экспорта"""
+    ikb = InlineKeyboardMarkup(row_width=2)
+    ikb.add(
+        InlineKeyboardButton("📊 Excel", callback_data=CB_EXPORT_EXCEL),
+        InlineKeyboardButton("📄 PDF", callback_data=CB_EXPORT_PDF),
+    )
+    ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"))
     return ikb

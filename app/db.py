@@ -584,3 +584,67 @@ def admin_export_all():
     with get_db() as conn, conn.cursor() as cur:
         cur.execute(Q.ADMIN_EXPORT_ALL_SELECT)
         return cur.fetchall()
+
+
+# ==================== BROADCAST ====================
+
+def get_all_active_managers() -> List[dict]:
+    """Список всех активных (одобренных и незаблокированных) менеджеров"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.GET_ALL_ACTIVE_MANAGERS)
+        return cur.fetchall()
+
+
+def get_managers_by_ids(ids: List[str]) -> List[dict]:
+    """Получить менеджеров по списку ID"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.GET_MANAGERS_BY_IDS, (ids,))
+        return cur.fetchall()
+
+
+# ==================== SEARCH ====================
+
+def search_requests(query: str, limit: int = 20) -> List[dict]:
+    """Поиск заявок по названию/клиенту"""
+    pattern = f"%{query}%"
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.SEARCH_REQUESTS, (pattern, pattern, pattern, pattern, limit))
+        return cur.fetchall()
+
+
+# ==================== MASS OPERATIONS ====================
+
+def mass_archive_requests(ids: List[str]) -> int:
+    """Массовое архивирование заявок"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.MASS_ARCHIVE_REQUESTS, (ids,))
+            return cur.rowcount
+    except Exception:
+        return 0
+
+
+def mass_delete_requests(ids: List[str]) -> int:
+    """Массовое удаление заявок"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.MASS_DELETE_REQUESTS, (ids,))
+            return cur.rowcount
+    except Exception:
+        return 0
+
+
+# ==================== EXPORT ====================
+
+def get_stats_for_export(days: int = 30) -> List[dict]:
+    """Статистика по дням для экспорта"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.GET_STATS_FOR_EXPORT.replace('%s', str(days)))
+        return cur.fetchall()
+
+
+def get_managers_stats_for_export() -> List[dict]:
+    """Статистика менеджеров для экспорта"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.GET_MANAGERS_STATS_FOR_EXPORT)
+        return cur.fetchall()
