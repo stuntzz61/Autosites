@@ -139,15 +139,23 @@ def register(dp, bot):
         name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "—"
         contact = user.get('contact', '—')
         tg_id = user.get('tg_id', '—')
+        username = user.get('username')
         created = user.get('created_at', '—')
         if hasattr(created, 'strftime'):
             created = created.strftime('%d.%m.%Y %H:%M')
+
+        # Telegram ссылка
+        if username:
+            tg_link = f"<a href='https://t.me/{username}'>@{username}</a>"
+        else:
+            tg_link = f"<a href='tg://user?id={tg_id}'>Профиль</a> (без username)"
 
         text = (
             f"👤 <b>Заявка на регистрацию</b>\n\n"
             f"Имя: <b>{e(name)}</b>\n"
             f"Контакт: {e(contact)}\n"
-            f"Telegram ID: <code>{tg_id}</code>\n"
+            f"Telegram: {tg_link}\n"
+            f"ID: <code>{tg_id}</code>\n"
             f"Дата заявки: {created}\n\n"
             "Одобрить или отклонить?"
         )
@@ -260,19 +268,23 @@ def register(dp, bot):
         for i, m in enumerate(leaderboard, 1):
             name = f"{m.get('first_name', '')} {m.get('last_name', '')}".strip() or "—"
             username = m.get('username')
-            user_link = f"@{username}" if username else ""
             total = m.get('total_requests', 0)
             completed = m.get('completed', 0)
-            if user_link:
-                leader_lines.append(f"  {i}. {_truncate(name, 12)} ({user_link}) — {total} ({completed}✅)")
+            this_week = m.get('this_week', 0)
+
+            # Формируем строку с username если есть
+            if username:
+                leader_lines.append(f"{i}. <b>{name}</b> (@{username})")
+                leader_lines.append(f"   📋 {total} | ✅ {completed} | 📅 {this_week}")
             else:
-                leader_lines.append(f"  {i}. {_truncate(name, 15)} — {total} ({completed}✅)")
+                leader_lines.append(f"{i}. <b>{name}</b>")
+                leader_lines.append(f"   📋 {total} | ✅ {completed} | 📅 {this_week}")
         leader_text = "\n".join(leader_lines) if leader_lines else "  Нет данных"
 
         text = (
             "📈 <b>Детальная статистика</b>\n\n"
             f"<b>По статусам:</b>\n{status_text}\n\n"
-            f"<b>🏆 Топ менеджеров:</b>\n{leader_text}"
+            f"<b>🏆 Топ менеджеров (всего | завершено | за неделю):</b>\n{leader_text}"
         )
 
         await message.answer(text, reply_markup=get_admin_keyboard())
@@ -353,7 +365,13 @@ def register(dp, bot):
         contact = user.get('contact', '—')
         tg_id = user.get('tg_id', '—')
         username = user.get('username')
-        username_link = f"@{username}" if username else "—"
+
+        # Telegram ссылка для связи
+        if username:
+            tg_link = f"<a href='https://t.me/{username}'>@{username}</a>"
+        else:
+            tg_link = f"<a href='tg://user?id={tg_id}'>Написать</a> (нет username)"
+
         registered = user.get('created_at', '—')
         if hasattr(registered, 'strftime'):
             registered = registered.strftime('%d.%m.%Y')
@@ -365,19 +383,30 @@ def register(dp, bot):
         if block_reason:
             status_text += f"\nПричина: {e(block_reason)}"
 
+        # Статистика
+        total_req = stats.get('total_requests', 0)
+        pending = stats.get('pending_requests', 0)
+        completed = stats.get('completed_requests', 0)
+        failed = stats.get('failed_requests', 0)
+        this_week = stats.get('this_week', 0)
+        today = stats.get('today', 0)
+        photos = stats.get('total_photos', 0)
+
         text = (
             f"👤 <b>Менеджер: {e(name)}</b>\n\n"
             f"📱 Контакт: {e(contact)}\n"
-            f"💬 Telegram: {username_link}\n"
+            f"💬 Telegram: {tg_link}\n"
             f"🆔 ID: <code>{tg_id}</code>\n"
             f"📅 Регистрация: {registered}\n\n"
             f"<b>Статус:</b> {status_text}\n\n"
             f"<b>📊 Статистика:</b>\n"
-            f"  📋 Всего заявок: {stats.get('total_requests', 0)}\n"
-            f"  ⏳ В работе: {stats.get('pending_requests', 0)}\n"
-            f"  ✅ Завершено: {stats.get('completed_requests', 0)}\n"
-            f"  ❌ Ошибок: {stats.get('failed_requests', 0)}\n"
-            f"  📷 Фото: {stats.get('total_photos', 0)}"
+            f"├ Всего заявок: <b>{total_req}</b>\n"
+            f"├ В работе: {pending} ⏳\n"
+            f"├ Завершено: {completed} ✅\n"
+            f"├ Ошибок: {failed} ❌\n"
+            f"├ За неделю: {this_week}\n"
+            f"├ Сегодня: {today}\n"
+            f"└ Фото загружено: {photos} 📷"
         )
 
         await call.message.edit_text(text, reply_markup=manager_full_card_inline(manager_id, is_blocked))

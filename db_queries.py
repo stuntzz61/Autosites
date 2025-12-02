@@ -43,7 +43,7 @@ FROM users WHERE tg_id=%s
 """
 
 LIST_PENDING_REGISTRATIONS = """
-SELECT id, tg_id, first_name, last_name, contact, created_at
+SELECT id, tg_id, username, first_name, last_name, contact, created_at
 FROM users
 WHERE approval_status = 'pending' AND role = 'manager'
 ORDER BY created_at ASC

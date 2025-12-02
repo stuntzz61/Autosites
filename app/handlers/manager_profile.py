@@ -105,7 +105,7 @@ def register(dp, bot):
             types.InlineKeyboardButton("🗄 Архив", callback_data="my_archive"),
         )
         ikb.add(
-            types.InlineKeyboardButton("✏️ Изменить контакт", callback_data="edit_contact"),
+            types.InlineKeyboardButton("✏️ Изменить данные", callback_data="profile_edit_contact"),
         )
 
         await message.answer(text, reply_markup=ikb)
@@ -120,12 +120,12 @@ def register(dp, bot):
         await call.answer()
         await ProfileEdit.new_contact.set()
         await call.message.edit_text(
-            "✏️ <b>Изменение контакта</b>\n\n"
+            "✏️ <b>Изменение данных</b>\n\n"
             "Введите новый контакт (телефон или email):\n\n"
             "Для отмены напишите /cancel"
         )
 
-    dp.register_callback_query_handler(cb_edit_contact, lambda c: c.data == "edit_contact", state="*")
+    dp.register_callback_query_handler(cb_edit_contact, lambda c: c.data == "profile_edit_contact", state="*")
 
     async def process_new_contact(message: types.Message, state: FSMContext):
         """Сохранение нового контакта"""

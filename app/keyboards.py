@@ -89,8 +89,10 @@ def request_card_inline(req_id: Any, is_owner: bool, is_admin: bool, status: str
         )
 
         # Действия в зависимости от статуса
-        if status in ("ready_to_generate", "collecting_photos", "draft"):
+        if status in ("ready_to_generate", "collecting_photos", "draft", "awaiting_photos"):
             ikb.add(InlineKeyboardButton("⚙️ Сгенерировать сайт", callback_data=f"{CB_GEN}{req_id}"))
+            # Менеджер может архивировать черновики
+            ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
         elif status == "generated_ok":
             ikb.add(
                 InlineKeyboardButton("✔️ Закрыть заявку", callback_data=f"{CB_CLOSE_REQ}{req_id}"),
@@ -98,9 +100,16 @@ def request_card_inline(req_id: Any, is_owner: bool, is_admin: bool, status: str
             )
         elif status in ("closed", "delivered"):
             ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
+        elif status == "generating" or status == "queued":
+            # В процессе генерации - только ждать
+            pass
+        elif status == "generated_error":
+            # После ошибки можно перегенерить или архивировать
+            ikb.add(InlineKeyboardButton("🔄 Повторить", callback_data=f"{CB_GEN}{req_id}"))
+            ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
 
-        # Удаление (не для завершённых)
-        if status not in ("generated_ok", "closed", "delivered", "archived"):
+        # Удаление только для админа и не для завершённых
+        if is_admin and status not in ("generated_ok", "closed", "delivered", "archived"):
             ikb.add(InlineKeyboardButton("🗑 Удалить", callback_data=f"{CB_DELETE}{req_id}"))
 
     ikb.add(InlineKeyboardButton("⬅️ К списку заявок", callback_data=CB_BACK_TO_LIST))
@@ -253,12 +262,13 @@ def admin_managers_list_inline(managers: List[dict], page: int = 1) -> InlineKey
         username = m.get('username')
         total = m.get('total_requests', 0)
         completed = m.get('completed_requests', 0)
-        blocked = "🔒" if m.get('is_blocked') else ""
+        blocked = "🔒 " if m.get('is_blocked') else ""
 
+        # Формат: 🔒 Имя @username | 📋5 ✅3
         if username:
-            title = f"{blocked}👤 {_truncate(name, 12)} @{username[:10]} | 📋{total}"
+            title = f"{blocked}{_truncate(name, 12)} @{_truncate(username, 8)} | 📋{total}✅{completed}"
         else:
-            title = f"{blocked}👤 {_truncate(name, 15)} | 📋{total} ✅{completed}"
+            title = f"{blocked}{_truncate(name, 18)} | 📋{total} ✅{completed}"
         ikb.add(InlineKeyboardButton(title, callback_data=f"{CB_ADMIN_MANAGER}{m['id']}"))
 
     ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"))
@@ -312,11 +322,15 @@ def pending_list_inline(users: list) -> InlineKeyboardMarkup:
 
     for u in users:
         name = f"{u.get('first_name', '')} {u.get('last_name', '')}".strip() or "Без имени"
+        username = u.get('username')
         created = u.get('created_at', '')
         if hasattr(created, 'strftime'):
             created = created.strftime('%d.%m %H:%M')
 
-        title = f"⏳ {_truncate(name, 20)} | {created}"
+        if username:
+            title = f"⏳ {_truncate(name, 15)} @{_truncate(username, 10)} | {created}"
+        else:
+            title = f"⏳ {_truncate(name, 20)} | {created}"
         ikb.add(InlineKeyboardButton(title, callback_data=f"pending_user_{u['id']}"))
 
     if not users:
