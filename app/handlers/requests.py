@@ -309,6 +309,9 @@ def register(dp, bot):
 
     # ==================== СМЕНА СТАТУСА ====================
 
+    # Кэш для хранения полных ID заявок по коротким
+    _request_id_cache = {}
+
     async def cb_change_status(call: types.CallbackQuery):
         """Показать меню смены статуса"""
         req_id = call.data[len(CB_CHANGE_STATUS):]
@@ -323,6 +326,10 @@ def register(dp, bot):
 
         if not (is_owner or is_admin):
             return await call.answer("⛔ Нет прав", show_alert=True)
+
+        # Сохраняем полный ID в кэш
+        short_id = str(req_id)[:8]
+        _request_id_cache[short_id] = str(req_id)
 
         # Получаем текущий статус
         payload = get_request_payload(req_id) or {}
@@ -340,16 +347,41 @@ def register(dp, bot):
 
     dp.register_callback_query_handler(cb_change_status, lambda c: c.data and c.data.startswith(CB_CHANGE_STATUS))
 
+    # Маппинг сокращённых статусов на полные
+    STATUS_SHORT_TO_FULL = {
+        "drft": "draft",
+        "cinfo": "collecting_info",
+        "cphot": "collecting_photos",
+        "ready": "ready_to_generate",
+        "queue": "queued",
+        "genng": "generating",
+        "genok": "generated_ok",
+        "gener": "generated_error",
+        "deliv": "delivered",
+        "closd": "closed",
+    }
+
     async def cb_set_status(call: types.CallbackQuery):
         """Установить новый статус"""
-        # Формат: set_status_{req_id}:{status}
-        data = call.data[len(CB_SET_STATUS):]
-        parts = data.split(":")
+        # Формат: ss_{short_id}_{status_key}
+        data = call.data[3:]  # Убираем "ss_"
+        parts = data.split("_")
 
         if len(parts) != 2:
             return await call.answer("❌ Ошибка данных", show_alert=True)
 
-        req_id, new_status = parts
+        short_id, status_key = parts
+
+        # Получаем полный ID из кэша или ищем в БД
+        req_id = _request_id_cache.get(short_id)
+
+        if not req_id:
+            # Пробуем найти по началу UUID
+            from app.db import find_request_by_short_id
+            req_id = find_request_by_short_id(short_id)
+
+        if not req_id:
+            return await call.answer("❌ Заявка не найдена", show_alert=True)
 
         rec = get_request(req_id)
         if not rec:
@@ -362,6 +394,9 @@ def register(dp, bot):
         if not (is_owner or is_admin):
             return await call.answer("⛔ Нет прав", show_alert=True)
 
+        # Конвертируем сокращённый статус в полный
+        new_status = STATUS_SHORT_TO_FULL.get(status_key, status_key)
+
         # Устанавливаем новый статус
         set_request_status(req_id, new_status)
 
@@ -369,7 +404,7 @@ def register(dp, bot):
         if user:
             log_activity(str(user["id"]), "status_changed", "request", req_id, {"new_status": new_status})
 
-        await call.answer(f"✅ Статус изменён на: {STATUS_LABELS.get(new_status, new_status)}", show_alert=True)
+        await call.answer(f"✅ Статус изменён!", show_alert=True)
 
         # Возвращаем к карточке заявки
         rec = get_request(req_id)
@@ -377,7 +412,7 @@ def register(dp, bot):
             txt = format_request_card(rec, show_private=True)
             await call.message.edit_text(txt, reply_markup=request_card_inline(req_id, is_owner, is_admin, new_status))
 
-    dp.register_callback_query_handler(cb_set_status, lambda c: c.data and c.data.startswith(CB_SET_STATUS))
+    dp.register_callback_query_handler(cb_set_status, lambda c: c.data and c.data.startswith("ss_"))
 
     # ==================== В АРХИВ ====================
 

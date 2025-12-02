@@ -491,31 +491,54 @@ def export_options_inline() -> InlineKeyboardMarkup:
 
 def change_status_inline(req_id: str, current_status: str = None) -> InlineKeyboardMarkup:
     """Клавиатура выбора нового статуса"""
-    ikb = InlineKeyboardMarkup(row_width=1)
+    ikb = InlineKeyboardMarkup(row_width=2)
 
-    # Доступные статусы для смены
+    # Сокращаем req_id до первых 8 символов для callback_data
+    short_id = str(req_id)[:8]
+
+    # Доступные статусы для смены (сокращённые ключи)
     statuses = [
-        ("draft", "📝 Черновик"),
-        ("collecting_info", "📋 Сбор информации"),
-        ("collecting_photos", "📷 Загрузка фото"),
-        ("ready_to_generate", "✅ Готова к генерации"),
-        ("queued", "⏳ В очереди"),
-        ("generating", "⚙️ Генерируется"),
-        ("generated_ok", "🎉 Сайт готов"),
-        ("generated_error", "❌ Ошибка генерации"),
-        ("delivered", "📬 Доставлено"),
-        ("closed", "✔️ Закрыта"),
+        ("drft", "📝 Черновик"),
+        ("cinfo", "📋 Сбор инфо"),
+        ("cphot", "📷 Фото"),
+        ("ready", "✅ Готова"),
+        ("queue", "⏳ Очередь"),
+        ("genng", "⚙️ Генерация"),
+        ("genok", "🎉 Готов"),
+        ("gener", "❌ Ошибка"),
+        ("deliv", "📬 Доставлено"),
+        ("closd", "✔️ Закрыта"),
     ]
+
+    # Маппинг сокращённых ключей на полные
+    # (будет использоваться в хэндлере)
 
     for status_key, status_label in statuses:
         # Отмечаем текущий статус
-        if status_key == current_status:
-            label = f"• {status_label} (текущий)"
+        full_status = STATUS_SHORT_TO_FULL.get(status_key, status_key)
+        if full_status == current_status:
+            label = f"• {status_label}"
         else:
             label = status_label
 
-        ikb.add(InlineKeyboardButton(label, callback_data=f"{CB_SET_STATUS}{req_id}:{status_key}"))
+        # Формат: ss_{short_id}_{status_key} (максимум ~20 символов)
+        ikb.add(InlineKeyboardButton(label, callback_data=f"ss_{short_id}_{status_key}"))
 
-    ikb.add(InlineKeyboardButton("⬅️ Назад к заявке", callback_data=f"{CB_OPEN}{req_id}"))
+    ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data=f"{CB_OPEN}{req_id}"))
 
     return ikb
+
+
+# Маппинг сокращённых статусов на полные
+STATUS_SHORT_TO_FULL = {
+    "drft": "draft",
+    "cinfo": "collecting_info",
+    "cphot": "collecting_photos",
+    "ready": "ready_to_generate",
+    "queue": "queued",
+    "genng": "generating",
+    "genok": "generated_ok",
+    "gener": "generated_error",
+    "deliv": "delivered",
+    "closd": "closed",
+}

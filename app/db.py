@@ -657,3 +657,17 @@ def get_managers_stats_for_export() -> List[dict]:
     with get_db() as conn, conn.cursor() as cur:
         cur.execute(Q.GET_MANAGERS_STATS_FOR_EXPORT)
         return cur.fetchall()
+
+
+def find_request_by_short_id(short_id: str) -> Optional[str]:
+    """Найти заявку по началу UUID"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM requests WHERE CAST(id AS TEXT) LIKE %s LIMIT 1",
+                (f"{short_id}%",)
+            )
+            row = cur.fetchone()
+            return str(row["id"]) if row else None
+    except Exception:
+        return None
