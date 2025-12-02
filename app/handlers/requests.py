@@ -11,7 +11,7 @@ from app.constants import (
     BTN_NEW, BTN_MY, BTN_RESET, BTN_ADMIN_LOGIN,
     CB_OPEN, CB_LIST_PAGE, CB_BACK_TO_LIST, CB_DELETE,
     CB_EDIT, CB_EDIT_FIELD, CB_EXPORT_ONE, CB_GEN,
-    EDITABLE_FIELDS,
+    EDITABLE_FIELDS, EDIT_HINTS,
     # статусы
     STATUS_COLLECTING_INFO, STATUS_COLLECTING_PHOTOS, STATUS_READY_TO_GENERATE, STATUS_QUEUED,
 )
@@ -21,7 +21,7 @@ from app.db import (
     get_request_payload,  # читаем payload из БД везде
     set_request_status,   # меняем статус заявки
 )
-from app.keyboards import requests_list_inline, request_card_inline
+from app.keyboards import requests_list_inline, request_card_inline, edit_fields_inline
 from app.utils import (
     e, parse_services, parse_portfolio, parse_testimonials, parse_faq,
     default_seo_title, chunks, convert_uuids_to_strings, has_min_requirements,
@@ -32,72 +32,80 @@ from app.services.n8n import post_generate_site, test_webhook
 log = logging.getLogger("bot")
 
 
+# ------- формат карточки (экспортируем для использования в forms.py) -------
+def format_request_card(rec: dict, show_private: bool = True) -> str:
+    """Рендер карточки заявки из актуального payload_json."""
+    payload = get_request_payload(str(rec["id"])) or {}
+    site = payload.get("site") or {}
+    client_json = payload.get("client") or {}
+
+    services = site.get("services") or []
+    portfolio = site.get("portfolio") or []
+    testimonials = site.get("testimonials") or []
+    faq = site.get("faq") or []
+    structure = site.get("structure") or []
+
+    assets = site.get("assets") or {}
+    images = assets.get("images") or []
+    images_count = len(images)
+
+    # Группировка фото по категориям
+    photo_cats = {}
+    for img in images:
+        cat = img.get("category", "other")
+        photo_cats[cat] = photo_cats.get(cat, 0) + 1
+    photo_summary = ", ".join([f"{cat}: {cnt}" for cat, cnt in photo_cats.items()]) if photo_cats else "нет"
+
+    services_txt = "\n".join(
+        [
+            f"• {e(s.get('name', ''))}"
+            + (f" — {e(s.get('summary', ''))}" if s.get("summary") else "")
+            + (f" — {e(s.get('priceFrom', ''))}" if s.get("priceFrom") else "")
+            for s in services
+        ]
+    ) or "—"
+
+    structure_txt = ", ".join([e(s) for s in structure]) or "—"
+
+    seo = site.get("seo") or {}
+    hero = site.get("hero") or {}
+    has_seo = bool((seo.get("description") or "").strip())
+    has_hero = bool((hero.get("title") or "").strip())
+
+    # приватные поля клиента — только владельцу/админу
+    client_name = rec.get("client_name") or client_json.get("name")
+    client_company = rec.get("client_company") or client_json.get("company")
+    client_contact = rec.get("client_contact") or client_json.get("contact")
+    client_block = (
+        f"Клиент: <b>{e(client_name)}</b>\n"
+        f"Компания клиента: {e(client_company)}\n"
+        f"Контакты клиента: {e(client_contact)}\n\n"
+    ) if show_private else ""
+
+    # статус из payload_json.site.meta.status
+    meta = site.get("meta") or {}
+    status = meta.get("status") or "draft"
+
+    return (
+        f"<b>Заявка #{rec['id']}</b>\n"
+        f"Статус: <i>{e(status)}</i>\n"
+        f"{client_block}"
+        f"<b>Для сайта</b>\n"
+        f"Название компании: {e(site.get('company'))}\n"
+        f"Чем занимаетесь: {e(site.get('business_type'))}\n"
+        f"Цвета: {e(site.get('color_palette'))}\n"
+        f"Контакты: {e(site.get('site_contacts'))}\n"
+        f"Описание компании: {e(site.get('summary'))}\n"
+        f"Режим работы: {e(site.get('work_hours'))}\n"
+        f"Структура: {structure_txt}\n"
+        f"Картинки: {images_count} ({photo_summary})\n"
+        f"Услуги ({len(services)}):\n{services_txt}\n\n"
+        f"Портфолио: {len(portfolio)} | Отзывы: {len(testimonials)} | FAQ: {len(faq)}\n"
+        f"Поисковое описание: {'добавлено' if has_seo else '—'} | Первый экран: {'настроен' if has_hero else '—'}"
+    )
+
+
 def register(dp, bot):
-
-    # ------- формат карточки -------
-    def format_request_card(rec: dict, show_private: bool = True) -> str:
-        """Рендер карточки заявки из актуального payload_json."""
-        payload = get_request_payload(str(rec["id"])) or {}
-        site = payload.get("site") or {}
-        client_json = payload.get("client") or {}
-
-        services = site.get("services") or []
-        portfolio = site.get("portfolio") or []
-        testimonials = site.get("testimonials") or []
-        faq = site.get("faq") or []
-        structure = site.get("structure") or []
-
-        assets = site.get("assets") or {}
-        images = assets.get("images") or []
-        images_count = len(images)
-
-        services_txt = "\n".join(
-            [
-                f"• {e(s.get('name', ''))}"
-                + (f" — {e(s.get('summary', ''))}" if s.get("summary") else "")
-                + (f" — {e(s.get('priceFrom', ''))}" if s.get("priceFrom") else "")
-                for s in services
-            ]
-        ) or "—"
-
-        structure_txt = ", ".join([e(s) for s in structure]) or "—"
-
-        seo = site.get("seo") or {}
-        hero = site.get("hero") or {}
-        has_seo = bool((seo.get("description") or "").strip())
-        has_hero = bool((hero.get("title") or "").strip())
-
-        # приватные поля клиента — только владельцу/админу
-        client_name = rec.get("client_name") or client_json.get("name")
-        client_company = rec.get("client_company") or client_json.get("company")
-        client_contact = rec.get("client_contact") or client_json.get("contact")
-        client_block = (
-            f"Клиент: <b>{e(client_name)}</b>\n"
-            f"Компания клиента: {e(client_company)}\n"
-            f"Контакты клиента: {e(client_contact)}\n\n"
-        ) if show_private else ""
-
-        # статус из payload_json.site.meta.status
-        meta = site.get("meta") or {}
-        status = meta.get("status") or "draft"
-
-        return (
-            f"<b>Заявка #{rec['id']}</b>\n"
-            f"Статус: <i>{e(status)}</i>\n"
-            f"{client_block}"
-            f"<b>Для сайта</b>\n"
-            f"Название компании: {e(site.get('company'))}\n"
-            f"Чем занимаетесь: {e(site.get('business_type'))}\n"
-            f"Цвета: {e(site.get('color_palette'))}\n"
-            f"Контакты: {e(site.get('site_contacts'))}\n"
-            f"Описание компании: {e(site.get('summary'))}\n"
-            f"Режим работы: {e(site.get('work_hours'))}\n"
-            f"Структура: {structure_txt}\n"
-            f"Картинки: {images_count}\n"
-            f"Услуги ({len(services)}):\n{services_txt}\n\n"
-            f"Портфолио: {len(portfolio)} | Отзывы: {len(testimonials)} | FAQ: {len(faq)}\n"
-            f"Поисковое описание: {'добавлено' if has_seo else '—'} | Первый экран: {'настроен' if has_hero else '—'}"
-        )
 
     # ------- /my_requests -------
     async def cmd_my_requests(message: types.Message, state: FSMContext):
@@ -156,12 +164,6 @@ def register(dp, bot):
             txt = format_request_card(rec, show_private=(is_owner or is_admin))
             await call.message.edit_text(txt, reply_markup=request_card_inline(rec["id"], is_owner, is_admin))
 
-            payload = get_request_payload(req_id) or {}
-            site = payload.get("site") or {}
-            need_more = not site.get("portfolio") or not site.get("testimonials") or not site.get("faq")
-            if need_more:
-                from app.keyboards import more_details_inline
-                await call.message.answer("Можно добавить детали:", reply_markup=more_details_inline(rec["id"]))
         except Exception as ex:
             log.exception("cb_open_request failed")
             await call.message.answer(f"⚠️ Ошибка открытия: {ex}")
@@ -194,7 +196,7 @@ def register(dp, bot):
 
     dp.register_callback_query_handler(cb_delete_request, lambda c: c.data and c.data.startswith(CB_DELETE))
 
-    # ------- edit -------
+    # ------- edit (показываем ВСЕ поля) -------
     async def cb_edit_request(call: types.CallbackQuery):
         req_id = call.data[len(CB_EDIT):]
         rec = get_request(req_id)
@@ -205,17 +207,23 @@ def register(dp, bot):
         is_owner = bool(user and rec.get("manager_id") and str(rec["manager_id"]) == str(user["id"]))
         if not (is_admin or is_owner):
             return await call.answer("Нет прав на редактирование.", show_alert=True)
-        from app.keyboards import edit_fields_inline
+
         await call.message.edit_text(
-            f"Редактирование заявки #{rec['id']}: выберите поле ниже.",
+            f"✏️ <b>Редактирование заявки #{rec['id']}</b>\n\n"
+            "Выберите поле для изменения:",
             reply_markup=edit_fields_inline(rec["id"])
         )
 
-    dp.register_callback_query_handler(cb_edit_request, lambda c: c.data and c.data.startswith(CB_EDIT))
+    dp.register_callback_query_handler(cb_edit_request, lambda c: c.data and c.data.startswith(CB_EDIT) and not c.data.startswith(CB_EDIT_FIELD))
 
+    # ------- edit field -------
     async def cb_edit_field(call: types.CallbackQuery, state: FSMContext):
         payload = call.data[len(CB_EDIT_FIELD):]
-        req_id, field = payload.split("_", 1)
+        parts = payload.split("_", 1)
+        if len(parts) != 2:
+            return await call.answer("Ошибка формата данных", show_alert=True)
+
+        req_id, field = parts
         rec = get_request(req_id)
         if not rec:
             return await call.message.edit_text("Заявка не найдена.")
@@ -226,12 +234,32 @@ def register(dp, bot):
             return await call.answer("Нет прав на редактирование.", show_alert=True)
 
         title = EDITABLE_FIELDS.get(field, field)
+        hint = EDIT_HINTS.get(field, f"Введите новое значение для: <b>{title}</b>")
+
+        # Показываем текущее значение
+        payload_data = get_request_payload(req_id) or {}
+        site = payload_data.get("site") or {}
+
+        current_value = ""
+        if field == "seo_description":
+            current_value = (site.get("seo") or {}).get("description", "")
+        elif field == "hero_title":
+            current_value = (site.get("hero") or {}).get("title", "")
+        elif field == "hero_subtitle":
+            current_value = (site.get("hero") or {}).get("subtitle", "")
+        elif field in ("services", "portfolio", "testimonials", "faq"):
+            items = site.get(field) or []
+            current_value = f"({len(items)} записей)"
+        else:
+            current_value = site.get(field, "")
+
         await state.update_data(edit_req_id=req_id, edit_field=field)
         await EditField.waiting_value.set()
+
+        current_txt = f"\n\n📋 Текущее значение: <i>{e(current_value)}</i>" if current_value else ""
+
         await call.message.edit_text(
-            f"Введите новое значение для: <b>{title}</b>\n\n"
-            f"Если «Структура» — перечислите секции через запятую.\n"
-            f"Если «Услуги» — по одной строке: Название — кратко — от цена."
+            f"✏️ <b>{title}</b>{current_txt}\n\n{hint}"
         )
 
     dp.register_callback_query_handler(cb_edit_field, lambda c: c.data and c.data.startswith(CB_EDIT_FIELD))
@@ -257,28 +285,60 @@ def register(dp, bot):
         site_json = payload.get("site") or {}
         val = (message.text or "").strip()
 
+        # Валидация
+        if not val:
+            return await message.answer("❌ Значение не может быть пустым. Введите ещё раз:")
+
         if field == "structure":
             site_json["structure"] = [s.strip() for s in val.replace(";", ",").split(",") if s.strip()]
         elif field == "services":
-            site_json["services"] = parse_services(val)
+            services = parse_services(val)
+            if not services:
+                return await message.answer("❌ Не удалось распознать услуги. Введите по формату: <i>Название — кратко — от цена</i>")
+            site_json["services"] = services
         elif field == "portfolio":
-            site_json["portfolio"] = parse_portfolio(val)
+            portfolio = parse_portfolio(val)
+            if not portfolio:
+                return await message.answer("❌ Не удалось распознать портфолио. Введите по формату.")
+            site_json["portfolio"] = portfolio
         elif field == "testimonials":
-            site_json["testimonials"] = parse_testimonials(val)
+            testimonials = parse_testimonials(val)
+            if not testimonials:
+                return await message.answer("❌ Не удалось распознать отзывы. Введите по формату.")
+            site_json["testimonials"] = testimonials
         elif field == "faq":
-            site_json["faq"] = parse_faq(val)
+            faq = parse_faq(val)
+            if not faq:
+                return await message.answer("❌ Не удалось распознать FAQ. Введите по формату: <i>Вопрос — Ответ</i>")
+            site_json["faq"] = faq
         elif field == "seo_description":
+            if len(val) < 10:
+                return await message.answer("❌ Описание слишком короткое (минимум 10 символов).")
             site_json.setdefault("seo", {})["description"] = val
             site_json["seo"]["title"] = default_seo_title(site_json.get("company", ""), site_json.get("business_type", ""))
         elif field == "hero_title":
+            if len(val) < 3:
+                return await message.answer("❌ Заголовок слишком короткий (минимум 3 символа).")
             site_json.setdefault("hero", {})["title"] = val
             site_json["hero"].setdefault("primaryCta", {"label": "Оставить заявку", "href": "#contact"})
             site_json["hero"].setdefault("secondaryCta", {"label": "Портфолио", "href": "#portfolio"})
             site_json["hero"].setdefault("image", "/public/illustrations/hero.svg")
         elif field == "hero_subtitle":
+            if len(val) < 5:
+                return await message.answer("❌ Подзаголовок слишком короткий (минимум 5 символов).")
             site_json.setdefault("hero", {})["subtitle"] = val
         elif field in {"summary", "short_desc"}:
+            if len(val) < 10:
+                return await message.answer("❌ Описание слишком короткое (минимум 10 символов).")
             site_json["summary"] = val
+        elif field == "company":
+            if len(val) < 2:
+                return await message.answer("❌ Название компании слишком короткое (минимум 2 символа).")
+            site_json["company"] = val
+        elif field == "work_hours":
+            if len(val) < 3:
+                return await message.answer("❌ Режим работы слишком короткий.")
+            site_json["work_hours"] = val
         else:
             # универсально для простых полей site.*
             site_json[field] = val

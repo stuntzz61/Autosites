@@ -47,7 +47,12 @@ CB_MORE_TESTI="more_testi_"
 CB_MORE_FAQ="more_faq_"
 CB_MORE_SEO="more_seo_"
 CB_MORE_HERO="more_hero_"
-CB_DONE="more_done"
+CB_DONE="more_done_"  # теперь с req_id
+
+# Фото категории
+CB_PHOTO_CAT="photo_cat_"
+CB_PHOTO_DONE="photo_done_"
+CB_PHOTO_CATS="photo_cats_"
 
 # Редактируемые поля
 EDITABLE_FIELDS = {
@@ -67,12 +72,49 @@ EDITABLE_FIELDS = {
     "hero_title":"Заголовок на первом экране",
     "hero_subtitle":"Короткое описание под заголовком"
 }
-# app/constants.py
 
+# Подсказки для редактирования полей
+EDIT_HINTS = {
+    "company": "Введите <b>название компании</b>:",
+    "business_type": "Введите <b>чем вы занимаетесь</b> (например: производственная компания):",
+    "color_palette": "Введите <b>пожелания по цветам</b> (например: синий, белый, серый):",
+    "site_contacts": "Укажите <b>контакты/адреса для сайта</b> (телефон, email, адрес):",
+    "summary": "Опишите <b>компанию в 2–3 предложениях</b>:",
+    "work_hours": "Введите <b>режим работы</b> (например: Пн-Пт 9:00-18:00):",
+    "structure": "Секции сайта через запятую (например: Hero, О нас, Услуги, Портфолио, Отзывы, Контакты):",
+    "services": "Введите <b>услуги</b> — по одной в строке: <i>Название — кратко — от цена</i>.",
+    "portfolio": "Портфолио — по одной строке: <i>Проект — клиент — год — кратко — теги «;» — опц.ссылка</i>.",
+    "testimonials": "Отзывы — по одной строке: <i>Имя — Компания/Роль — цитата — опц.оценка 1-5</i>.",
+    "faq": "FAQ — по одной строке: <i>Вопрос — Ответ</i>.",
+    "seo_description": "Описание для поисковиков (1–2 предложения).",
+    "hero_title": "Заголовок на первом экране:",
+    "hero_subtitle": "Короткое описание под заголовком:",
+}
+
+# Статусы заявок
 STATUS_DRAFT = "draft"
 STATUS_COLLECTING_INFO = "collecting_info"
 STATUS_COLLECTING_PHOTOS = "collecting_photos"
 STATUS_READY_TO_GENERATE = "ready_to_generate"
 STATUS_QUEUED = "queued"
-STATUS_GENERATED_OK = "generated_ok"       # опционально
-STATUS_GENERATED_ERROR = "generated_error" # опционально
+STATUS_GENERATED_OK = "generated_ok"
+STATUS_GENERATED_ERROR = "generated_error"
+
+# Дефолтная структура сайта
+DEFAULT_STRUCTURE = ["Hero", "О нас", "Услуги", "Портфолио", "Отзывы", "Контакты", "Карта"]
+
+# Категории фото
+PHOTO_CATEGORIES = {
+    "hero": "🏠 Главное фото (Hero)",
+    "services": "🛠 Фото услуг",
+    "portfolio": "📁 Фото портфолио",
+    "team": "👥 Фото команды",
+    "office": "🏢 Фото офиса/производства",
+    "other": "📷 Другие фото",
+}
+
+# Валидация
+MIN_COMPANY_NAME_LEN = 2
+MAX_COMPANY_NAME_LEN = 100
+MIN_DESCRIPTION_LEN = 10
+MAX_DESCRIPTION_LEN = 500

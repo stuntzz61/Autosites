@@ -16,7 +16,7 @@ class RequestForm(StatesGroup):
     site_contacts = State()
     short_desc = State()
     work_hours = State()
-    structure = State()
+    # structure убран из анкеты - будет по умолчанию
     images = State()
     services = State()
     portfolio = State()
@@ -31,3 +31,8 @@ class AdminLogin(StatesGroup):
 
 class EditField(StatesGroup):
     waiting_value = State()
+
+class PhotoUpload(StatesGroup):
+    """Пошаговая загрузка фото по категориям"""
+    choosing_category = State()  # Выбор категории фото
+    uploading = State()  # Загрузка фото в выбранную категорию
