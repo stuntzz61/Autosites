@@ -6,13 +6,15 @@ import time
 from app.config import ADMIN_PASSWORD
 from app.constants import (
     GUEST_CMDS, MANAGER_CMDS, ADMIN_CMDS, DEBUG_CMDS,
-    BTN_REG, BTN_ADMIN_LOGIN, BTN_NEW, BTN_MY, BTN_RESET,
-    BTN_PANEL, BTN_USERS, BTN_REQS, BTN_LOGOUT,
+    BTN_REG, BTN_ADMIN_LOGIN, BTN_NEW, BTN_MY, BTN_ARCHIVE, BTN_RESET,
+    BTN_PANEL, BTN_STATS, BTN_MANAGERS, BTN_USERS, BTN_REQS, BTN_LOGOUT,
     MSG_WELCOME_GUEST, MSG_WELCOME_MANAGER, MSG_WELCOME_ADMIN, MSG_REG_COMPLETE,
+    MSG_BLOCKED_USER,
 )
 from app.db import (
     init_db, get_user_by_tgid, get_mode, set_mode,
     admin_counts, admin_users, list_all_requests, count_all_requests,
+    is_manager_blocked, log_activity,
 )
 from app.states import RegForm, AdminLogin
 
@@ -36,7 +38,7 @@ def register(dp, bot):
         try:
             await bot.set_my_commands(cmds, scope=types.BotCommandScopeChat(chat_id), language_code=lang)
         except Exception:
-            pass  # Игнорируем ошибки установки команд
+            pass
 
     def require_admin(handler):
         """Декоратор для проверки прав администратора"""
@@ -49,6 +51,22 @@ def register(dp, bot):
             return await handler(message, *args, **kwargs)
         return wrapper
 
+    def get_manager_keyboard():
+        """Клавиатура менеджера"""
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(BTN_NEW)
+        kb.add(BTN_MY, BTN_ARCHIVE)
+        kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
+        return kb
+
+    def get_admin_keyboard():
+        """Клавиатура администратора"""
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(BTN_PANEL, BTN_STATS)
+        kb.add(BTN_MANAGERS, BTN_REQS)
+        kb.add(BTN_LOGOUT)
+        return kb
+
     # ==================== /start ====================
 
     async def cmd_start(message: types.Message):
@@ -57,6 +75,12 @@ def register(dp, bot):
         is_reg = bool(user)
         mode = get_mode(message.from_user.id)
 
+        # Проверка блокировки
+        if is_reg and mode == "manager" and is_manager_blocked(message.from_user.id):
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(BTN_ADMIN_LOGIN)
+            return await message.answer(MSG_BLOCKED_USER, reply_markup=kb)
+
         if is_reg and mode != "admin":
             set_mode(message.from_user.id, "manager")
             mode = "manager"
@@ -64,17 +88,9 @@ def register(dp, bot):
         await set_scope_cmds(message.chat.id, mode, is_reg, message.from_user.language_code)
 
         if mode == "admin":
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_PANEL)
-            kb.add(BTN_USERS, BTN_REQS)
-            kb.add(BTN_LOGOUT)
-            await message.answer(MSG_WELCOME_ADMIN, reply_markup=kb)
+            await message.answer(MSG_WELCOME_ADMIN, reply_markup=get_admin_keyboard())
         elif is_reg:
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_NEW)
-            kb.add(BTN_MY)
-            kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
-            await message.answer(MSG_WELCOME_MANAGER, reply_markup=kb)
+            await message.answer(MSG_WELCOME_MANAGER, reply_markup=get_manager_keyboard())
         else:
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add(BTN_REG, BTN_ADMIN_LOGIN)
@@ -103,11 +119,20 @@ def register(dp, bot):
     async def cmd_myid(message: types.Message):
         """Показать ID пользователя"""
         user = message.from_user
+        db_user = get_user_by_tgid(user.id)
+        mode = get_mode(user.id)
+
+        status = "Администратор" if mode == "admin" else "Менеджер" if db_user else "Гость"
+        blocked = ""
+        if db_user and is_manager_blocked(user.id):
+            blocked = "\n⚠️ Статус: Заблокирован"
+
         await message.answer(
             f"👤 <b>Информация о пользователе</b>\n\n"
-            f"ID: <code>{user.id}</code>\n"
-            f"Username: @{user.username or '—'}\n"
-            f"Имя: {user.first_name or '—'} {user.last_name or ''}"
+            f"🆔 ID: <code>{user.id}</code>\n"
+            f"👤 Username: @{user.username or '—'}\n"
+            f"📝 Имя: {user.first_name or '—'} {user.last_name or ''}\n"
+            f"🔑 Роль: {status}{blocked}"
         )
 
     dp.register_message_handler(cmd_myid, commands=["myid"], state="*")
@@ -116,24 +141,22 @@ def register(dp, bot):
 
     async def cmd_register(message: types.Message):
         if get_mode(message.from_user.id) == "admin":
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_PANEL)
-            kb.add(BTN_USERS, BTN_REQS)
-            kb.add(BTN_LOGOUT)
             return await message.answer(
                 "Вы находитесь в режиме администратора.\n"
                 "Для регистрации сначала выйдите из админки.",
-                reply_markup=kb
+                reply_markup=get_admin_keyboard()
             )
 
         user = get_user_by_tgid(message.from_user.id)
         if user:
+            # Проверка блокировки
+            if is_manager_blocked(message.from_user.id):
+                kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                kb.add(BTN_ADMIN_LOGIN)
+                return await message.answer(MSG_BLOCKED_USER, reply_markup=kb)
+
             set_mode(message.from_user.id, "manager")
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_NEW)
-            kb.add(BTN_MY)
-            kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
-            return await message.answer("Вы уже зарегистрированы в системе.", reply_markup=kb)
+            return await message.answer("Вы уже зарегистрированы в системе.", reply_markup=get_manager_keyboard())
 
         await RegForm.first_name.set()
         await message.answer(
@@ -189,11 +212,12 @@ def register(dp, bot):
             await state.finish()
             await set_scope_cmds(message.chat.id, "manager", True, message.from_user.language_code)
 
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_NEW)
-            kb.add(BTN_MY)
-            kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
-            await message.answer(MSG_REG_COMPLETE, reply_markup=kb)
+            # Логируем регистрацию
+            user = get_user_by_tgid(message.from_user.id)
+            if user:
+                log_activity(str(user["id"]), "user_registered", "user", str(user["id"]))
+
+            await message.answer(MSG_REG_COMPLETE, reply_markup=get_manager_keyboard())
 
         except Exception:
             await state.finish()
@@ -208,11 +232,7 @@ def register(dp, bot):
 
     async def cmd_admin_login(message: types.Message, state: FSMContext):
         if get_mode(message.from_user.id) == "admin":
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_PANEL)
-            kb.add(BTN_USERS, BTN_REQS)
-            kb.add(BTN_LOGOUT)
-            return await message.answer("Вы уже авторизованы как администратор.", reply_markup=kb)
+            return await message.answer("Вы уже авторизованы как администратор.", reply_markup=get_admin_keyboard())
 
         await AdminLogin.password.set()
         await message.answer(
@@ -225,7 +245,7 @@ def register(dp, bot):
     dp.register_message_handler(cmd_admin_login, lambda m: m.text == BTN_ADMIN_LOGIN, state="*")
 
     async def admin_check_pass(message: types.Message, state: FSMContext):
-        # Удаляем сообщение с паролем для безопасности
+        # Удаляем сообщение с паролем
         try:
             await message.delete()
         except Exception:
@@ -239,11 +259,12 @@ def register(dp, bot):
         await state.finish()
         await set_scope_cmds(message.chat.id, "admin", True, message.from_user.language_code)
 
-        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(BTN_PANEL)
-        kb.add(BTN_USERS, BTN_REQS)
-        kb.add(BTN_LOGOUT)
-        await message.answer("✅ Авторизация успешна. Режим администратора включён.", reply_markup=kb)
+        # Логируем вход
+        user = get_user_by_tgid(message.from_user.id)
+        if user:
+            log_activity(str(user["id"]), "admin_login", "user", str(user["id"]))
+
+        await message.answer("✅ Авторизация успешна. Режим администратора включён.", reply_markup=get_admin_keyboard())
 
     dp.register_message_handler(admin_check_pass, state=AdminLogin.password)
 
@@ -254,87 +275,12 @@ def register(dp, bot):
         set_mode(message.from_user.id, "manager")
         await set_scope_cmds(message.chat.id, "manager", True, message.from_user.language_code)
 
-        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(BTN_NEW)
-        kb.add(BTN_MY)
-        kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
-        await message.answer("✅ Вы вышли из режима администратора.", reply_markup=kb)
+        # Логируем выход
+        user = get_user_by_tgid(message.from_user.id)
+        if user:
+            log_activity(str(user["id"]), "admin_logout", "user", str(user["id"]))
+
+        await message.answer("✅ Вы вышли из режима администратора.", reply_markup=get_manager_keyboard())
 
     dp.register_message_handler(cmd_logout, commands=["logout"], state="*")
     dp.register_message_handler(cmd_logout, lambda m: m.text == BTN_LOGOUT, state="*")
-
-    # ==================== АДМИН-ПАНЕЛЬ ====================
-
-    @require_admin
-    async def cmd_admin_panel(message: types.Message):
-        users_count, reqs_count = admin_counts()
-        await message.answer(
-            "📊 <b>Панель администратора</b>\n\n"
-            f"👥 Пользователей: <b>{users_count}</b>\n"
-            f"📋 Заявок: <b>{reqs_count}</b>\n\n"
-            "<b>Команды:</b>\n"
-            "• 👥 Пользователи — список всех пользователей\n"
-            "• 📦 Все заявки — список всех заявок\n"
-            "• /export_request <id> — экспорт заявки\n"
-            "• /export_all — экспорт всех заявок\n"
-            "• 🚪 Выход — выйти из режима админа"
-        )
-
-    dp.register_message_handler(cmd_admin_panel, commands=["admin_panel"], state="*")
-    dp.register_message_handler(cmd_admin_panel, lambda m: m.text == BTN_PANEL, state="*")
-
-    @require_admin
-    async def cmd_admin_users(message: types.Message):
-        rows = admin_users()
-        if not rows:
-            return await message.answer("Пользователей пока нет.")
-
-        from app.utils import e, chunks
-        lines = []
-        for u in rows:
-            name = f"{(u.get('first_name') or '')} {(u.get('last_name') or '')}".strip() or "—"
-            role = u.get('role', 'guest')
-            role_emoji = "👑" if role == "admin" else "👤"
-            lines.append(
-                f"{role_emoji} <b>{e(name)}</b>\n"
-                f"   📱 {e(u.get('contact') or '—')} | ID: <code>{u.get('tg_id')}</code>"
-            )
-
-        for part in chunks("\n\n".join(lines)):
-            await message.answer(part)
-
-    dp.register_message_handler(cmd_admin_users, commands=["admin_users"], state="*")
-    dp.register_message_handler(cmd_admin_users, lambda m: m.text == BTN_USERS, state="*")
-
-    @require_admin
-    async def cmd_admin_requests(message: types.Message):
-        total = count_all_requests()
-        if total == 0:
-            return await message.answer("Заявок пока нет.")
-
-        rows = list_all_requests(0, 20)
-        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-        from app.constants import CB_OPEN
-        from app.keyboards import _truncate
-
-        ikb = InlineKeyboardMarkup(row_width=1)
-        for r in rows:
-            company = _truncate(r.get('company_name') or '', 20)
-            client = _truncate(r.get('client_name') or '', 15)
-
-            if company and client:
-                title = f"🏢 {company} • {client}"
-            elif company:
-                title = f"🏢 {company}"
-            elif client:
-                title = f"👤 {client}"
-            else:
-                req_id = str(r['id'])[:8]
-                title = f"📋 Заявка {req_id}..."
-
-            ikb.add(InlineKeyboardButton(title, callback_data=f"{CB_OPEN}{r['id']}"))
-
-        await message.answer(f"📦 <b>Все заявки</b> ({total})\n\nВыберите заявку:", reply_markup=ikb)
-
-    dp.register_message_handler(cmd_admin_requests, commands=["admin_requests"], state="*")
-    dp.register_message_handler(cmd_admin_requests, lambda m: m.text == BTN_REQS, state="*")

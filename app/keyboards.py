@@ -4,9 +4,11 @@ from app.constants import (
     CB_OPEN, CB_LIST_PAGE, CB_BACK_TO_LIST,
     CB_EDIT, CB_DELETE, CB_EXPORT_ONE, CB_GEN,
     CB_MORE_PORTF, CB_MORE_TESTI, CB_MORE_FAQ, CB_MORE_SEO, CB_MORE_HERO, CB_DONE,
-    CB_EDIT_FIELD, CB_PHOTO_CAT,
-    PHOTO_CATEGORIES,
+    CB_EDIT_FIELD, CB_PHOTO_CAT, CB_ARCHIVE_REQ, CB_CLOSE_REQ,
+    CB_ADMIN_MANAGER, CB_ADMIN_BLOCK, CB_ADMIN_UNBLOCK, CB_ADMIN_STATS,
+    PHOTO_CATEGORIES, STATUS_LABELS,
     BTN_BACK, BTN_EXIT, BTN_SKIP,
+    get_company_emoji,
 )
 
 
@@ -18,24 +20,36 @@ def _truncate(text: str, max_len: int = 25) -> str:
 
 
 def requests_list_inline(reqs: List[dict], page: int, total: int, per_page: int = 10) -> InlineKeyboardMarkup:
-    """Список заявок с компанией и именем клиента"""
+    """Список заявок с эмодзи компании"""
     ikb = InlineKeyboardMarkup(row_width=1)
 
     for r in reqs:
-        # Формируем удобное название: компания | клиент
-        company = _truncate(r.get('company_name') or '', 20)
-        client = _truncate(r.get('client_name') or '', 15)
+        company = _truncate(r.get('company_name') or '', 18)
+        client = _truncate(r.get('client_name') or '', 12)
+        business_type = r.get('business_type') or ''
+        status = r.get('status') or ''
+
+        # Эмодзи по типу бизнеса
+        emoji = get_company_emoji(company, business_type)
+
+        # Индикатор статуса
+        status_indicator = ""
+        if status == "generated_ok":
+            status_indicator = " ✅"
+        elif status == "generating" or status == "queued":
+            status_indicator = " ⏳"
+        elif status == "generated_error":
+            status_indicator = " ❌"
 
         if company and client:
-            title = f"🏢 {company} • {client}"
+            title = f"{emoji} {company} • {client}{status_indicator}"
         elif company:
-            title = f"🏢 {company}"
+            title = f"{emoji} {company}{status_indicator}"
         elif client:
-            title = f"👤 {client}"
+            title = f"👤 {client}{status_indicator}"
         else:
-            # Fallback: короткий ID
             req_id = str(r['id'])[:8]
-            title = f"📋 Заявка {req_id}..."
+            title = f"📋 {req_id}...{status_indicator}"
 
         ikb.add(InlineKeyboardButton(title, callback_data=f"{CB_OPEN}{r['id']}"))
 
@@ -53,19 +67,31 @@ def requests_list_inline(reqs: List[dict], page: int, total: int, per_page: int 
     return ikb
 
 
-def request_card_inline(req_id: Any, is_owner: bool, is_admin: bool) -> InlineKeyboardMarkup:
-    """Карточка заявки с действиями"""
+def request_card_inline(req_id: Any, is_owner: bool, is_admin: bool, status: str = None) -> InlineKeyboardMarkup:
+    """Карточка заявки с действиями в зависимости от статуса"""
     ikb = InlineKeyboardMarkup(row_width=2)
 
     if is_owner or is_admin:
+        # Основные действия
         ikb.add(
             InlineKeyboardButton("✏️ Редактировать", callback_data=f"{CB_EDIT}{req_id}"),
-            InlineKeyboardButton("🗑 Удалить", callback_data=f"{CB_DELETE}{req_id}"),
-        )
-        ikb.add(
             InlineKeyboardButton("📤 Экспорт", callback_data=f"{CB_EXPORT_ONE}{req_id}"),
-            InlineKeyboardButton("⚙️ Сгенерировать", callback_data=f"{CB_GEN}{req_id}"),
         )
+
+        # Действия в зависимости от статуса
+        if status in ("ready_to_generate", "collecting_photos", "draft"):
+            ikb.add(InlineKeyboardButton("⚙️ Сгенерировать сайт", callback_data=f"{CB_GEN}{req_id}"))
+        elif status == "generated_ok":
+            ikb.add(
+                InlineKeyboardButton("✔️ Закрыть заявку", callback_data=f"{CB_CLOSE_REQ}{req_id}"),
+                InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"),
+            )
+        elif status in ("closed", "delivered"):
+            ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
+
+        # Удаление (не для завершённых)
+        if status not in ("generated_ok", "closed", "delivered", "archived"):
+            ikb.add(InlineKeyboardButton("🗑 Удалить", callback_data=f"{CB_DELETE}{req_id}"))
 
     ikb.add(InlineKeyboardButton("⬅️ К списку заявок", callback_data=CB_BACK_TO_LIST))
 
@@ -100,7 +126,7 @@ def edit_fields_inline(req_id: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton("💼 Сфера", callback_data=f"{CB_EDIT_FIELD}{req_id}_business_type"),
     )
 
-    # Контакты (разделены)
+    # Контакты
     ikb.add(
         InlineKeyboardButton("📞 Телефон", callback_data=f"{CB_EDIT_FIELD}{req_id}_phone"),
         InlineKeyboardButton("📧 Email", callback_data=f"{CB_EDIT_FIELD}{req_id}_email"),
@@ -131,12 +157,7 @@ def edit_fields_inline(req_id: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton("🔍 SEO", callback_data=f"{CB_EDIT_FIELD}{req_id}_seo_description"),
         InlineKeyboardButton("🏠 Заголовок", callback_data=f"{CB_EDIT_FIELD}{req_id}_hero_title"),
     )
-    ikb.add(
-        InlineKeyboardButton("📄 Подзаголовок", callback_data=f"{CB_EDIT_FIELD}{req_id}_hero_subtitle"),
-        InlineKeyboardButton("📐 Структура", callback_data=f"{CB_EDIT_FIELD}{req_id}_structure"),
-    )
 
-    # Назад
     ikb.add(InlineKeyboardButton("⬅️ Назад к заявке", callback_data=f"{CB_OPEN}{req_id}"))
 
     return ikb
@@ -147,7 +168,6 @@ def photo_categories_inline(req_id: str) -> InlineKeyboardMarkup:
     ikb = InlineKeyboardMarkup(row_width=2)
 
     cats = list(PHOTO_CATEGORIES.items())
-    # Парами
     for i in range(0, len(cats), 2):
         row = []
         for j in range(2):
@@ -184,11 +204,70 @@ def form_navigation_keyboard(can_skip: bool = False) -> ReplyKeyboardMarkup:
     return kb
 
 
-def confirm_keyboard() -> InlineKeyboardMarkup:
-    """Клавиатура подтверждения"""
+# ==================== ADMIN KEYBOARDS ====================
+
+def admin_main_inline() -> InlineKeyboardMarkup:
+    """Главное меню админа"""
+    ikb = InlineKeyboardMarkup(row_width=2)
+
+    ikb.add(
+        InlineKeyboardButton("📈 Статистика", callback_data="admin_stats"),
+        InlineKeyboardButton("👥 Менеджеры", callback_data="admin_managers"),
+    )
+    ikb.add(
+        InlineKeyboardButton("📦 Все заявки", callback_data="admin_requests"),
+        InlineKeyboardButton("📋 Лог действий", callback_data="admin_log"),
+    )
+    ikb.add(
+        InlineKeyboardButton("📊 Отчёт за неделю", callback_data="admin_weekly"),
+        InlineKeyboardButton("📤 Экспорт всего", callback_data="admin_export"),
+    )
+
+    return ikb
+
+
+def admin_managers_list_inline(managers: List[dict], page: int = 1) -> InlineKeyboardMarkup:
+    """Список менеджеров для админа"""
+    ikb = InlineKeyboardMarkup(row_width=1)
+
+    for m in managers:
+        name = f"{m.get('first_name', '')} {m.get('last_name', '')}".strip() or "Без имени"
+        total = m.get('total_requests', 0)
+        completed = m.get('completed_requests', 0)
+        blocked = "🔒" if m.get('is_blocked') else ""
+
+        title = f"{blocked}👤 {_truncate(name, 15)} | 📋{total} ✅{completed}"
+        ikb.add(InlineKeyboardButton(title, callback_data=f"{CB_ADMIN_MANAGER}{m['id']}"))
+
+    ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"))
+
+    return ikb
+
+
+def admin_manager_card_inline(manager_id: str, is_blocked: bool) -> InlineKeyboardMarkup:
+    """Карточка менеджера для админа"""
+    ikb = InlineKeyboardMarkup(row_width=2)
+
+    ikb.add(
+        InlineKeyboardButton("📊 Статистика", callback_data=f"{CB_ADMIN_STATS}{manager_id}"),
+        InlineKeyboardButton("📋 Заявки", callback_data=f"admin_mgr_reqs_{manager_id}"),
+    )
+
+    if is_blocked:
+        ikb.add(InlineKeyboardButton("🔓 Разблокировать", callback_data=f"{CB_ADMIN_UNBLOCK}{manager_id}"))
+    else:
+        ikb.add(InlineKeyboardButton("🔒 Заблокировать", callback_data=f"{CB_ADMIN_BLOCK}{manager_id}"))
+
+    ikb.add(InlineKeyboardButton("⬅️ К списку", callback_data="admin_managers"))
+
+    return ikb
+
+
+def confirm_action_inline(action: str, entity_id: str) -> InlineKeyboardMarkup:
+    """Подтверждение действия"""
     ikb = InlineKeyboardMarkup(row_width=2)
     ikb.add(
-        InlineKeyboardButton("✅ Подтвердить", callback_data="confirm_yes"),
-        InlineKeyboardButton("❌ Отмена", callback_data="confirm_no"),
+        InlineKeyboardButton("✅ Да", callback_data=f"confirm_{action}_{entity_id}"),
+        InlineKeyboardButton("❌ Нет", callback_data=f"cancel_{action}_{entity_id}"),
     )
     return ikb

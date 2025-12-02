@@ -17,17 +17,18 @@ MANAGER_CMDS = [
     types.BotCommand("start", "Главное меню"),
     types.BotCommand("new_request", "Создать заявку"),
     types.BotCommand("my_requests", "Мои заявки"),
+    types.BotCommand("archive", "Архив заявок"),
     types.BotCommand("reset", "Отменить текущую форму"),
-    types.BotCommand("admin_login", "Вход для администратора"),
 ]
 
 ADMIN_CMDS = [
     types.BotCommand("start", "Главное меню"),
     types.BotCommand("admin_panel", "Панель управления"),
-    types.BotCommand("admin_users", "Список пользователей"),
-    types.BotCommand("admin_requests", "Список заявок"),
-    types.BotCommand("export_request", "Экспорт заявки"),
+    types.BotCommand("stats", "Статистика"),
+    types.BotCommand("managers", "Управление менеджерами"),
+    types.BotCommand("all_requests", "Все заявки"),
     types.BotCommand("export_all", "Экспорт всех заявок"),
+    types.BotCommand("broadcast", "Рассылка"),
     types.BotCommand("logout", "Выход из админки"),
 ]
 
@@ -40,11 +41,14 @@ BTN_ADMIN_LOGIN = "🔐 Вход для администратора"
 # Менеджер
 BTN_NEW = "➕ Новая заявка"
 BTN_MY = "📋 Мои заявки"
+BTN_ARCHIVE = "🗄 Архив"
 BTN_RESET = "❌ Отмена"
 
 # Админ
 BTN_PANEL = "📊 Панель управления"
-BTN_USERS = "👥 Пользователи"
+BTN_STATS = "📈 Статистика"
+BTN_MANAGERS = "👥 Менеджеры"
+BTN_USERS = "👤 Пользователи"
 BTN_REQS = "📦 Все заявки"
 BTN_LOGOUT = "🚪 Выход"
 
@@ -64,6 +68,11 @@ CB_LIST_PAGE = "plist_"
 CB_EXPORT_ONE = "exp_"
 CB_GEN = "gen_"
 
+# Статусы
+CB_SET_STATUS = "set_status_"
+CB_ARCHIVE_REQ = "archive_"
+CB_CLOSE_REQ = "close_"
+
 # Доп. детали
 CB_MORE = "more_"
 CB_MORE_PORTF = "more_portf_"
@@ -77,6 +86,13 @@ CB_DONE = "more_done_"
 CB_PHOTO_CAT = "photo_cat_"
 CB_PHOTO_DONE = "photo_done_"
 CB_PHOTO_CATS = "photo_cats_"
+
+# Админ
+CB_ADMIN_MANAGER = "adm_mgr_"
+CB_ADMIN_BLOCK = "adm_block_"
+CB_ADMIN_UNBLOCK = "adm_unblock_"
+CB_ADMIN_STATS = "adm_stats_"
+CB_ADMIN_REQUESTS = "adm_reqs_"
 
 # ==================== РЕДАКТИРУЕМЫЕ ПОЛЯ ====================
 
@@ -99,7 +115,6 @@ EDITABLE_FIELDS = {
     "hero_subtitle": "Подзаголовок главной",
 }
 
-# Подсказки для редактирования полей
 EDIT_HINTS = {
     "company": "Введите <b>название компании</b>:",
     "business_type": "Опишите <b>сферу деятельности</b> (например: строительная компания, IT-услуги):",
@@ -129,18 +144,99 @@ STATUS_QUEUED = "queued"
 STATUS_GENERATING = "generating"
 STATUS_GENERATED_OK = "generated_ok"
 STATUS_GENERATED_ERROR = "generated_error"
+STATUS_DELIVERED = "delivered"      # Сайт доставлен клиенту
+STATUS_CLOSED = "closed"            # Заявка закрыта
+STATUS_ARCHIVED = "archived"        # В архиве
+STATUS_CANCELLED = "cancelled"      # Отменена
 
-# Читаемые статусы
+# Читаемые статусы с эмодзи
 STATUS_LABELS = {
-    STATUS_DRAFT: "Черновик",
-    STATUS_COLLECTING_INFO: "Сбор информации",
-    STATUS_COLLECTING_PHOTOS: "Загрузка фото",
-    STATUS_READY_TO_GENERATE: "Готова к генерации",
-    STATUS_QUEUED: "В очереди",
-    STATUS_GENERATING: "Генерируется",
-    STATUS_GENERATED_OK: "Сайт готов ✅",
-    STATUS_GENERATED_ERROR: "Ошибка генерации ❌",
+    STATUS_DRAFT: "📝 Черновик",
+    STATUS_COLLECTING_INFO: "📋 Сбор информации",
+    STATUS_COLLECTING_PHOTOS: "📷 Загрузка фото",
+    STATUS_READY_TO_GENERATE: "✅ Готова к генерации",
+    STATUS_QUEUED: "⏳ В очереди",
+    STATUS_GENERATING: "⚙️ Генерируется...",
+    STATUS_GENERATED_OK: "🎉 Сайт готов",
+    STATUS_GENERATED_ERROR: "❌ Ошибка генерации",
+    STATUS_DELIVERED: "📬 Доставлено",
+    STATUS_CLOSED: "✔️ Закрыта",
+    STATUS_ARCHIVED: "🗄 В архиве",
+    STATUS_CANCELLED: "🚫 Отменена",
 }
+
+# Статусы для фильтрации
+ACTIVE_STATUSES = [STATUS_DRAFT, STATUS_COLLECTING_INFO, STATUS_COLLECTING_PHOTOS,
+                   STATUS_READY_TO_GENERATE, STATUS_QUEUED, STATUS_GENERATING]
+COMPLETED_STATUSES = [STATUS_GENERATED_OK, STATUS_DELIVERED, STATUS_CLOSED]
+TERMINAL_STATUSES = [STATUS_GENERATED_ERROR, STATUS_ARCHIVED, STATUS_CANCELLED]
+
+# ==================== ЭМОДЗИ ДЛЯ КОМПАНИЙ ====================
+
+# По первой букве названия
+COMPANY_EMOJIS_BY_LETTER = {
+    'А': '🏢', 'Б': '🏗', 'В': '🏭', 'Г': '🏬', 'Д': '🏪',
+    'Е': '🏨', 'Ж': '🏦', 'З': '🏥', 'И': '🏫', 'К': '🏛',
+    'Л': '🏟', 'М': '🎪', 'Н': '🏰', 'О': '🗼', 'П': '🏠',
+    'Р': '🏡', 'С': '🏘', 'Т': '⛪', 'У': '🕌', 'Ф': '🕍',
+    'Х': '⛩', 'Ц': '🗽', 'Ч': '🗿', 'Ш': '🎡', 'Э': '💎',
+    'Ю': '🌟', 'Я': '⭐',
+}
+
+# По типу бизнеса (ключевые слова)
+BUSINESS_TYPE_EMOJIS = {
+    'строител': '🏗',
+    'ремонт': '🔧',
+    'it': '💻',
+    'программ': '💻',
+    'разработ': '👨‍💻',
+    'дизайн': '🎨',
+    'маркетинг': '📢',
+    'реклам': '📣',
+    'юрид': '⚖️',
+    'бухгалт': '📊',
+    'медиц': '🏥',
+    'красот': '💅',
+    'ресторан': '🍽',
+    'кафе': '☕',
+    'доставк': '🚚',
+    'логист': '📦',
+    'образован': '📚',
+    'автомобил': '🚗',
+    'недвижим': '🏠',
+    'туризм': '✈️',
+    'спорт': '⚽',
+    'фитнес': '💪',
+    'производ': '🏭',
+    'оптов': '📦',
+    'розн': '🛒',
+    'консалт': '💼',
+    'финанс': '💰',
+    'страхов': '🛡',
+    'безопас': '🔒',
+    'клинин': '🧹',
+    'event': '🎉',
+    'фото': '📸',
+    'видео': '🎬',
+}
+
+def get_company_emoji(company_name: str = "", business_type: str = "") -> str:
+    """Получить эмодзи для компании на основе названия или типа бизнеса"""
+    business_lower = (business_type or "").lower()
+
+    # Сначала проверяем тип бизнеса
+    for keyword, emoji in BUSINESS_TYPE_EMOJIS.items():
+        if keyword in business_lower:
+            return emoji
+
+    # Затем по первой букве названия
+    if company_name:
+        first_letter = company_name[0].upper()
+        if first_letter in COMPANY_EMOJIS_BY_LETTER:
+            return COMPANY_EMOJIS_BY_LETTER[first_letter]
+
+    # Дефолт
+    return '🏢'
 
 # ==================== ДЕФОЛТЫ ====================
 
@@ -172,6 +268,13 @@ MSG_GENERATION_STARTED = (
     "Результат будет отправлен в этот чат."
 )
 
+MSG_GENERATION_COMPLETE = (
+    "🎉 <b>Сайт успешно сгенерирован!</b>\n\n"
+    "Заявка: <code>{req_id}</code>\n"
+    "Компания: {company}\n\n"
+    "Архив с сайтом прикреплён ниже."
+)
+
 MSG_GENERATION_ERROR = "❌ <b>Ошибка генерации</b>\n\nПожалуйста, попробуйте позже или обратитесь в поддержку."
 
 MSG_NO_WEBHOOK = "⚠️ Сервис генерации временно недоступен. Пожалуйста, попробуйте позже."
@@ -189,7 +292,7 @@ MSG_WELCOME_MANAGER = (
 
 MSG_WELCOME_ADMIN = (
     "👋 <b>Панель администратора</b>\n\n"
-    "Доступно управление пользователями и заявками."
+    "Доступно управление пользователями, заявками и статистика."
 )
 
 MSG_REG_COMPLETE = (
@@ -210,3 +313,15 @@ MSG_PHOTOS_INSTRUCTION = (
     "Рекомендуемые форматы: JPG, PNG\n"
     "Максимальный размер: 20 МБ"
 )
+
+MSG_BLOCKED_USER = (
+    "⛔ <b>Доступ ограничен</b>\n\n"
+    "Ваш аккаунт заблокирован администратором.\n"
+    "Для разблокировки обратитесь в поддержку."
+)
+
+# ==================== ЛИМИТЫ ====================
+
+MAX_REQUESTS_PER_DAY = 50
+MAX_ACTIVE_REQUESTS = 20
+MAX_PHOTOS_PER_REQUEST = 50

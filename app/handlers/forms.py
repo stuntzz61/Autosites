@@ -2,18 +2,18 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 
 from app.constants import (
-    BTN_BACK, BTN_EXIT, BTN_SKIP, BTN_NEW, BTN_MY, BTN_RESET, BTN_ADMIN_LOGIN,
+    BTN_BACK, BTN_EXIT, BTN_SKIP, BTN_NEW, BTN_MY, BTN_ARCHIVE, BTN_RESET, BTN_ADMIN_LOGIN,
     DEFAULT_STRUCTURE, MIN_COMPANY_NAME_LEN, MAX_COMPANY_NAME_LEN,
     MIN_DESCRIPTION_LEN, MAX_DESCRIPTION_LEN,
     STATUS_COLLECTING_PHOTOS, STATUS_READY_TO_GENERATE,
     CB_DONE, CB_MORE_PORTF, CB_MORE_TESTI, CB_MORE_FAQ, CB_MORE_SEO, CB_MORE_HERO,
-    CB_OPEN, MSG_REQUEST_CREATED, MSG_PHOTOS_INSTRUCTION,
+    CB_OPEN, MSG_REQUEST_CREATED, MSG_PHOTOS_INSTRUCTION, MSG_BLOCKED_USER,
 )
 from app.states import RequestForm, PhotoUpload
 from app.db import (
     get_mode, get_user_by_tgid, create_request_by_tgid,
     update_request_site_json, get_request, get_request_payload, get_current_request_id_by_tgid,
-    set_request_status,
+    set_request_status, is_manager_blocked,
 )
 from app.utils import (
     default_seo_title, parse_services, parse_portfolio,
@@ -183,6 +183,14 @@ def register(dp, bot):
 
     dp.register_message_handler(handle_skip, lambda m: m.text == BTN_SKIP, state="*")
 
+    def get_manager_keyboard():
+        """Клавиатура менеджера"""
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(BTN_NEW)
+        kb.add(BTN_MY, BTN_ARCHIVE)
+        kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
+        return kb
+
     # ------- Начало новой заявки -------
     async def cmd_new_request(message: types.Message):
         if get_mode(message.from_user.id) not in ("manager", "admin"):
@@ -193,6 +201,12 @@ def register(dp, bot):
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add(BTN_REG, BTN_ADMIN_LOGIN)
             return await message.answer("Сначала необходимо пройти регистрацию.", reply_markup=kb)
+
+        # Проверка блокировки
+        if is_manager_blocked(message.from_user.id):
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(BTN_ADMIN_LOGIN)
+            return await message.answer(MSG_BLOCKED_USER, reply_markup=kb)
 
         await RequestForm.client_name.set()
         await message.answer(
@@ -428,10 +442,7 @@ def register(dp, bot):
 
         await state.finish()
 
-        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(BTN_NEW)
-        kb.add(BTN_MY)
-        kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
+        kb = get_manager_keyboard()
 
         count_msg = f"Добавлено услуг: {len(services)}"
         if len(services) < 3:
@@ -458,19 +469,11 @@ def register(dp, bot):
             req_id = st.get("edit_req_id") or get_current_request_id_by_tgid(call.from_user.id)
 
         if not req_id:
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_NEW)
-            kb.add(BTN_MY)
-            kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
-            return await call.message.answer("Заявка не найдена.", reply_markup=kb)
+            return await call.message.answer("Заявка не найдена.", reply_markup=get_manager_keyboard())
 
         rec = get_request(req_id)
         if not rec:
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_NEW)
-            kb.add(BTN_MY)
-            kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
-            return await call.message.answer("Заявка удалена или не найдена.", reply_markup=kb)
+            return await call.message.answer("Заявка удалена или не найдена.", reply_markup=get_manager_keyboard())
 
         from app.handlers.requests import format_request_card
 
@@ -478,16 +481,18 @@ def register(dp, bot):
         is_owner = bool(user and rec.get("manager_id") and str(rec["manager_id"]) == str(user["id"]))
         is_admin = (get_mode(call.from_user.id) == "admin")
 
-        txt = format_request_card(rec, show_private=(is_owner or is_admin))
-        await call.message.answer(txt, reply_markup=request_card_inline(rec["id"], is_owner, is_admin))
+        # Получаем статус для карточки
+        payload = get_request_payload(req_id) or {}
+        site = payload.get("site") or {}
+        meta = site.get("meta") or {}
+        status = meta.get("status") or "draft"
 
-        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(BTN_NEW)
-        kb.add(BTN_MY)
-        kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
+        txt = format_request_card(rec, show_private=(is_owner or is_admin))
+        await call.message.answer(txt, reply_markup=request_card_inline(rec["id"], is_owner, is_admin, status))
+
         await call.message.answer(
             "Вы можете отредактировать заявку, добавить данные или запустить генерацию сайта.",
-            reply_markup=kb
+            reply_markup=get_manager_keyboard()
         )
 
     dp.register_callback_query_handler(cb_done, lambda c: c.data and c.data.startswith(CB_DONE), state="*")
