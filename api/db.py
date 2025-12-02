@@ -193,7 +193,7 @@ async def list_requests(
 
     if status:
         if status == 'archived':
-            conditions.append("r.archived_at IS NOT NULL")
+            conditions.append("(r.payload_json->'site'->'meta'->>'status' = 'archived' OR r.status = 'archived')")
         else:
             conditions.append("(r.payload_json->'site'->'meta'->>'status' = %s OR r.status = %s)")
             params.extend([status, status])
@@ -209,7 +209,7 @@ async def list_requests(
                            COALESCE(r.payload_json->'client'->>'name', '') as client_name,
                            COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) as status,
                            r.payload_json,
-                           r.created_at, r.archived_at
+                           r.created_at
                     FROM requests r
                     JOIN projects p ON p.id = r.project_id
                     WHERE {where_clause}
@@ -234,7 +234,7 @@ async def get_request(request_id: str) -> Optional[Dict]:
                           COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) as status,
                           r.payload_json,
                           p.manager_id as user_id,
-                          r.created_at, r.archived_at
+                          r.created_at
                    FROM requests r
                    JOIN projects p ON p.id = r.project_id
                    WHERE r.id = %s""",
@@ -347,8 +347,7 @@ async def archive_request(request_id: str):
         async with conn.cursor() as cur:
             await cur.execute(
                 """UPDATE requests
-                   SET archived_at = NOW(),
-                       status = 'archived',
+                   SET status = 'archived',
                        payload_json = jsonb_set(
                            COALESCE(payload_json, '{}'::jsonb),
                            '{site,meta,status}',
@@ -371,7 +370,13 @@ async def mass_archive_requests(request_ids: List[str]):
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                """UPDATE requests SET archived_at = NOW(), status = 'archived'
+                """UPDATE requests
+                   SET status = 'archived',
+                       payload_json = jsonb_set(
+                           COALESCE(payload_json, '{}'::jsonb),
+                           '{site,meta,status}',
+                           '"archived"'::jsonb
+                       )
                    WHERE id = ANY(%s)""",
                 (request_ids,)
             )
@@ -398,11 +403,11 @@ async def get_dashboard_stats() -> Dict:
                 """SELECT
                    COUNT(*) FILTER (WHERE role = 'manager' AND approval_status = 'approved') as total_managers,
                    (SELECT COUNT(*) FROM requests) as total_requests,
-                   (SELECT COUNT(*) FROM requests WHERE status = 'success' OR payload_json->'site'->'meta'->>'status' = 'success') as completed_requests,
-                   (SELECT COUNT(*) FROM requests WHERE status NOT IN ('success', 'archived', 'closed')) as pending_requests,
+                   (SELECT COUNT(*) FROM requests WHERE status = 'success' OR payload_json->'site'->'meta'->>'status' = 'generated_ok') as completed_requests,
+                   (SELECT COUNT(*) FROM requests WHERE status NOT IN ('success', 'archived', 'closed', 'generated_ok')) as pending_requests,
                    (SELECT COUNT(*) FROM requests WHERE DATE(created_at) = CURRENT_DATE) as today_requests,
-                   (SELECT COUNT(*) FROM requests WHERE DATE(created_at) = CURRENT_DATE AND status = 'success') as today_generated,
-                   (SELECT COUNT(*) FROM requests WHERE DATE(archived_at) = CURRENT_DATE) as today_archived
+                   (SELECT COUNT(*) FROM requests WHERE DATE(created_at) = CURRENT_DATE AND (status = 'success' OR payload_json->'site'->'meta'->>'status' = 'generated_ok')) as today_generated,
+                   (SELECT COUNT(*) FROM requests WHERE status = 'archived' OR payload_json->'site'->'meta'->>'status' = 'archived') as today_archived
                    FROM users"""
             )
             stats = await cur.fetchone()
@@ -426,9 +431,9 @@ async def get_dashboard_stats() -> Dict:
                    COUNT(*) FILTER (WHERE status = 'draft') as draft_count,
                    COUNT(*) FILTER (WHERE status = 'ready_to_generate' OR payload_json->'site'->'meta'->>'status' = 'ready_to_generate') as ready_count,
                    COUNT(*) FILTER (WHERE status IN ('generating', 'in_queue')) as generating_count,
-                   COUNT(*) FILTER (WHERE status = 'success') as success_count,
-                   COUNT(*) FILTER (WHERE status = 'error') as error_count
-                   FROM requests WHERE archived_at IS NULL"""
+                   COUNT(*) FILTER (WHERE status = 'success' OR payload_json->'site'->'meta'->>'status' = 'generated_ok') as success_count,
+                   COUNT(*) FILTER (WHERE status = 'error' OR payload_json->'site'->'meta'->>'status' = 'generated_error') as error_count
+                   FROM requests WHERE status != 'archived' AND (payload_json->'site'->'meta'->>'status' IS NULL OR payload_json->'site'->'meta'->>'status' != 'archived')"""
             )
             status_counts = await cur.fetchone()
 

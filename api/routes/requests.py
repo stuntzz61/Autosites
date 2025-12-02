@@ -40,6 +40,8 @@ async def list_requests(
 
     # Regular users can only see their own requests
     user_id = str(user['id']) if user['role'] != 'admin' else None
+    
+    print(f"[DEBUG] list_requests: user_id={user_id}, role={user.get('role')}, status={status}")
 
     requests = await db.list_requests(
         user_id=user_id,
@@ -47,6 +49,8 @@ async def list_requests(
         limit=limit,
         offset=offset
     )
+    
+    print(f"[DEBUG] list_requests: found {len(requests)} requests")
 
     return {
         "items": [

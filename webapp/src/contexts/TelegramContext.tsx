@@ -132,26 +132,66 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       tg.ready()
       tg.expand()
 
-      // Set theme colors
-      document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff')
-      document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000')
-      document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999')
-      document.documentElement.style.setProperty('--tg-theme-link-color', tg.themeParams.link_color || '#2481cc')
-      document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#2481cc')
-      document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff')
-      document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f4f4f5')
-      document.documentElement.style.setProperty('--tg-theme-header-bg-color', tg.themeParams.header_bg_color || '#ffffff')
-      document.documentElement.style.setProperty('--tg-theme-section-bg-color', tg.themeParams.section_bg_color || '#ffffff')
-      document.documentElement.style.setProperty('--tg-theme-section-header-text-color', tg.themeParams.section_header_text_color || '#6d6d72')
-      document.documentElement.style.setProperty('--tg-theme-accent-text-color', tg.themeParams.accent_text_color || '#2481cc')
-      document.documentElement.style.setProperty('--tg-theme-destructive-text-color', tg.themeParams.destructive_text_color || '#ff3b30')
-      document.documentElement.style.setProperty('--tg-theme-subtitle-text-color', tg.themeParams.subtitle_text_color || '#999999')
-
-      // Set dark mode class
-      if (tg.colorScheme === 'dark') {
+      // Set dark mode class first
+      const isDark = tg.colorScheme === 'dark'
+      if (isDark) {
         document.documentElement.classList.add('dark')
       } else {
         document.documentElement.classList.remove('dark')
+      }
+
+      // Apply Telegram theme colors only if they exist and improve dark theme
+      const theme = tg.themeParams
+      if (theme.bg_color) {
+        // If Telegram sends pure black (#000000), use a nicer dark blue instead
+        const bgColor = (theme.bg_color === '#000000' || theme.bg_color === '#000') 
+          ? '#0f172a' 
+          : theme.bg_color
+        document.documentElement.style.setProperty('--tg-theme-bg-color', bgColor)
+      }
+      if (theme.text_color) {
+        document.documentElement.style.setProperty('--tg-theme-text-color', theme.text_color)
+      }
+      if (theme.hint_color) {
+        document.documentElement.style.setProperty('--tg-theme-hint-color', theme.hint_color)
+      }
+      if (theme.link_color) {
+        document.documentElement.style.setProperty('--tg-theme-link-color', theme.link_color)
+      }
+      if (theme.button_color) {
+        document.documentElement.style.setProperty('--tg-theme-button-color', theme.button_color)
+      }
+      if (theme.button_text_color) {
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', theme.button_text_color)
+      }
+      if (theme.secondary_bg_color) {
+        // Improve pure black secondary bg too
+        const secBgColor = (theme.secondary_bg_color === '#000000' || theme.secondary_bg_color === '#000')
+          ? '#1e293b'
+          : theme.secondary_bg_color
+        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', secBgColor)
+      }
+      if (theme.header_bg_color) {
+        document.documentElement.style.setProperty('--tg-theme-header-bg-color', theme.header_bg_color)
+      }
+      if (theme.section_bg_color) {
+        // Improve pure black section bg
+        const secColor = (theme.section_bg_color === '#000000' || theme.section_bg_color === '#000')
+          ? '#1e293b'
+          : theme.section_bg_color
+        document.documentElement.style.setProperty('--tg-theme-section-bg-color', secColor)
+      }
+      if (theme.section_header_text_color) {
+        document.documentElement.style.setProperty('--tg-theme-section-header-text-color', theme.section_header_text_color)
+      }
+      if (theme.accent_text_color) {
+        document.documentElement.style.setProperty('--tg-theme-accent-text-color', theme.accent_text_color)
+      }
+      if (theme.destructive_text_color) {
+        document.documentElement.style.setProperty('--tg-theme-destructive-text-color', theme.destructive_text_color)
+      }
+      if (theme.subtitle_text_color) {
+        document.documentElement.style.setProperty('--tg-theme-subtitle-text-color', theme.subtitle_text_color)
       }
 
       setWebApp(tg)
@@ -163,7 +203,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
 
       setIsReady(true)
     } else {
-      // Development mode without Telegram
+      // Development mode without Telegram - use light theme
       console.log('Running outside of Telegram')
       setIsReady(true)
     }

@@ -1,0 +1,206 @@
+{
+  "request_id": "ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0",
+  "manager_id": "79ac48df-c36b-41d7-bc8d-ee1494eca709",
+  "client": {
+    "name": "М Дмитрий Валерьевич",
+    "company": "ООО «ВЕБЛИ РАШЕН»",
+    "contact": "+79953792006,takesxq77@gmail.com, @retrieww"
+  },
+  "site": {
+    "seo": {
+      "title": "Webly — Автоматическое создание сайтов лендингов под ключ",
+      "description": "Мы специализируемся на разработке продающих лендингов с высокой конверсией. Создаем не просто красивый дизайн, а эффективный бизнес-инструмент, который превраща"
+    },
+    "hero": {
+      "image": "/public/illustrations/hero.svg",
+      "title": "Webly — Автоматическое создание сайтов лендингов под ключ",
+      "subtitle": "Мы специализируемся на разработке продающих лендингов с высокой конверсией. Создаем не просто красивый дизайн, а эффекти",
+      "primaryCta": {
+        "href": "#contact",
+        "label": "Оставить заявку"
+      },
+      "secondaryCta": {
+        "href": "#portfolio",
+        "label": "Портфолио"
+      }
+    },
+    "meta": {
+      "status": "ready_to_generate"
+    },
+    "email": "sosalxyi@gmail.com",
+    "phone": "+79953792006",
+    "assets": {
+      "images": [
+        {
+          "alt": "🏠 Главный баннер",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/hero/9ce680261aa24a29992af5f5a87eb650_photo_AQADdg9rG6tzeEl9.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/hero/9ce680261aa24a29992af5f5a87eb650_photo_AQADdg9rG6tzeEl9.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQADdg9rG6tzeEl9.jpg",
+          "width": 480,
+          "height": 600,
+          "category": "hero"
+        },
+        {
+          "alt": "📁 Портфолио",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/portfolio/1b43d6a3654e4320a0175f118407e6d7_photo_AQADgw9rG6tzeEl8.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/portfolio/1b43d6a3654e4320a0175f118407e6d7_photo_AQADgw9rG6tzeEl8.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQADgw9rG6tzeEl8.jpg",
+          "width": 1920,
+          "height": 2560,
+          "category": "portfolio"
+        },
+        {
+          "alt": "📁 Портфолио",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/portfolio/a679bbaef05d47c79d3ce6d1b19871e5_photo_AQAD3g5rG_8TcEl.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/portfolio/a679bbaef05d47c79d3ce6d1b19871e5_photo_AQAD3g5rG_8TcEl.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQAD3g5rG_8TcEl-.jpg",
+          "width": 720,
+          "height": 1280,
+          "category": "portfolio"
+        },
+        {
+          "alt": "📁 Портфолио",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/portfolio/82addf6a5b8b4e41948f06b03d09ba85_photo_AQADBA5rGyWJcEl8.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/portfolio/82addf6a5b8b4e41948f06b03d09ba85_photo_AQADBA5rGyWJcEl8.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQADBA5rGyWJcEl8.jpg",
+          "width": 1919,
+          "height": 2560,
+          "category": "portfolio"
+        },
+        {
+          "alt": "📁 Портфолио",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/portfolio/84b59b83a9ab47078ce567e0127ce258_photo_AQADzQ5rGwE1YEl8.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/portfolio/84b59b83a9ab47078ce567e0127ce258_photo_AQADzQ5rGwE1YEl8.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQADzQ5rGwE1YEl8.jpg",
+          "width": 1920,
+          "height": 2560,
+          "category": "portfolio"
+        },
+        {
+          "alt": "🛠 Услуги",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/services/1f386400631548218139d13618dc6edc_photo_AQADhA9rG6tzeEl9.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/services/1f386400631548218139d13618dc6edc_photo_AQADhA9rG6tzeEl9.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQADhA9rG6tzeEl9.jpg",
+          "width": 458,
+          "height": 458,
+          "category": "services"
+        },
+        {
+          "alt": "🛠 Услуги",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/services/71b4f954728044ee85cc799559471556_photo_AQADhQ9rG6tzeEl8.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/services/71b4f954728044ee85cc799559471556_photo_AQADhQ9rG6tzeEl8.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQADhQ9rG6tzeEl8.jpg",
+          "width": 1179,
+          "height": 2556,
+          "category": "services"
+        },
+        {
+          "alt": "🛠 Услуги",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/services/10c9bd4fa7744a6c94e0a6b1cbbd4dfa_photo_AQADhg9rG6tzeEl8.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/services/10c9bd4fa7744a6c94e0a6b1cbbd4dfa_photo_AQADhg9rG6tzeEl8.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQADhg9rG6tzeEl8.jpg",
+          "width": 1440,
+          "height": 2560,
+          "category": "services"
+        },
+        {
+          "alt": "🛠 Услуги",
+          "key": "uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/services/2042a7bd792d4f5d9a6d19d2119794d0_photo_AQADhw9rG6tzeEl8.jpg",
+          "url": "https://storage.yandexcloud.net/autosites-uploads/uploads/webly/ef8b9d3c-23cb-436a-b6a9-4881a6b0e0d0/services/2042a7bd792d4f5d9a6d19d2119794d0_photo_AQADhw9rG6tzeEl8.jpg",
+          "mime": "image/jpeg",
+          "name": "photo_AQADhw9rG6tzeEl8.jpg",
+          "width": 1440,
+          "height": 2560,
+          "category": "services"
+        }
+      ]
+    },
+    "address": "г. Ростов-на-дону, Красноармейска 138/2",
+    "company": "Webly",
+    "summary": "Мы специализируемся на разработке продающих лендингов с высокой конверсией. Создаем не просто красивый дизайн, а эффективный бизнес-инструмент, который превращает посетителей сайта в реальных клиентов. Ваш быстрый старт и стабильный поток заявок — наша главная задача.",
+    "services": [
+      {
+        "name": "Экспресс",
+        "summary": "лендинг",
+        "priceFrom": "запуск сайта на готовом решении за 3–4 дня для быстрого старта"
+      },
+      {
+        "name": "Лендинг с уникальным дизайном",
+        "summary": "полная проработка структуры, текстов и визуала под ваш бренд",
+        "priceFrom": "от 35 000 ₽"
+      },
+      {
+        "name": "Дизайн",
+        "summary": "макет в Figma",
+        "priceFrom": "разработка визуальной концепции сайта без верстки и программирования"
+      },
+      {
+        "name": "Аудит текущего сайта",
+        "summary": "разбор ошибок в дизайне и текстах с рекомендациями по увеличению продаж",
+        "priceFrom": "от 5 000 ₽"
+      },
+      {
+        "name": "Техническая поддержка",
+        "summary": "внесение правок, оплата хостинга и контроль работоспособности сайта",
+        "priceFrom": "от 3 000 ₽/мес"
+      }
+    ],
+    "portfolio": [
+      {
+        "link": "лендингов с готовыми блоками, A/B",
+        "tags": [
+          "Платформа для быстрого создания промо"
+        ],
+        "year": "NovaLaunch",
+        "title": "Landing",
+        "client": "конструктор для стартапов",
+        "summary": "2024"
+      },
+      {
+        "tags": [
+          "площадка с фильтрами по городу, экосистемой отзывов и личными кабинетами продавцов."
+        ],
+        "year": 2023,
+        "title": "Маркетплейс локальных брендов",
+        "client": "UrbanMarket",
+        "summary": "Интернет"
+      },
+      {
+        "year": 2022,
+        "title": "Корпоративный портал для застройщика",
+        "client": "СтройГрад",
+        "summary": "Закрытый портал для сотрудников и партнеров с документами, статусами объектов и системой заявок."
+      },
+      {
+        "link": "календарь с поиском по специализации, тайм",
+        "tags": [
+          "Сайт"
+        ],
+        "year": "Medico",
+        "title": "Сервис онлайн",
+        "client": "записи к врачам",
+        "summary": "2024"
+      }
+    ],
+    "structure": [
+      "Hero",
+      "О компании",
+      "Услуги",
+      "Портфолио",
+      "Отзывы",
+      "Контакты",
+      "Карта"
+    ],
+    "work_hours": "Пн-Пт 9:00-18:00, прием заявок в телеграм круглосуточно",
+    "business_type": "Автоматическое создание сайтов лендингов под ключ",
+    "color_palette": "На усмотрение дизайнера"
+  }
+}

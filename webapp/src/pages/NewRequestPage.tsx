@@ -144,15 +144,47 @@ export default function NewRequestPage() {
     }))
   }
 
+  const validatePhone = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '')
+    return cleaned.length >= 10 && cleaned.length <= 12
+  }
+
+  const validateEmail = (email: string) => {
+    if (!email) return true // email optional
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
   const canGoNext = () => {
     switch (currentStep) {
-      case 0: return formData.company_name.trim().length > 0
-      case 1: return formData.client_name.trim().length > 0
-      case 2: return formData.phone.trim().length > 0
+      case 0: return formData.company_name.trim().length >= 2
+      case 1: return formData.client_name.trim().length >= 2
+      case 2: return validatePhone(formData.phone) && validateEmail(formData.email)
       case 3: return formData.services.some(s => s.trim().length > 0)
       default: return true
     }
   }
+
+  const getStepError = () => {
+    switch (currentStep) {
+      case 0: 
+        if (formData.company_name && formData.company_name.trim().length < 2) 
+          return 'Минимум 2 символа'
+        return null
+      case 1:
+        if (formData.client_name && formData.client_name.trim().length < 2)
+          return 'Минимум 2 символа'
+        return null
+      case 2:
+        if (formData.phone && !validatePhone(formData.phone))
+          return 'Введите корректный номер телефона'
+        if (formData.email && !validateEmail(formData.email))
+          return 'Введите корректный email'
+        return null
+      default: return null
+    }
+  }
+
+  const stepError = getStepError()
 
   const goNext = () => {
     if (currentStep < steps.length - 1) {
@@ -251,26 +283,36 @@ export default function NewRequestPage() {
                 subtitle="Как связаться с компанией?"
               >
                 <div className="space-y-3">
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => updateField('phone', e.target.value)}
-                      placeholder="Телефон *"
-                      className="input pl-10"
-                      autoFocus
-                    />
+                  <div>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
+                      <input
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => updateField('phone', e.target.value)}
+                        placeholder="+7 (XXX) XXX-XX-XX *"
+                        className={clsx('input pl-10', !validatePhone(formData.phone) && formData.phone && 'ring-2 ring-red-500/30')}
+                        autoFocus
+                      />
+                    </div>
+                    {formData.phone && !validatePhone(formData.phone) && (
+                      <p className="text-xs text-red-500 mt-1 ml-1">Введите корректный номер (10-12 цифр)</p>
+                    )}
                   </div>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      placeholder="Email"
-                      className="input pl-10"
-                    />
+                  <div>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => updateField('email', e.target.value)}
+                        placeholder="Email (опционально)"
+                        className={clsx('input pl-10', !validateEmail(formData.email) && formData.email && 'ring-2 ring-red-500/30')}
+                      />
+                    </div>
+                    {formData.email && !validateEmail(formData.email) && (
+                      <p className="text-xs text-red-500 mt-1 ml-1">Введите корректный email</p>
+                    )}
                   </div>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
@@ -278,7 +320,7 @@ export default function NewRequestPage() {
                       type="text"
                       value={formData.address}
                       onChange={(e) => updateField('address', e.target.value)}
-                      placeholder="Адрес"
+                      placeholder="Адрес (опционально)"
                       className="input pl-10"
                     />
                   </div>
