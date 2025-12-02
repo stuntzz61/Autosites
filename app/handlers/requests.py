@@ -10,7 +10,7 @@ from app.constants import (
     BTN_NEW, BTN_MY, BTN_RESET, BTN_ADMIN_LOGIN, BTN_ARCHIVE,
     CB_OPEN, CB_LIST_PAGE, CB_BACK_TO_LIST, CB_DELETE,
     CB_EDIT, CB_EDIT_FIELD, CB_EXPORT_ONE, CB_GEN,
-    CB_ARCHIVE_REQ, CB_CLOSE_REQ,
+    CB_ARCHIVE_REQ, CB_CLOSE_REQ, CB_CHANGE_STATUS, CB_SET_STATUS,
     EDITABLE_FIELDS, EDIT_HINTS, STATUS_LABELS, PHOTO_CATEGORIES,
     STATUS_COLLECTING_INFO, STATUS_COLLECTING_PHOTOS, STATUS_READY_TO_GENERATE,
     STATUS_QUEUED, STATUS_CLOSED, STATUS_ARCHIVED,
@@ -23,7 +23,7 @@ from app.db import (
     get_request_payload, set_request_status, archive_request,
     mark_generation_started, log_activity,
 )
-from app.keyboards import requests_list_inline, request_card_inline, edit_fields_inline
+from app.keyboards import requests_list_inline, request_card_inline, edit_fields_inline, change_status_inline
 from app.utils import (
     e, parse_services, parse_portfolio, parse_testimonials, parse_faq,
     default_seo_title, chunks, convert_uuids_to_strings, has_min_requirements,
@@ -306,6 +306,78 @@ def register(dp, bot):
             await call.message.edit_text(txt, reply_markup=request_card_inline(req_id, is_owner, is_admin, STATUS_CLOSED))
 
     dp.register_callback_query_handler(cb_close_request, lambda c: c.data and c.data.startswith(CB_CLOSE_REQ))
+
+    # ==================== СМЕНА СТАТУСА ====================
+
+    async def cb_change_status(call: types.CallbackQuery):
+        """Показать меню смены статуса"""
+        req_id = call.data[len(CB_CHANGE_STATUS):]
+
+        rec = get_request(req_id)
+        if not rec:
+            return await call.answer("❌ Заявка не найдена", show_alert=True)
+
+        user = get_user_by_tgid(call.from_user.id)
+        is_owner = bool(user and rec.get("manager_id") and str(rec["manager_id"]) == str(user["id"]))
+        is_admin = (get_mode(call.from_user.id) == "admin")
+
+        if not (is_owner or is_admin):
+            return await call.answer("⛔ Нет прав", show_alert=True)
+
+        # Получаем текущий статус
+        payload = get_request_payload(req_id) or {}
+        site = payload.get("site") or {}
+        meta = site.get("meta") or {}
+        current_status = meta.get("status") or "draft"
+
+        await call.answer()
+        await call.message.edit_text(
+            f"🔀 <b>Смена статуса</b>\n\n"
+            f"Текущий статус: <b>{STATUS_LABELS.get(current_status, current_status)}</b>\n\n"
+            "Выберите новый статус:",
+            reply_markup=change_status_inline(req_id, current_status)
+        )
+
+    dp.register_callback_query_handler(cb_change_status, lambda c: c.data and c.data.startswith(CB_CHANGE_STATUS))
+
+    async def cb_set_status(call: types.CallbackQuery):
+        """Установить новый статус"""
+        # Формат: set_status_{req_id}:{status}
+        data = call.data[len(CB_SET_STATUS):]
+        parts = data.split(":")
+
+        if len(parts) != 2:
+            return await call.answer("❌ Ошибка данных", show_alert=True)
+
+        req_id, new_status = parts
+
+        rec = get_request(req_id)
+        if not rec:
+            return await call.answer("❌ Заявка не найдена", show_alert=True)
+
+        user = get_user_by_tgid(call.from_user.id)
+        is_owner = bool(user and rec.get("manager_id") and str(rec["manager_id"]) == str(user["id"]))
+        is_admin = (get_mode(call.from_user.id) == "admin")
+
+        if not (is_owner or is_admin):
+            return await call.answer("⛔ Нет прав", show_alert=True)
+
+        # Устанавливаем новый статус
+        set_request_status(req_id, new_status)
+
+        # Логируем
+        if user:
+            log_activity(str(user["id"]), "status_changed", "request", req_id, {"new_status": new_status})
+
+        await call.answer(f"✅ Статус изменён на: {STATUS_LABELS.get(new_status, new_status)}", show_alert=True)
+
+        # Возвращаем к карточке заявки
+        rec = get_request(req_id)
+        if rec:
+            txt = format_request_card(rec, show_private=True)
+            await call.message.edit_text(txt, reply_markup=request_card_inline(req_id, is_owner, is_admin, new_status))
+
+    dp.register_callback_query_handler(cb_set_status, lambda c: c.data and c.data.startswith(CB_SET_STATUS))
 
     # ==================== В АРХИВ ====================
 

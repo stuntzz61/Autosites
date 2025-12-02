@@ -133,6 +133,10 @@ CB_MASS_CANCEL = "mass_cancel"
 CB_EXPORT_EXCEL = "export_excel"
 CB_EXPORT_PDF = "export_pdf"
 
+# Смена статуса
+CB_CHANGE_STATUS = "chg_status_"
+CB_SET_STATUS = "set_status_"
+
 # ==================== РЕДАКТИРУЕМЫЕ ПОЛЯ ====================
 
 EDITABLE_FIELDS = {

@@ -12,6 +12,7 @@ from app.constants import (
     CB_SEARCH, CB_SEARCH_RESULT,
     CB_MASS_OPS, CB_MASS_SELECT, CB_MASS_ARCHIVE, CB_MASS_DELETE, CB_MASS_CONFIRM, CB_MASS_CANCEL,
     CB_EXPORT_EXCEL, CB_EXPORT_PDF,
+    CB_CHANGE_STATUS, CB_SET_STATUS,
     PHOTO_CATEGORIES, STATUS_LABELS,
     BTN_BACK, BTN_EXIT, BTN_SKIP,
     get_company_emoji,
@@ -103,8 +104,8 @@ def request_card_inline(req_id: Any, is_owner: bool, is_admin: bool, status: str
         elif status in ("closed", "delivered"):
             ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
         elif status == "generating" or status == "queued":
-            # В процессе генерации - показываем статус
-            ikb.add(InlineKeyboardButton("⏳ Генерация в процессе...", callback_data="noop"))
+            # В процессе генерации - можно сбросить статус
+            ikb.add(InlineKeyboardButton("🔄 Повторить генерацию", callback_data=f"{CB_GEN}{req_id}"))
         elif status == "generated_error":
             # После ошибки можно перегенерить или архивировать
             ikb.add(InlineKeyboardButton("🔄 Повторить генерацию", callback_data=f"{CB_GEN}{req_id}"))
@@ -112,6 +113,10 @@ def request_card_inline(req_id: Any, is_owner: bool, is_admin: bool, status: str
         else:
             # Для любого другого статуса - показать архив
             ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
+
+        # Кнопка смены статуса - для всех кроме архива
+        if status not in ("archived", "cancelled"):
+            ikb.add(InlineKeyboardButton("🔀 Сменить статус", callback_data=f"{CB_CHANGE_STATUS}{req_id}"))
 
         # Удаление только для админа и не для завершённых
         if is_admin and status not in ("generated_ok", "closed", "delivered", "archived"):
@@ -481,4 +486,36 @@ def export_options_inline() -> InlineKeyboardMarkup:
         InlineKeyboardButton("📄 PDF", callback_data=CB_EXPORT_PDF),
     )
     ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"))
+    return ikb
+
+
+def change_status_inline(req_id: str, current_status: str = None) -> InlineKeyboardMarkup:
+    """Клавиатура выбора нового статуса"""
+    ikb = InlineKeyboardMarkup(row_width=1)
+
+    # Доступные статусы для смены
+    statuses = [
+        ("draft", "📝 Черновик"),
+        ("collecting_info", "📋 Сбор информации"),
+        ("collecting_photos", "📷 Загрузка фото"),
+        ("ready_to_generate", "✅ Готова к генерации"),
+        ("queued", "⏳ В очереди"),
+        ("generating", "⚙️ Генерируется"),
+        ("generated_ok", "🎉 Сайт готов"),
+        ("generated_error", "❌ Ошибка генерации"),
+        ("delivered", "📬 Доставлено"),
+        ("closed", "✔️ Закрыта"),
+    ]
+
+    for status_key, status_label in statuses:
+        # Отмечаем текущий статус
+        if status_key == current_status:
+            label = f"• {status_label} (текущий)"
+        else:
+            label = status_label
+
+        ikb.add(InlineKeyboardButton(label, callback_data=f"{CB_SET_STATUS}{req_id}:{status_key}"))
+
+    ikb.add(InlineKeyboardButton("⬅️ Назад к заявке", callback_data=f"{CB_OPEN}{req_id}"))
+
     return ikb
