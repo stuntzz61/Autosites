@@ -20,10 +20,12 @@ ON CONFLICT (tg_id) DO UPDATE SET role=EXCLUDED.role
 """
 
 # --- Requests listing (привязка к manager_id) ---
+# Теперь возвращаем и компанию, и имя клиента для удобного отображения
 
 LIST_MANAGER_REQUESTS = """
 SELECT r.id,
-       COALESCE(r.payload_json->'client'->>'name','Без имени') AS client_name,
+       COALESCE(r.payload_json->'client'->>'name', '') AS client_name,
+       COALESCE(r.payload_json->'site'->>'company', '') AS company_name,
        r.status, r.created_at
 FROM requests r
 JOIN projects p ON p.id = r.project_id
@@ -43,7 +45,8 @@ WHERE u.tg_id = %s
 
 LIST_ALL_REQUESTS = """
 SELECT r.id, p.manager_id,
-       COALESCE(r.payload_json->'client'->>'name','Без имени') AS client_name,
+       COALESCE(r.payload_json->'client'->>'name', '') AS client_name,
+       COALESCE(r.payload_json->'site'->>'company', '') AS company_name,
        r.status, r.created_at
 FROM requests r
 JOIN projects p ON p.id = r.project_id
@@ -79,7 +82,6 @@ RETURNING id
 
 # --- Requests insert/update ---
 
-# ВАЖНО: теперь 3 параметра и RETURNING id
 INSERT_REQUEST = """
 INSERT INTO requests (project_id, payload_json, status)
 VALUES (%s, %s::jsonb, %s)
@@ -120,7 +122,7 @@ JOIN projects p ON p.id = r.project_id
 ORDER BY r.created_at DESC
 """
 
-# Последняя «активная» заявка менеджера по tg_id (обновлён список статусов)
+# Последняя «активная» заявка менеджера по tg_id
 GET_LATEST_REQUEST_ID_BY_TGID = """
 SELECT r.id
 FROM requests r
