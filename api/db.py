@@ -300,38 +300,27 @@ async def create_request(user_id: str, company_name: str, client_name: str, payl
 
 
 async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
-    updates = []
-    params = []
-
-    if 'company_name' in data:
-        updates.append("company_name = %s")
-        params.append(data['company_name'])
-
-    if 'client_name' in data:
-        updates.append("client_name = %s")
-        params.append(data['client_name'])
-
-    if 'payload' in data:
-        updates.append("payload_json = %s")
-        params.append(json.dumps(data['payload']))
-
-    if not updates:
+    """Update request - only payload_json is updatable"""
+    if 'payload' not in data:
         return await get_request(request_id)
-
-    params.append(request_id)
 
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                f"""UPDATE requests SET {', '.join(updates)}
+                """UPDATE requests SET payload_json = %s
                     WHERE id = %s
-                    RETURNING id, company_name, client_name, status, payload_json, created_at""",
-                params
+                    RETURNING id, status, payload_json, created_at""",
+                (json.dumps(data['payload']), request_id)
             )
             await conn.commit()
             row = await cur.fetchone()
-            if row and row.get('payload_json'):
-                row['payload'] = row.pop('payload_json')
+            if row:
+                payload = row.get('payload_json') or {}
+                row['payload'] = payload
+                row['company_name'] = payload.get('site', {}).get('company', '')
+                row['client_name'] = payload.get('client', {}).get('name', '')
+                if 'payload_json' in row:
+                    del row['payload_json']
             return row
 
 

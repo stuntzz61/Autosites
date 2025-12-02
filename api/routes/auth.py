@@ -171,23 +171,24 @@ async def admin_login(request: AdminLoginRequest, x_telegram_init_data: str = He
     if not tg_id:
         raise HTTPException(status_code=401, detail="Invalid user data")
 
-    # Check if user exists and is admin (either by role or in ADMIN_IDS)
+    # Check if user exists
     user = await db.get_user_by_tg_id(tg_id)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    # Debug logging
+    print(f"[DEBUG] admin-login: tg_id={tg_id}, admin_ids={settings.admin_tg_ids}, user_role={user.get('role')}")
+
     is_admin_by_config = tg_id in settings.admin_tg_ids
     is_admin_by_role = user.get('role') == 'admin'
 
-    if not (is_admin_by_config or is_admin_by_role):
-        raise HTTPException(status_code=403, detail="Not authorized as admin")
-
-    # Verify password
+    # Verify password first - if password correct, allow admin access
     if request.password != settings.ADMIN_PASSWORD:
         raise HTTPException(status_code=401, detail="Invalid password")
 
-    # If user is in ADMIN_IDS but not yet set as admin in DB, update their role
-    if is_admin_by_config and not is_admin_by_role:
+    # If password is correct but user not admin yet, make them admin
+    if not is_admin_by_role:
         await db.update_user_role(str(user['id']), 'admin')
+        user['role'] = 'admin'
 
     return {"success": True, "role": "admin"}

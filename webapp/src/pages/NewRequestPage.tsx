@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2, User, Briefcase, Phone, Mail, MapPin,
   ArrowRight, ArrowLeft, Check, Loader2, Plus, X,
-  Clock, Palette, FileText
+  Clock, Palette, Camera, Upload, Image
 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -17,16 +17,31 @@ const steps = [
   { id: 'client', title: 'Клиент', icon: User },
   { id: 'contacts', title: 'Контакты', icon: Phone },
   { id: 'services', title: 'Услуги', icon: Briefcase },
+  { id: 'photos', title: 'Фото', icon: Camera },
   { id: 'details', title: 'Детали', icon: Palette },
 ]
 
 // Default site structure - fixed, not editable by manager
 const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты']
 
+// Photo categories
+const photoCategories = [
+  { id: 'hero', label: 'Главный баннер', icon: '🏠', description: 'Главное фото для шапки' },
+  { id: 'services', label: 'Услуги', icon: '🛠', description: 'Фото для раздела услуг' },
+  { id: 'portfolio', label: 'Портфолио', icon: '📁', description: 'Примеры работ' },
+  { id: 'gallery', label: 'Галерея', icon: '🖼', description: 'Дополнительные фото' },
+]
+
 interface ServiceItem {
   name: string
   summary: string
   priceFrom: string
+}
+
+interface PhotoItem {
+  file: File
+  preview: string
+  category: string
 }
 
 interface FormData {
@@ -49,6 +64,9 @@ interface FormData {
   // Services
   services: ServiceItem[]
 
+  // Photos
+  photos: PhotoItem[]
+
   // Additional
   color_palette: string
 }
@@ -57,8 +75,11 @@ export default function NewRequestPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { haptic } = useTelegram()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [currentStep, setCurrentStep] = useState(0)
+  const [selectedCategory, setSelectedCategory] = useState('hero')
+  const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     company: '',
     business_type: '',
@@ -71,6 +92,7 @@ export default function NewRequestPage() {
     address: '',
     work_hours: '',
     services: [{ name: '', summary: '', priceFrom: '' }],
+    photos: [],
     color_palette: 'На усмотрение дизайнера',
   })
 
@@ -99,11 +121,30 @@ export default function NewRequestPage() {
         }
       }
 
+      // Create request first
       const response = await requestsApi.create({
         company_name: formData.company,
         client_name: formData.client_name,
         payload,
       })
+
+      const requestId = response.data.id
+
+      // Upload photos if any
+      if (formData.photos.length > 0) {
+        setUploadingPhotos(true)
+        for (const photo of formData.photos) {
+          try {
+            const photoFormData = new FormData()
+            photoFormData.append('file', photo.file)
+            photoFormData.append('category', photo.category)
+            await requestsApi.uploadPhotos(requestId, photoFormData)
+          } catch (e) {
+            console.error('Failed to upload photo:', e)
+          }
+        }
+        setUploadingPhotos(false)
+      }
 
       return response.data
     },
@@ -116,6 +157,7 @@ export default function NewRequestPage() {
     onError: () => {
       toast.error('Ошибка создания заявки')
       haptic?.notificationOccurred('error')
+      setUploadingPhotos(false)
     },
   })
 
@@ -144,19 +186,50 @@ export default function NewRequestPage() {
     }))
   }
 
-  const formatPhone = (value: string): string => {
-    // Remove all non-digits
-    const digits = value.replace(/\D/g, '')
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
 
-    // Limit to 11 digits (Russian phone format: 7 + 10 digits)
+    const newPhotos: PhotoItem[] = []
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (file.type.startsWith('image/')) {
+        newPhotos.push({
+          file,
+          preview: URL.createObjectURL(file),
+          category: selectedCategory,
+        })
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      photos: [...prev.photos, ...newPhotos],
+    }))
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const removePhoto = (index: number) => {
+    setFormData(prev => {
+      const newPhotos = [...prev.photos]
+      URL.revokeObjectURL(newPhotos[index].preview)
+      newPhotos.splice(index, 1)
+      return { ...prev, photos: newPhotos }
+    })
+  }
+
+  const formatPhone = (value: string): string => {
+    const digits = value.replace(/\D/g, '')
     const limited = digits.slice(0, 11)
 
     if (!limited) return ''
 
-    // Format as +7 (XXX) XXX-XX-XX
     let formatted = ''
     if (limited.length > 0) {
-      // Start with +7
       const startDigit = limited[0] === '8' ? '7' : limited[0]
       formatted = '+' + startDigit
     }
@@ -221,6 +294,10 @@ export default function NewRequestPage() {
     }
   }
 
+  const getPhotosByCategory = (category: string) => {
+    return formData.photos.filter(p => p.category === category)
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -237,7 +314,7 @@ export default function NewRequestPage() {
               key={step.id}
               className={clsx(
                 'flex-1 h-1 rounded-full transition-colors',
-                i <= currentStep ? 'bg-tg-button' : 'bg-tg-secondary-bg'
+                i <= currentStep ? 'bg-blue-600 dark:bg-white' : 'bg-tg-secondary-bg'
               )}
             />
           ))}
@@ -257,7 +334,7 @@ export default function NewRequestPage() {
             {/* Step 0: Company */}
             {currentStep === 0 && (
               <StepContent
-                icon={<Building2 className="w-8 h-8 text-blue-500" />}
+                icon={<Building2 className="w-8 h-8 text-blue-600 dark:text-white" />}
                 title="О компании"
                 subtitle="Расскажите о бизнесе клиента"
               >
@@ -300,7 +377,7 @@ export default function NewRequestPage() {
             {/* Step 1: Client */}
             {currentStep === 1 && (
               <StepContent
-                icon={<User className="w-8 h-8 text-green-500" />}
+                icon={<User className="w-8 h-8 text-blue-600 dark:text-white" />}
                 title="Клиент"
                 subtitle="Кто заказывает сайт?"
               >
@@ -343,7 +420,7 @@ export default function NewRequestPage() {
             {/* Step 2: Contacts */}
             {currentStep === 2 && (
               <StepContent
-                icon={<Phone className="w-8 h-8 text-emerald-500" />}
+                icon={<Phone className="w-8 h-8 text-blue-600 dark:text-white" />}
                 title="Контакты для сайта"
                 subtitle="Эти данные будут на сайте"
               >
@@ -416,13 +493,13 @@ export default function NewRequestPage() {
             {/* Step 3: Services */}
             {currentStep === 3 && (
               <StepContent
-                icon={<Briefcase className="w-8 h-8 text-amber-500" />}
+                icon={<Briefcase className="w-8 h-8 text-blue-600 dark:text-white" />}
                 title="Услуги"
                 subtitle="Что предлагает компания?"
               >
                 <div className="space-y-4">
                   {formData.services.map((service, i) => (
-                    <div key={i} className="bg-tg-secondary-bg rounded-2xl p-4">
+                    <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-medium text-tg-text">Услуга {i + 1}</span>
                         {formData.services.length > 1 && (
@@ -468,10 +545,112 @@ export default function NewRequestPage() {
               </StepContent>
             )}
 
-            {/* Step 4: Details */}
+            {/* Step 4: Photos */}
             {currentStep === 4 && (
               <StepContent
-                icon={<Palette className="w-8 h-8 text-violet-500" />}
+                icon={<Camera className="w-8 h-8 text-blue-600 dark:text-white" />}
+                title="Фотографии"
+                subtitle="Загрузите фото для сайта"
+              >
+                <div className="space-y-4">
+                  {/* Category selector */}
+                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+                    {photoCategories.map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={clsx(
+                          'flex items-center gap-2 px-3 py-2 rounded-xl whitespace-nowrap transition-colors',
+                          selectedCategory === cat.id
+                            ? 'bg-blue-600 dark:bg-white text-white dark:text-black'
+                            : 'bg-tg-secondary-bg text-tg-text'
+                        )}
+                      >
+                        <span>{cat.icon}</span>
+                        <span className="text-sm font-medium">{cat.label}</span>
+                        {getPhotosByCategory(cat.id).length > 0 && (
+                          <span className={clsx(
+                            'px-1.5 py-0.5 rounded-full text-xs',
+                            selectedCategory === cat.id
+                              ? 'bg-white/20 dark:bg-black/20'
+                              : 'bg-blue-600/10 dark:bg-white/10 text-blue-600 dark:text-white'
+                          )}>
+                            {getPhotosByCategory(cat.id).length}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Upload button */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-blue-500/30 dark:border-white/20 rounded-xl text-blue-600 dark:text-white hover:bg-blue-500/5 dark:hover:bg-white/5 transition-colors"
+                  >
+                    <Upload className="w-5 h-5" />
+                    <span className="font-medium">Добавить фото в "{photoCategories.find(c => c.id === selectedCategory)?.label}"</span>
+                  </button>
+
+                  {/* Photos grid */}
+                  {formData.photos.length > 0 && (
+                    <div className="space-y-4">
+                      {photoCategories.map(cat => {
+                        const photos = getPhotosByCategory(cat.id)
+                        if (photos.length === 0) return null
+
+                        return (
+                          <div key={cat.id}>
+                            <p className="text-sm font-medium text-tg-text mb-2">
+                              {cat.icon} {cat.label}
+                            </p>
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                              {photos.map((photo, index) => {
+                                const globalIndex = formData.photos.indexOf(photo)
+                                return (
+                                  <div key={index} className="relative flex-shrink-0 group">
+                                    <img
+                                      src={photo.preview}
+                                      alt={cat.label}
+                                      className="w-20 h-20 rounded-xl object-cover"
+                                    />
+                                    <button
+                                      onClick={() => removePhoto(globalIndex)}
+                                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {formData.photos.length === 0 && (
+                    <div className="text-center py-8 text-tg-hint">
+                      <Image className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Фото можно добавить позже</p>
+                    </div>
+                  )}
+                </div>
+              </StepContent>
+            )}
+
+            {/* Step 5: Details */}
+            {currentStep === 5 && (
+              <StepContent
+                icon={<Palette className="w-8 h-8 text-blue-600 dark:text-white" />}
                 title="Детали сайта"
                 subtitle="Дополнительные настройки"
               >
@@ -479,12 +658,12 @@ export default function NewRequestPage() {
                   {/* Fixed Structure Info */}
                   <div>
                     <label className="text-sm text-tg-hint mb-2 block">Структура сайта</label>
-                    <div className="bg-tg-secondary-bg rounded-2xl p-4">
+                    <div className="bg-tg-secondary-bg rounded-xl p-4">
                       <div className="flex flex-wrap gap-2">
                         {DEFAULT_STRUCTURE.map(section => (
                           <span
                             key={section}
-                            className="px-3 py-1.5 rounded-xl text-sm font-medium bg-tg-section text-tg-text border border-black/5 dark:border-white/5"
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-tg-section text-tg-text border border-gray-200 dark:border-zinc-700"
                           >
                             {section}
                           </span>
@@ -510,11 +689,15 @@ export default function NewRequestPage() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 dark:from-zinc-800 dark:to-zinc-900 rounded-xl p-4 border border-blue-500/20 dark:border-zinc-700">
-                    <p className="text-sm font-semibold text-tg-text mb-2">📷 Фотографии</p>
-                    <p className="text-xs text-tg-hint">
-                      После создания заявки вы сможете загрузить фотографии для секций сайта
-                    </p>
+                  {/* Summary */}
+                  <div className="bg-blue-50 dark:bg-zinc-800 rounded-xl p-4 border border-blue-200 dark:border-zinc-700">
+                    <p className="text-sm font-semibold text-tg-text mb-2">📋 Итого</p>
+                    <div className="space-y-1 text-sm text-tg-hint">
+                      <p>Компания: <span className="text-tg-text">{formData.company || '—'}</span></p>
+                      <p>Клиент: <span className="text-tg-text">{formData.client_name || '—'}</span></p>
+                      <p>Услуг: <span className="text-tg-text">{formData.services.filter(s => s.name.trim()).length}</span></p>
+                      <p>Фото: <span className="text-tg-text">{formData.photos.length}</span></p>
+                    </div>
                   </div>
                 </div>
               </StepContent>
@@ -537,7 +720,10 @@ export default function NewRequestPage() {
             className="btn btn-primary flex-1"
           >
             {createMutation.isPending ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                {uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}
+              </>
             ) : currentStep === steps.length - 1 ? (
               <>
                 <Check className="w-5 h-5" />
@@ -570,7 +756,7 @@ function StepContent({
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-2xl bg-tg-secondary-bg">
+        <div className="p-3 rounded-xl bg-blue-50 dark:bg-zinc-800">
           {icon}
         </div>
         <div>

@@ -176,7 +176,7 @@ export default function RequestsPage() {
                     layout
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white font-bold text-lg">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 dark:from-zinc-700 dark:to-zinc-800 flex items-center justify-center text-white font-bold text-lg">
                         {request.company_name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
