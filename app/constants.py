@@ -48,6 +48,7 @@ BTN_RESET = "❌ Отмена"
 BTN_PANEL = "📊 Панель управления"
 BTN_STATS = "📈 Статистика"
 BTN_MANAGERS = "👥 Менеджеры"
+BTN_PENDING = "⏳ Ожидают одобрения"
 BTN_USERS = "👤 Пользователи"
 BTN_REQS = "📦 Все заявки"
 BTN_LOGOUT = "🚪 Выход"
@@ -93,6 +94,13 @@ CB_ADMIN_BLOCK = "adm_block_"
 CB_ADMIN_UNBLOCK = "adm_unblock_"
 CB_ADMIN_STATS = "adm_stats_"
 CB_ADMIN_REQUESTS = "adm_reqs_"
+CB_ADMIN_DELETE_USER = "adm_del_user_"
+CB_ADMIN_EDIT_USER = "adm_edit_user_"
+
+# Одобрение регистраций
+CB_APPROVE_USER = "approve_"
+CB_REJECT_USER = "reject_"
+CB_PENDING_LIST = "pending_list"
 
 # ==================== РЕДАКТИРУЕМЫЕ ПОЛЯ ====================
 
@@ -318,6 +326,33 @@ MSG_BLOCKED_USER = (
     "⛔ <b>Доступ ограничен</b>\n\n"
     "Ваш аккаунт заблокирован администратором.\n"
     "Для разблокировки обратитесь в поддержку."
+)
+
+MSG_PENDING_APPROVAL = (
+    "⏳ <b>Заявка на регистрацию отправлена</b>\n\n"
+    "Ваша заявка находится на рассмотрении администратора.\n"
+    "Вы получите уведомление после одобрения."
+)
+
+MSG_REGISTRATION_APPROVED = (
+    "✅ <b>Регистрация одобрена!</b>\n\n"
+    "Добро пожаловать в систему!\n"
+    "Теперь вы можете создавать заявки на разработку сайтов."
+)
+
+MSG_REGISTRATION_REJECTED = (
+    "❌ <b>Регистрация отклонена</b>\n\n"
+    "К сожалению, ваша заявка была отклонена.\n"
+    "Причина: {reason}\n\n"
+    "Вы можете подать заявку повторно."
+)
+
+MSG_NEW_REGISTRATION_ADMIN = (
+    "🆕 <b>Новая заявка на регистрацию</b>\n\n"
+    "👤 {name}\n"
+    "📱 {contact}\n"
+    "🆔 ID: <code>{tg_id}</code>\n\n"
+    "Одобрить или отклонить?"
 )
 
 # ==================== ЛИМИТЫ ====================

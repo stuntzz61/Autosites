@@ -13,7 +13,7 @@ from app.states import RequestForm, PhotoUpload
 from app.db import (
     get_mode, get_user_by_tgid, create_request_by_tgid,
     update_request_site_json, get_request, get_request_payload, get_current_request_id_by_tgid,
-    set_request_status, is_manager_blocked,
+    set_request_status, is_manager_blocked, is_user_approved, get_user_approval_status,
 )
 from app.utils import (
     default_seo_title, parse_services, parse_portfolio,
@@ -193,7 +193,9 @@ def register(dp, bot):
 
     # ------- Начало новой заявки -------
     async def cmd_new_request(message: types.Message):
-        if get_mode(message.from_user.id) not in ("manager", "admin"):
+        mode = get_mode(message.from_user.id)
+
+        if mode not in ("manager", "admin"):
             return await message.answer("Эта функция доступна только для зарегистрированных пользователей.")
 
         if not get_user_by_tgid(message.from_user.id):
@@ -201,6 +203,22 @@ def register(dp, bot):
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add(BTN_REG, BTN_ADMIN_LOGIN)
             return await message.answer("Сначала необходимо пройти регистрацию.", reply_markup=kb)
+
+        # Проверка статуса одобрения (не для админа)
+        if mode != "admin":
+            approval_status = get_user_approval_status(message.from_user.id)
+            if approval_status == "pending":
+                return await message.answer(
+                    "⏳ <b>Ожидание одобрения</b>\n\n"
+                    "Ваша заявка на регистрацию находится на рассмотрении администратора.\n"
+                    "После одобрения вы сможете создавать заявки."
+                )
+            if approval_status == "rejected":
+                return await message.answer(
+                    "❌ <b>Регистрация отклонена</b>\n\n"
+                    "Ваша заявка на регистрацию была отклонена.\n"
+                    "Вы можете подать новую заявку."
+                )
 
         # Проверка блокировки
         if is_manager_blocked(message.from_user.id):

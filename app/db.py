@@ -35,9 +35,12 @@ def get_user_by_id(uid: str):
         return cur.fetchone()
 
 
-def create_user(tg_id: int, first_name: str, last_name: str, contact: str):
+def create_user(tg_id: int, first_name: str, last_name: str, contact: str) -> Optional[str]:
+    """Создаёт пользователя со статусом pending"""
     with get_db() as conn, conn.cursor() as cur:
         cur.execute(Q.CREATE_USER, (tg_id, first_name, last_name, contact))
+        row = cur.fetchone()
+        return str(row["id"]) if row else None
 
 
 def get_mode(tg_id: int) -> str:
@@ -50,6 +53,156 @@ def get_mode(tg_id: int) -> str:
 def set_mode(tg_id: int, mode: str):
     with get_db() as conn, conn.cursor() as cur:
         cur.execute(Q.SET_MODE, (tg_id, mode))
+
+
+# ==================== APPROVAL SYSTEM ====================
+
+def is_user_approved(tg_id: int) -> bool:
+    """Проверить, одобрен ли пользователь"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.IS_USER_APPROVED, (tg_id,))
+            row = cur.fetchone()
+            return row["is_approved"] if row else False
+    except Exception:
+        return False
+
+
+def get_user_approval_status(tg_id: int) -> str:
+    """Получить статус одобрения пользователя"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.GET_USER_APPROVAL_STATUS, (tg_id,))
+            row = cur.fetchone()
+            return row["approval_status"] if row else "unknown"
+    except Exception:
+        return "unknown"
+
+
+def list_pending_registrations() -> List[dict]:
+    """Список ожидающих одобрения"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.LIST_PENDING_REGISTRATIONS)
+        return cur.fetchall()
+
+
+def count_pending_registrations() -> int:
+    """Количество ожидающих одобрения"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.COUNT_PENDING_REGISTRATIONS)
+        row = cur.fetchone()
+        return row["n"] if row else 0
+
+
+def approve_user(user_id: str, approved_by_id: str) -> bool:
+    """Одобрить регистрацию пользователя"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.APPROVE_USER, (approved_by_id, user_id))
+            return cur.rowcount > 0
+    except Exception:
+        return False
+
+
+def reject_user(user_id: str, approved_by_id: str, reason: str = None) -> bool:
+    """Отклонить регистрацию пользователя"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.REJECT_USER, (reason, approved_by_id, user_id))
+            return cur.rowcount > 0
+    except Exception:
+        return False
+
+
+def delete_user(user_id: str) -> bool:
+    """Удалить пользователя"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.DELETE_USER, (user_id,))
+            return cur.rowcount > 0
+    except Exception:
+        return False
+
+
+def update_user(user_id: str, first_name: str = None, last_name: str = None, contact: str = None) -> bool:
+    """Обновить данные пользователя"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.UPDATE_USER, (first_name, last_name, contact, user_id))
+            return cur.rowcount > 0
+    except Exception:
+        return False
+
+
+# ==================== ADMIN NOTIFICATIONS ====================
+
+def create_admin_notification(notification_type: str, title: str, message: str = None,
+                              entity_type: str = None, entity_id: str = None) -> Optional[str]:
+    """Создать уведомление для админа"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.CREATE_ADMIN_NOTIFICATION, (
+                notification_type, title, message, entity_type, entity_id
+            ))
+            row = cur.fetchone()
+            return str(row["id"]) if row else None
+    except Exception:
+        return None
+
+
+def get_unread_notifications(limit: int = 20) -> List[dict]:
+    """Получить непрочитанные уведомления"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.GET_UNREAD_NOTIFICATIONS, (limit,))
+        return cur.fetchall()
+
+
+def count_unread_notifications() -> int:
+    """Количество непрочитанных уведомлений"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.COUNT_UNREAD_NOTIFICATIONS)
+        row = cur.fetchone()
+        return row["n"] if row else 0
+
+
+def mark_notification_read(notification_id: str) -> bool:
+    """Отметить уведомление как прочитанное"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.MARK_NOTIFICATION_READ, (notification_id,))
+            return True
+    except Exception:
+        return False
+
+
+def mark_all_notifications_read() -> bool:
+    """Отметить все уведомления как прочитанные"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.MARK_ALL_NOTIFICATIONS_READ)
+            return True
+    except Exception:
+        return False
+
+
+# ==================== SYSTEM SETTINGS ====================
+
+def get_setting(key: str) -> Optional[str]:
+    """Получить системную настройку"""
+    with get_db() as conn, conn.cursor() as cur:
+        cur.execute(Q.GET_SETTING, (key,))
+        row = cur.fetchone()
+        return row["value"] if row else None
+
+
+def set_setting(key: str, value: str) -> bool:
+    """Установить системную настройку"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.SET_SETTING, (key, value))
+            return True
+    except Exception:
+        return False
 
 
 # ==================== MANAGER SETTINGS ====================

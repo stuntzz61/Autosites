@@ -6,6 +6,7 @@ from app.constants import (
     CB_MORE_PORTF, CB_MORE_TESTI, CB_MORE_FAQ, CB_MORE_SEO, CB_MORE_HERO, CB_DONE,
     CB_EDIT_FIELD, CB_PHOTO_CAT, CB_ARCHIVE_REQ, CB_CLOSE_REQ,
     CB_ADMIN_MANAGER, CB_ADMIN_BLOCK, CB_ADMIN_UNBLOCK, CB_ADMIN_STATS,
+    CB_ADMIN_DELETE_USER, CB_APPROVE_USER, CB_REJECT_USER,
     PHOTO_CATEGORIES, STATUS_LABELS,
     BTN_BACK, BTN_EXIT, BTN_SKIP,
     get_company_emoji,
@@ -270,4 +271,59 @@ def confirm_action_inline(action: str, entity_id: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton("✅ Да", callback_data=f"confirm_{action}_{entity_id}"),
         InlineKeyboardButton("❌ Нет", callback_data=f"cancel_{action}_{entity_id}"),
     )
+    return ikb
+
+
+def pending_approval_inline(user_id: str) -> InlineKeyboardMarkup:
+    """Клавиатура одобрения/отклонения регистрации"""
+    ikb = InlineKeyboardMarkup(row_width=2)
+    ikb.add(
+        InlineKeyboardButton("✅ Одобрить", callback_data=f"{CB_APPROVE_USER}{user_id}"),
+        InlineKeyboardButton("❌ Отклонить", callback_data=f"{CB_REJECT_USER}{user_id}"),
+    )
+    ikb.add(InlineKeyboardButton("⬅️ К списку", callback_data="pending_list"))
+    return ikb
+
+
+def pending_list_inline(users: list) -> InlineKeyboardMarkup:
+    """Список ожидающих одобрения"""
+    ikb = InlineKeyboardMarkup(row_width=1)
+
+    for u in users:
+        name = f"{u.get('first_name', '')} {u.get('last_name', '')}".strip() or "Без имени"
+        created = u.get('created_at', '')
+        if hasattr(created, 'strftime'):
+            created = created.strftime('%d.%m %H:%M')
+
+        title = f"⏳ {_truncate(name, 20)} | {created}"
+        ikb.add(InlineKeyboardButton(title, callback_data=f"pending_user_{u['id']}"))
+
+    if not users:
+        ikb.add(InlineKeyboardButton("Нет ожидающих заявок", callback_data="noop"))
+
+    ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"))
+    return ikb
+
+
+def manager_full_card_inline(manager_id: str, is_blocked: bool) -> InlineKeyboardMarkup:
+    """Полная карточка менеджера с CRUD"""
+    ikb = InlineKeyboardMarkup(row_width=2)
+
+    ikb.add(
+        InlineKeyboardButton("📊 Статистика", callback_data=f"{CB_ADMIN_STATS}{manager_id}"),
+        InlineKeyboardButton("📋 Заявки", callback_data=f"admin_mgr_reqs_{manager_id}"),
+    )
+
+    if is_blocked:
+        ikb.add(InlineKeyboardButton("🔓 Разблокировать", callback_data=f"{CB_ADMIN_UNBLOCK}{manager_id}"))
+    else:
+        ikb.add(InlineKeyboardButton("🔒 Заблокировать", callback_data=f"{CB_ADMIN_BLOCK}{manager_id}"))
+
+    ikb.add(
+        InlineKeyboardButton("✏️ Редактировать", callback_data=f"admin_edit_mgr_{manager_id}"),
+        InlineKeyboardButton("🗑 Удалить", callback_data=f"{CB_ADMIN_DELETE_USER}{manager_id}"),
+    )
+
+    ikb.add(InlineKeyboardButton("⬅️ К списку", callback_data="admin_managers"))
+
     return ikb

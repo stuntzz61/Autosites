@@ -6,13 +6,15 @@ import json
 GET_USER_BY_TGID = "SELECT * FROM users WHERE tg_id=%s"
 GET_USER_BY_ID = "SELECT * FROM users WHERE id=%s::uuid"
 
+# Создаём пользователя со статусом pending (ожидает одобрения)
 CREATE_USER = """
-INSERT INTO users (tg_id, role, first_name, last_name, contact)
-VALUES (%s, 'manager', %s, %s, %s)
+INSERT INTO users (tg_id, role, first_name, last_name, contact, approval_status)
+VALUES (%s, 'manager', %s, %s, %s, 'pending')
 ON CONFLICT (tg_id) DO UPDATE
 SET first_name=EXCLUDED.first_name,
     last_name=EXCLUDED.last_name,
     contact=EXCLUDED.contact
+RETURNING id
 """
 
 GET_MODE = "SELECT role FROM users WHERE tg_id=%s"
@@ -22,6 +24,93 @@ ON CONFLICT (tg_id) DO UPDATE SET role=EXCLUDED.role
 """
 
 SELECT_USER_ID_BY_TGID = "SELECT id FROM users WHERE tg_id=%s"
+
+# ==================== APPROVAL SYSTEM ====================
+
+GET_USER_APPROVAL_STATUS = """
+SELECT approval_status FROM users WHERE tg_id=%s
+"""
+
+IS_USER_APPROVED = """
+SELECT COALESCE(approval_status, 'pending') = 'approved' as is_approved
+FROM users WHERE tg_id=%s
+"""
+
+LIST_PENDING_REGISTRATIONS = """
+SELECT id, tg_id, first_name, last_name, contact, created_at
+FROM users
+WHERE approval_status = 'pending' AND role = 'manager'
+ORDER BY created_at ASC
+"""
+
+COUNT_PENDING_REGISTRATIONS = """
+SELECT COUNT(*) as n FROM users
+WHERE approval_status = 'pending' AND role = 'manager'
+"""
+
+APPROVE_USER = """
+UPDATE users
+SET approval_status = 'approved',
+    approved_by = %s::uuid,
+    approved_at = NOW()
+WHERE id = %s::uuid
+"""
+
+REJECT_USER = """
+UPDATE users
+SET approval_status = 'rejected',
+    rejection_reason = %s,
+    approved_by = %s::uuid,
+    approved_at = NOW()
+WHERE id = %s::uuid
+"""
+
+DELETE_USER = """
+DELETE FROM users WHERE id = %s::uuid
+"""
+
+UPDATE_USER = """
+UPDATE users
+SET first_name = COALESCE(%s, first_name),
+    last_name = COALESCE(%s, last_name),
+    contact = COALESCE(%s, contact)
+WHERE id = %s::uuid
+"""
+
+# ==================== ADMIN NOTIFICATIONS ====================
+
+CREATE_ADMIN_NOTIFICATION = """
+INSERT INTO admin_notifications (notification_type, title, message, entity_type, entity_id)
+VALUES (%s, %s, %s, %s, %s::uuid)
+RETURNING id
+"""
+
+GET_UNREAD_NOTIFICATIONS = """
+SELECT * FROM admin_notifications
+WHERE is_read = FALSE
+ORDER BY created_at DESC
+LIMIT %s
+"""
+
+MARK_NOTIFICATION_READ = """
+UPDATE admin_notifications SET is_read = TRUE WHERE id = %s::uuid
+"""
+
+MARK_ALL_NOTIFICATIONS_READ = """
+UPDATE admin_notifications SET is_read = TRUE WHERE is_read = FALSE
+"""
+
+COUNT_UNREAD_NOTIFICATIONS = """
+SELECT COUNT(*) as n FROM admin_notifications WHERE is_read = FALSE
+"""
+
+# ==================== SYSTEM SETTINGS ====================
+
+GET_SETTING = "SELECT value FROM system_settings WHERE key = %s"
+SET_SETTING = """
+INSERT INTO system_settings (key, value, updated_at) VALUES (%s, %s, NOW())
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+"""
 
 # ==================== MANAGER SETTINGS ====================
 

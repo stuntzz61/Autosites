@@ -3,20 +3,22 @@ from aiogram.dispatcher import FSMContext
 from functools import wraps
 import time
 
-from app.config import ADMIN_PASSWORD
+from app.config import ADMIN_PASSWORD, get_admin_chat_ids
 from app.constants import (
     GUEST_CMDS, MANAGER_CMDS, ADMIN_CMDS, DEBUG_CMDS,
     BTN_REG, BTN_ADMIN_LOGIN, BTN_NEW, BTN_MY, BTN_ARCHIVE, BTN_RESET,
-    BTN_PANEL, BTN_STATS, BTN_MANAGERS, BTN_USERS, BTN_REQS, BTN_LOGOUT,
-    MSG_WELCOME_GUEST, MSG_WELCOME_MANAGER, MSG_WELCOME_ADMIN, MSG_REG_COMPLETE,
-    MSG_BLOCKED_USER,
+    BTN_PANEL, BTN_STATS, BTN_MANAGERS, BTN_PENDING, BTN_REQS, BTN_LOGOUT,
+    MSG_WELCOME_GUEST, MSG_WELCOME_MANAGER, MSG_WELCOME_ADMIN,
+    MSG_BLOCKED_USER, MSG_PENDING_APPROVAL, MSG_NEW_REGISTRATION_ADMIN,
 )
 from app.db import (
     init_db, get_user_by_tgid, get_mode, set_mode,
-    admin_counts, admin_users, list_all_requests, count_all_requests,
-    is_manager_blocked, log_activity,
+    is_manager_blocked, is_user_approved, get_user_approval_status,
+    create_admin_notification, count_pending_registrations,
+    log_activity, create_user,
 )
 from app.states import RegForm, AdminLogin
+from app.keyboards import pending_approval_inline
 
 
 def register(dp, bot):
@@ -61,11 +63,46 @@ def register(dp, bot):
 
     def get_admin_keyboard():
         """Клавиатура администратора"""
+        pending = count_pending_registrations()
+        pending_text = f"⏳ Ожидают ({pending})" if pending > 0 else BTN_PENDING
+
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add(BTN_PANEL, BTN_STATS)
-        kb.add(BTN_MANAGERS, BTN_REQS)
-        kb.add(BTN_LOGOUT)
+        kb.add(BTN_MANAGERS, pending_text)
+        kb.add(BTN_REQS, BTN_LOGOUT)
         return kb
+
+    def get_guest_keyboard():
+        """Клавиатура гостя"""
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(BTN_REG, BTN_ADMIN_LOGIN)
+        return kb
+
+    async def notify_admins_new_registration(user_data: dict, tg_id: int):
+        """Уведомить админов о новой регистрации"""
+        name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
+        contact = user_data.get('contact', '—')
+
+        text = MSG_NEW_REGISTRATION_ADMIN.format(
+            name=name,
+            contact=contact,
+            tg_id=tg_id
+        )
+
+        # Получаем ID админов из конфига
+        admin_ids = get_admin_chat_ids()
+
+        for admin_id in admin_ids:
+            try:
+                user = get_user_by_tgid(tg_id)
+                if user:
+                    await bot.send_message(
+                        admin_id,
+                        text,
+                        reply_markup=pending_approval_inline(str(user['id']))
+                    )
+            except Exception:
+                pass
 
     # ==================== /start ====================
 
@@ -75,26 +112,37 @@ def register(dp, bot):
         is_reg = bool(user)
         mode = get_mode(message.from_user.id)
 
-        # Проверка блокировки
-        if is_reg and mode == "manager" and is_manager_blocked(message.from_user.id):
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_ADMIN_LOGIN)
-            return await message.answer(MSG_BLOCKED_USER, reply_markup=kb)
-
+        # Проверка статуса одобрения
         if is_reg and mode != "admin":
+            approval_status = get_user_approval_status(message.from_user.id)
+
+            if approval_status == "pending":
+                return await message.answer(MSG_PENDING_APPROVAL, reply_markup=get_guest_keyboard())
+
+            if approval_status == "rejected":
+                return await message.answer(
+                    "❌ <b>Ваша заявка была отклонена</b>\n\n"
+                    "Вы можете подать новую заявку на регистрацию.",
+                    reply_markup=get_guest_keyboard()
+                )
+
+            # Проверка блокировки (только для одобренных)
+            if is_manager_blocked(message.from_user.id):
+                kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                kb.add(BTN_ADMIN_LOGIN)
+                return await message.answer(MSG_BLOCKED_USER, reply_markup=kb)
+
             set_mode(message.from_user.id, "manager")
             mode = "manager"
 
-        await set_scope_cmds(message.chat.id, mode, is_reg, message.from_user.language_code)
+        await set_scope_cmds(message.chat.id, mode, is_reg and is_user_approved(message.from_user.id), message.from_user.language_code)
 
         if mode == "admin":
             await message.answer(MSG_WELCOME_ADMIN, reply_markup=get_admin_keyboard())
-        elif is_reg:
+        elif is_reg and is_user_approved(message.from_user.id):
             await message.answer(MSG_WELCOME_MANAGER, reply_markup=get_manager_keyboard())
         else:
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(BTN_REG, BTN_ADMIN_LOGIN)
-            await message.answer(MSG_WELCOME_GUEST, reply_markup=kb)
+            await message.answer(MSG_WELCOME_GUEST, reply_markup=get_guest_keyboard())
 
     dp.register_message_handler(cmd_start, commands=["start"], state="*")
 
@@ -123,16 +171,25 @@ def register(dp, bot):
         mode = get_mode(user.id)
 
         status = "Администратор" if mode == "admin" else "Менеджер" if db_user else "Гость"
-        blocked = ""
-        if db_user and is_manager_blocked(user.id):
-            blocked = "\n⚠️ Статус: Заблокирован"
+
+        extra_info = ""
+        if db_user:
+            approval = get_user_approval_status(user.id)
+            if approval == "pending":
+                extra_info = "\n⏳ Статус: Ожидает одобрения"
+            elif approval == "rejected":
+                extra_info = "\n❌ Статус: Отклонён"
+            elif is_manager_blocked(user.id):
+                extra_info = "\n⛔ Статус: Заблокирован"
+            else:
+                extra_info = "\n✅ Статус: Активен"
 
         await message.answer(
             f"👤 <b>Информация о пользователе</b>\n\n"
             f"🆔 ID: <code>{user.id}</code>\n"
             f"👤 Username: @{user.username or '—'}\n"
             f"📝 Имя: {user.first_name or '—'} {user.last_name or ''}\n"
-            f"🔑 Роль: {status}{blocked}"
+            f"🔑 Роль: {status}{extra_info}"
         )
 
     dp.register_message_handler(cmd_myid, commands=["myid"], state="*")
@@ -149,27 +206,33 @@ def register(dp, bot):
 
         user = get_user_by_tgid(message.from_user.id)
         if user:
-            # Проверка блокировки
-            if is_manager_blocked(message.from_user.id):
+            approval = get_user_approval_status(message.from_user.id)
+
+            if approval == "pending":
+                return await message.answer(MSG_PENDING_APPROVAL, reply_markup=get_guest_keyboard())
+
+            if approval == "rejected":
+                # Разрешаем повторную регистрацию
+                pass
+            elif is_manager_blocked(message.from_user.id):
                 kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
                 kb.add(BTN_ADMIN_LOGIN)
                 return await message.answer(MSG_BLOCKED_USER, reply_markup=kb)
-
-            set_mode(message.from_user.id, "manager")
-            return await message.answer("Вы уже зарегистрированы в системе.", reply_markup=get_manager_keyboard())
+            else:
+                set_mode(message.from_user.id, "manager")
+                return await message.answer("Вы уже зарегистрированы в системе.", reply_markup=get_manager_keyboard())
 
         await RegForm.first_name.set()
         await message.answer(
-            "📋 <b>Регистрация</b>\n\n"
-            "Для работы с системой необходимо пройти регистрацию.\n\n"
+            "📋 <b>Регистрация менеджера</b>\n\n"
+            "Для работы с системой необходимо пройти регистрацию.\n"
+            "После заполнения формы ваша заявка будет отправлена на рассмотрение администратору.\n\n"
             "Введите ваше <b>имя</b>:",
             reply_markup=types.ReplyKeyboardRemove()
         )
 
     dp.register_message_handler(cmd_register, commands=["register"], state="*")
     dp.register_message_handler(cmd_register, lambda m: m.text == BTN_REG, state="*")
-
-    from app.db import create_user
 
     async def reg_first_name(message: types.Message, state: FSMContext):
         text = message.text.strip()
@@ -202,24 +265,38 @@ def register(dp, bot):
 
         data = await state.get_data()
         try:
-            create_user(
+            user_id = create_user(
                 tg_id=message.from_user.id,
                 first_name=data.get("first_name"),
                 last_name=data.get("last_name"),
                 contact=text,
             )
-            set_mode(message.from_user.id, "manager")
+
             await state.finish()
-            await set_scope_cmds(message.chat.id, "manager", True, message.from_user.language_code)
 
-            # Логируем регистрацию
-            user = get_user_by_tgid(message.from_user.id)
-            if user:
-                log_activity(str(user["id"]), "user_registered", "user", str(user["id"]))
+            if user_id:
+                # Логируем регистрацию
+                log_activity(user_id, "registration_submitted", "user", user_id)
 
-            await message.answer(MSG_REG_COMPLETE, reply_markup=get_manager_keyboard())
+                # Создаём уведомление для админа
+                name = f"{data.get('first_name', '')} {data.get('last_name', '')}".strip()
+                create_admin_notification(
+                    "new_registration",
+                    f"Новая заявка: {name}",
+                    f"Контакт: {text}, TG ID: {message.from_user.id}",
+                    "user",
+                    user_id
+                )
 
-        except Exception:
+                # Уведомляем админов
+                await notify_admins_new_registration(
+                    {"first_name": data.get("first_name"), "last_name": data.get("last_name"), "contact": text},
+                    message.from_user.id
+                )
+
+            await message.answer(MSG_PENDING_APPROVAL, reply_markup=get_guest_keyboard())
+
+        except Exception as e:
             await state.finish()
             await message.answer("⚠️ Ошибка сохранения данных. Попробуйте ещё раз: /register")
 
@@ -284,3 +361,24 @@ def register(dp, bot):
 
     dp.register_message_handler(cmd_logout, commands=["logout"], state="*")
     dp.register_message_handler(cmd_logout, lambda m: m.text == BTN_LOGOUT, state="*")
+
+    # ==================== ОЖИДАЮЩИЕ ОДОБРЕНИЯ (по кнопке) ====================
+
+    async def cmd_pending(message: types.Message):
+        if get_mode(message.from_user.id) != "admin":
+            return await message.answer("⛔ Требуются права администратора.")
+
+        from app.db import list_pending_registrations
+        from app.keyboards import pending_list_inline
+
+        pending = list_pending_registrations()
+        count = len(pending)
+
+        await message.answer(
+            f"⏳ <b>Ожидают одобрения</b> ({count})\n\n"
+            "Выберите заявку для рассмотрения:",
+            reply_markup=pending_list_inline(pending)
+        )
+
+    dp.register_message_handler(cmd_pending, lambda m: m.text and m.text.startswith("⏳"), state="*")
+    dp.register_message_handler(cmd_pending, lambda m: m.text == BTN_PENDING, state="*")
