@@ -5,6 +5,7 @@ from .photos import register as register_photos
 from .admin import register as register_admin
 from .admin_extended import register as register_admin_extended
 from .inline_mode import register as register_inline_mode
+from .manager_profile import register as register_manager_profile
 
 
 def register_all_handlers(dp, bot):
@@ -15,3 +16,4 @@ def register_all_handlers(dp, bot):
     register_admin(dp, bot)
     register_admin_extended(dp, bot)
     register_inline_mode(dp, bot)
+    register_manager_profile(dp, bot)

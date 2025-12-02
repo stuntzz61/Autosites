@@ -8,13 +8,19 @@ GET_USER_BY_ID = "SELECT * FROM users WHERE id=%s::uuid"
 
 # Создаём пользователя со статусом pending (ожидает одобрения)
 CREATE_USER = """
-INSERT INTO users (tg_id, role, first_name, last_name, contact, approval_status)
-VALUES (%s, 'manager', %s, %s, %s, 'pending')
+INSERT INTO users (tg_id, role, first_name, last_name, contact, approval_status, username)
+VALUES (%s, 'manager', %s, %s, %s, 'pending', %s)
 ON CONFLICT (tg_id) DO UPDATE
 SET first_name=EXCLUDED.first_name,
     last_name=EXCLUDED.last_name,
-    contact=EXCLUDED.contact
+    contact=EXCLUDED.contact,
+    username=EXCLUDED.username
 RETURNING id
+"""
+
+# Обновляем username при взаимодействии
+UPDATE_USER_USERNAME = """
+UPDATE users SET username = %s WHERE tg_id = %s
 """
 
 GET_MODE = "SELECT role FROM users WHERE tg_id=%s"
@@ -330,7 +336,19 @@ LIMIT %s
 
 GET_OVERALL_STATS = "SELECT * FROM get_overall_stats()"
 
-GET_MANAGER_STATS = "SELECT * FROM get_manager_stats(%s::uuid)"
+GET_MANAGER_STATS = """
+SELECT
+    COUNT(r.id) as total_requests,
+    COUNT(r.id) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) = 'generated_ok') as completed_requests,
+    COUNT(r.id) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) IN ('draft', 'awaiting_photos', 'ready', 'collecting_photos')) as pending_requests,
+    COUNT(r.id) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) = 'generated_error') as failed_requests,
+    COUNT(r.id) FILTER (WHERE r.created_at >= CURRENT_DATE - INTERVAL '7 days') as this_week,
+    COUNT(r.id) FILTER (WHERE r.created_at >= CURRENT_DATE) as today,
+    COALESCE(SUM(jsonb_array_length(COALESCE(r.payload_json->'site'->'assets'->'images', '[]'))), 0) as total_photos
+FROM projects p
+LEFT JOIN requests r ON r.project_id = p.id
+WHERE p.manager_id = %s::uuid
+"""
 
 GET_TOP_MANAGERS = """
 SELECT * FROM top_managers
@@ -377,6 +395,7 @@ GET_MANAGER_LEADERBOARD = """
 SELECT
     u.id,
     u.tg_id,
+    u.username,
     u.first_name,
     u.last_name,
     COUNT(r.id) as total_requests,
@@ -387,7 +406,7 @@ FROM users u
 LEFT JOIN projects p ON p.manager_id = u.id
 LEFT JOIN requests r ON r.project_id = p.id
 WHERE u.role = 'manager'
-GROUP BY u.id, u.tg_id, u.first_name, u.last_name
+GROUP BY u.id, u.tg_id, u.username, u.first_name, u.last_name
 ORDER BY total_requests DESC
 LIMIT %s
 """
@@ -406,7 +425,7 @@ ORDER BY created_at DESC
 
 ADMIN_MANAGERS_SELECT = """
 SELECT
-    u.id, u.first_name, u.last_name, u.contact, u.created_at, u.tg_id,
+    u.id, u.first_name, u.last_name, u.contact, u.created_at, u.tg_id, u.username,
     COALESCE(ms.is_blocked, false) as is_blocked,
     ms.block_reason,
     COUNT(r.id) as total_requests,
@@ -416,7 +435,7 @@ LEFT JOIN manager_settings ms ON ms.user_id = u.id
 LEFT JOIN projects p ON p.manager_id = u.id
 LEFT JOIN requests r ON r.project_id = p.id
 WHERE u.role = 'manager'
-GROUP BY u.id, u.first_name, u.last_name, u.contact, u.created_at, u.tg_id, ms.is_blocked, ms.block_reason
+GROUP BY u.id, u.first_name, u.last_name, u.contact, u.created_at, u.tg_id, u.username, ms.is_blocked, ms.block_reason
 ORDER BY total_requests DESC
 """
 
@@ -575,6 +594,8 @@ ORDER BY date DESC
 GET_MANAGERS_STATS_FOR_EXPORT = """
 SELECT
     u.first_name || ' ' || u.last_name as manager_name,
+    u.username,
+    u.tg_id,
     COUNT(r.id) as total_requests,
     COUNT(r.id) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) = 'generated_ok') as completed,
     COUNT(r.id) FILTER (WHERE r.created_at >= CURRENT_DATE - INTERVAL '7 days') as this_week,
@@ -583,7 +604,7 @@ FROM users u
 LEFT JOIN projects p ON p.manager_id = u.id
 LEFT JOIN requests r ON r.project_id = p.id
 WHERE u.role = 'manager'
-GROUP BY u.id, u.first_name, u.last_name
+GROUP BY u.id, u.first_name, u.last_name, u.username, u.tg_id
 HAVING COUNT(r.id) > 0
 ORDER BY total_requests DESC
 """

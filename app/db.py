@@ -35,12 +35,21 @@ def get_user_by_id(uid: str):
         return cur.fetchone()
 
 
-def create_user(tg_id: int, first_name: str, last_name: str, contact: str) -> Optional[str]:
+def create_user(tg_id: int, first_name: str, last_name: str, contact: str, username: str = None) -> Optional[str]:
     """Создаёт пользователя со статусом pending"""
     with get_db() as conn, conn.cursor() as cur:
-        cur.execute(Q.CREATE_USER, (tg_id, first_name, last_name, contact))
+        cur.execute(Q.CREATE_USER, (tg_id, first_name, last_name, contact, username))
         row = cur.fetchone()
         return str(row["id"]) if row else None
+
+
+def update_user_username(tg_id: int, username: str) -> None:
+    """Обновить username пользователя"""
+    try:
+        with get_db() as conn, conn.cursor() as cur:
+            cur.execute(Q.UPDATE_USER_USERNAME, (username, tg_id))
+    except Exception:
+        pass
 
 
 def get_mode(tg_id: int) -> str:

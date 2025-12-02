@@ -25,7 +25,7 @@ def _truncate(text: str, max_len: int = 25) -> str:
     return text[:max_len] + "…" if len(text) > max_len else text
 
 
-def requests_list_inline(reqs: List[dict], page: int, total: int, per_page: int = 10) -> InlineKeyboardMarkup:
+def requests_list_inline(reqs: List[dict], page: int, total: int, per_page: int = 10, show_back: bool = False) -> InlineKeyboardMarkup:
     """Список заявок с эмодзи компании"""
     ikb = InlineKeyboardMarkup(row_width=1)
 
@@ -69,6 +69,10 @@ def requests_list_inline(reqs: List[dict], page: int, total: int, per_page: int 
         nav.append(InlineKeyboardButton("Вперёд »", callback_data=f"{CB_LIST_PAGE}{page+1}"))
     if nav:
         ikb.row(*nav)
+
+    # Кнопка возврата (для админа)
+    if show_back:
+        ikb.add(InlineKeyboardButton("⬅️ В меню", callback_data="admin_back"))
 
     return ikb
 
@@ -221,12 +225,20 @@ def admin_main_inline() -> InlineKeyboardMarkup:
         InlineKeyboardButton("👥 Менеджеры", callback_data="admin_managers"),
     )
     ikb.add(
+        InlineKeyboardButton("⏳ Ожидают", callback_data="pending_list"),
         InlineKeyboardButton("📦 Все заявки", callback_data="admin_requests"),
-        InlineKeyboardButton("📋 Лог действий", callback_data="admin_log"),
     )
     ikb.add(
+        InlineKeyboardButton("📢 Рассылка", callback_data=CB_BROADCAST),
+        InlineKeyboardButton("🔍 Поиск", callback_data=CB_SEARCH),
+    )
+    ikb.add(
+        InlineKeyboardButton("⚡ Массовые", callback_data=CB_MASS_OPS),
+        InlineKeyboardButton("📊 Экспорт", callback_data="export_menu"),
+    )
+    ikb.add(
+        InlineKeyboardButton("📋 Лог действий", callback_data="admin_log"),
         InlineKeyboardButton("📊 Отчёт за неделю", callback_data="admin_weekly"),
-        InlineKeyboardButton("📤 Экспорт всего", callback_data="admin_export"),
     )
 
     return ikb
@@ -238,11 +250,15 @@ def admin_managers_list_inline(managers: List[dict], page: int = 1) -> InlineKey
 
     for m in managers:
         name = f"{m.get('first_name', '')} {m.get('last_name', '')}".strip() or "Без имени"
+        username = m.get('username')
         total = m.get('total_requests', 0)
         completed = m.get('completed_requests', 0)
         blocked = "🔒" if m.get('is_blocked') else ""
 
-        title = f"{blocked}👤 {_truncate(name, 15)} | 📋{total} ✅{completed}"
+        if username:
+            title = f"{blocked}👤 {_truncate(name, 12)} @{username[:10]} | 📋{total}"
+        else:
+            title = f"{blocked}👤 {_truncate(name, 15)} | 📋{total} ✅{completed}"
         ikb.add(InlineKeyboardButton(title, callback_data=f"{CB_ADMIN_MANAGER}{m['id']}"))
 
     ikb.add(InlineKeyboardButton("⬅️ Назад", callback_data="admin_back"))

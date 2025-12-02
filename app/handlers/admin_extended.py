@@ -463,13 +463,18 @@ def register(dp, bot):
             desc = "сгенерированных"
         elif action_type == "old":
             # Старше 30 дней
-            from datetime import timedelta
-            cutoff = datetime.now() - timedelta(days=30)
-            to_archive = [
-                r for r in all_requests
-                if r.get('created_at') and r['created_at'] < cutoff
-                and r.get('status') not in ('generating', 'queued')
-            ]
+            from datetime import timedelta, timezone
+            cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+            to_archive = []
+            for r in all_requests:
+                created = r.get('created_at')
+                if not created:
+                    continue
+                # Приводим к aware datetime если нужно
+                if hasattr(created, 'tzinfo') and created.tzinfo is None:
+                    created = created.replace(tzinfo=timezone.utc)
+                if created < cutoff and r.get('status') not in ('generating', 'queued'):
+                    to_archive.append(r)
             desc = "старых (30+ дней)"
 
         if not to_archive:
@@ -580,7 +585,19 @@ def register(dp, bot):
         )
 
     dp.register_message_handler(cmd_export, lambda m: m.text == BTN_EXPORT, state="*")
-    dp.register_message_handler(cmd_export, commands=["export"], state="*")
+    dp.register_message_handler(cmd_export, commands=["export", "export_all"], state="*")
+
+    @require_admin
+    async def cb_export_menu(call: types.CallbackQuery):
+        """Меню экспорта через callback"""
+        await call.answer()
+        await call.message.edit_text(
+            "📊 <b>Экспорт статистики</b>\n\n"
+            "Выберите формат:",
+            reply_markup=export_options_inline()
+        )
+
+    dp.register_callback_query_handler(cb_export_menu, lambda c: c.data == "export_menu", state="*")
 
     @require_admin
     async def cb_export_excel(call: types.CallbackQuery):

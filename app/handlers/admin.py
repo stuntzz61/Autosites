@@ -259,9 +259,14 @@ def register(dp, bot):
         leader_lines = []
         for i, m in enumerate(leaderboard, 1):
             name = f"{m.get('first_name', '')} {m.get('last_name', '')}".strip() or "—"
+            username = m.get('username')
+            user_link = f"@{username}" if username else ""
             total = m.get('total_requests', 0)
             completed = m.get('completed', 0)
-            leader_lines.append(f"  {i}. {_truncate(name, 15)} — {total} заявок ({completed} ✅)")
+            if user_link:
+                leader_lines.append(f"  {i}. {_truncate(name, 12)} ({user_link}) — {total} ({completed}✅)")
+            else:
+                leader_lines.append(f"  {i}. {_truncate(name, 15)} — {total} ({completed}✅)")
         leader_text = "\n".join(leader_lines) if leader_lines else "  Нет данных"
 
         text = (
@@ -347,6 +352,8 @@ def register(dp, bot):
         name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or "—"
         contact = user.get('contact', '—')
         tg_id = user.get('tg_id', '—')
+        username = user.get('username')
+        username_link = f"@{username}" if username else "—"
         registered = user.get('created_at', '—')
         if hasattr(registered, 'strftime'):
             registered = registered.strftime('%d.%m.%Y')
@@ -361,7 +368,8 @@ def register(dp, bot):
         text = (
             f"👤 <b>Менеджер: {e(name)}</b>\n\n"
             f"📱 Контакт: {e(contact)}\n"
-            f"🆔 Telegram ID: <code>{tg_id}</code>\n"
+            f"💬 Telegram: {username_link}\n"
+            f"🆔 ID: <code>{tg_id}</code>\n"
             f"📅 Регистрация: {registered}\n\n"
             f"<b>Статус:</b> {status_text}\n\n"
             f"<b>📊 Статистика:</b>\n"
@@ -518,7 +526,7 @@ def register(dp, bot):
         rows = list_all_requests(0, 15)
         await message.answer(
             f"📦 <b>Все заявки</b> ({total})\n\nВыберите:",
-            reply_markup=requests_list_inline(rows, 1, total, 15)
+            reply_markup=requests_list_inline(rows, 1, total, 15, show_back=True)
         )
 
     dp.register_message_handler(cmd_all_requests, commands=["all_requests", "admin_requests"], state="*")
@@ -535,7 +543,7 @@ def register(dp, bot):
         rows = list_all_requests(0, 15)
         await call.message.edit_text(
             f"📦 <b>Все заявки</b> ({total})",
-            reply_markup=requests_list_inline(rows, 1, total, 15)
+            reply_markup=requests_list_inline(rows, 1, total, 15, show_back=True)
         )
 
     dp.register_callback_query_handler(cb_admin_requests, lambda c: c.data == "admin_requests")

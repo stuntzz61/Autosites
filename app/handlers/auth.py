@@ -16,7 +16,7 @@ from app.db import (
     init_db, get_user_by_tgid, get_mode, set_mode,
     is_manager_blocked, is_user_approved, get_user_approval_status,
     create_admin_notification, count_pending_registrations,
-    log_activity, create_user,
+    log_activity, create_user, update_user_username,
 )
 from app.states import RegForm, AdminLogin
 from app.keyboards import pending_approval_inline
@@ -59,7 +59,8 @@ def register(dp, bot):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add(BTN_NEW)
         kb.add(BTN_MY, BTN_ARCHIVE)
-        kb.add(BTN_RESET, BTN_ADMIN_LOGIN)
+        kb.add("👤 Мой профиль", BTN_RESET)
+        kb.add(BTN_ADMIN_LOGIN)
         return kb
 
     def get_admin_keyboard():
@@ -114,6 +115,10 @@ def register(dp, bot):
         user = get_user_by_tgid(message.from_user.id)
         is_reg = bool(user)
         mode = get_mode(message.from_user.id)
+
+        # Обновляем username при каждом /start
+        if message.from_user.username:
+            update_user_username(message.from_user.id, message.from_user.username)
 
         # Проверка статуса одобрения
         if is_reg and mode != "admin":
@@ -273,6 +278,7 @@ def register(dp, bot):
                 first_name=data.get("first_name"),
                 last_name=data.get("last_name"),
                 contact=text,
+                username=message.from_user.username,
             )
 
             await state.finish()
