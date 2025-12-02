@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { useAuthStore } from '../stores/authStore'
 
 // Telegram WebApp types
 interface TelegramUser {
@@ -121,6 +122,7 @@ const TelegramContext = createContext<TelegramContextValue | null>(null)
 export function TelegramProvider({ children }: { children: ReactNode }) {
   const [webApp, setWebApp] = useState<WebApp | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const { init } = useAuthStore()
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp
@@ -153,13 +155,19 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       }
 
       setWebApp(tg)
+
+      // Initialize auth with Telegram init data
+      if (tg.initData) {
+        init(tg.initData)
+      }
+
       setIsReady(true)
     } else {
       // Development mode without Telegram
       console.log('Running outside of Telegram')
       setIsReady(true)
     }
-  }, [])
+  }, [init])
 
   const value: TelegramContextValue = {
     webApp,

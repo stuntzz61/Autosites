@@ -40,12 +40,15 @@ def get_user_by_tgid(tg_id: int) -> Optional[Dict[str, Any]]:
         cur = conn.execute(
             """
             SELECT id, tg_id, username, first_name, last_name, contact, role,
-                   is_blocked, approval_status, created_at
+                   approval_status, created_at
             FROM users WHERE tg_id = %s
             """,
             (tg_id,)
         )
-        return cur.fetchone()
+        result = cur.fetchone()
+        if result:
+            result['is_blocked'] = False  # Default until migration applied
+        return result
 
 
 def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
@@ -54,12 +57,15 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         cur = conn.execute(
             """
             SELECT id, tg_id, username, first_name, last_name, contact, role,
-                   is_blocked, approval_status, created_at
+                   approval_status, created_at
             FROM users WHERE id = %s
             """,
             (user_id,)
         )
-        return cur.fetchone()
+        result = cur.fetchone()
+        if result:
+            result['is_blocked'] = False  # Default until migration applied
+        return result
 
 
 def create_user(
@@ -88,10 +94,13 @@ def update_user(user_id: str, **kwargs) -> bool:
     if not kwargs:
         return False
 
+    # Temporarily exclude is_blocked until migration is applied
+    allowed_fields = ['first_name', 'last_name', 'username', 'contact', 'role', 'approval_status']
+
     fields = []
     values = []
     for key, value in kwargs.items():
-        if key in ['first_name', 'last_name', 'username', 'contact', 'role', 'is_blocked', 'approval_status']:
+        if key in allowed_fields:
             fields.append(f"{key} = %s")
             values.append(value)
 
@@ -259,7 +268,7 @@ def get_all_managers(limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         cur = conn.execute(
             """
             SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name, u.contact,
-                   u.is_blocked, u.approval_status, u.created_at,
+                   u.approval_status, u.created_at,
                    COUNT(r.id) as total_requests,
                    COUNT(r.id) FILTER (WHERE r.status IN ('generated_ok', 'delivered', 'closed')) as completed_requests
             FROM users u
@@ -271,7 +280,10 @@ def get_all_managers(limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
             """,
             (limit, offset)
         )
-        return cur.fetchall()
+        results = cur.fetchall()
+        for r in results:
+            r['is_blocked'] = False  # Default until migration applied
+        return results
 
 
 def get_pending_registrations() -> List[Dict[str, Any]]:

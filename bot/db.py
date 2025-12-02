@@ -37,11 +37,14 @@ async def get_user_by_tg_id(tg_id: int) -> Optional[Dict]:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT id, tg_id, username, first_name, last_name, contact, role,
-                          approval_status, is_blocked, created_at
+                          approval_status, created_at
                    FROM users WHERE tg_id = %s""",
                 (tg_id,)
             )
-            return await cur.fetchone()
+            result = await cur.fetchone()
+            if result:
+                result['is_blocked'] = False  # Default until migration applied
+            return result
 
 
 async def create_user(

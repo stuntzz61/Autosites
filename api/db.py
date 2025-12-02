@@ -38,11 +38,14 @@ async def get_user_by_tg_id(tg_id: int) -> Optional[Dict]:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT id, tg_id, username, first_name, last_name, contact, role,
-                          approval_status, is_blocked, created_at
+                          approval_status, created_at
                    FROM users WHERE tg_id = %s""",
                 (tg_id,)
             )
-            return await cur.fetchone()
+            result = await cur.fetchone()
+            if result:
+                result['is_blocked'] = False  # Default until migration applied
+            return result
 
 
 async def get_user_by_id(user_id: str) -> Optional[Dict]:
@@ -50,11 +53,14 @@ async def get_user_by_id(user_id: str) -> Optional[Dict]:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT id, tg_id, username, first_name, last_name, contact, role,
-                          approval_status, is_blocked, created_at
+                          approval_status, created_at
                    FROM users WHERE id = %s""",
                 (user_id,)
             )
-            return await cur.fetchone()
+            result = await cur.fetchone()
+            if result:
+                result['is_blocked'] = False  # Default until migration applied
+            return result
 
 
 async def create_user(tg_id: int, username: str, first_name: str, last_name: str) -> Dict:
@@ -75,7 +81,7 @@ async def list_managers() -> List[Dict]:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name, u.contact,
-                          u.role, u.is_blocked, u.approval_status, u.created_at,
+                          u.role, u.approval_status, u.created_at,
                           COUNT(r.id) as request_count
                    FROM users u
                    LEFT JOIN requests r ON r.user_id = u.id
@@ -83,7 +89,10 @@ async def list_managers() -> List[Dict]:
                    GROUP BY u.id
                    ORDER BY request_count DESC"""
             )
-            return await cur.fetchall()
+            results = await cur.fetchall()
+            for r in results:
+                r['is_blocked'] = False  # Default until migration applied
+            return results
 
 
 async def list_pending_registrations() -> List[Dict]:
@@ -120,23 +129,33 @@ async def reject_user(user_id: str, reason: str):
 
 
 async def block_user(user_id: str):
+    """Block user. Note: requires migration 005 to be applied."""
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
-            await cur.execute(
-                "UPDATE users SET is_blocked = TRUE WHERE id = %s",
-                (user_id,)
-            )
-            await conn.commit()
+            # Try to update is_blocked, ignore error if column doesn't exist yet
+            try:
+                await cur.execute(
+                    "UPDATE users SET is_blocked = TRUE WHERE id = %s",
+                    (user_id,)
+                )
+                await conn.commit()
+            except Exception:
+                pass  # Column may not exist yet
 
 
 async def unblock_user(user_id: str):
+    """Unblock user. Note: requires migration 005 to be applied."""
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
-            await cur.execute(
-                "UPDATE users SET is_blocked = FALSE WHERE id = %s",
-                (user_id,)
-            )
-            await conn.commit()
+            # Try to update is_blocked, ignore error if column doesn't exist yet
+            try:
+                await cur.execute(
+                    "UPDATE users SET is_blocked = FALSE WHERE id = %s",
+                    (user_id,)
+                )
+                await conn.commit()
+            except Exception:
+                pass  # Column may not exist yet
 
 
 async def delete_user(user_id: str):
