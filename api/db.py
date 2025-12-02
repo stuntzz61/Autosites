@@ -84,7 +84,8 @@ async def list_managers() -> List[Dict]:
                           u.role, u.approval_status, u.created_at,
                           COUNT(r.id) as request_count
                    FROM users u
-                   LEFT JOIN requests r ON r.user_id = u.id
+                   LEFT JOIN projects p ON p.manager_id = u.id
+                   LEFT JOIN requests r ON r.project_id = p.id
                    WHERE u.role = 'manager' AND u.approval_status = 'approved'
                    GROUP BY u.id
                    ORDER BY request_count DESC"""
@@ -187,7 +188,7 @@ async def list_requests(
     params = []
 
     if user_id:
-        conditions.append("r.user_id = %s")
+        conditions.append("p.manager_id = %s")
         params.append(user_id)
 
     if status:
@@ -203,9 +204,14 @@ async def list_requests(
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                f"""SELECT r.id, r.company_name, r.client_name, r.status, r.payload_json,
+                f"""SELECT r.id,
+                           COALESCE(r.payload_json->'site'->>'company', '') as company_name,
+                           COALESCE(r.payload_json->'client'->>'name', '') as client_name,
+                           COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) as status,
+                           r.payload_json,
                            r.created_at, r.archived_at
                     FROM requests r
+                    JOIN projects p ON p.id = r.project_id
                     WHERE {where_clause}
                     ORDER BY r.created_at DESC
                     LIMIT %s OFFSET %s""",
@@ -222,9 +228,16 @@ async def get_request(request_id: str) -> Optional[Dict]:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                """SELECT r.id, r.company_name, r.client_name, r.status, r.payload_json,
-                          r.user_id, r.created_at, r.archived_at, r.closed_at
-                   FROM requests r WHERE r.id = %s""",
+                """SELECT r.id,
+                          COALESCE(r.payload_json->'site'->>'company', '') as company_name,
+                          COALESCE(r.payload_json->'client'->>'name', '') as client_name,
+                          COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) as status,
+                          r.payload_json,
+                          p.manager_id as user_id,
+                          r.created_at, r.archived_at
+                   FROM requests r
+                   JOIN projects p ON p.id = r.project_id
+                   WHERE r.id = %s""",
                 (request_id,)
             )
             row = await cur.fetchone()
@@ -236,16 +249,42 @@ async def get_request(request_id: str) -> Optional[Dict]:
 async def create_request(user_id: str, company_name: str, client_name: str, payload: Dict) -> Dict:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
+            # First, get or create a project for this manager
             await cur.execute(
-                """INSERT INTO requests (user_id, company_name, client_name, status, payload_json)
-                   VALUES (%s, %s, %s, 'draft', %s)
-                   RETURNING id, company_name, client_name, status, payload_json, created_at""",
-                (user_id, company_name, client_name, json.dumps(payload))
+                """SELECT id FROM projects
+                   WHERE manager_id = %s AND status IN ('draft', 'active')
+                   ORDER BY created_at DESC LIMIT 1""",
+                (user_id,)
+            )
+            project = await cur.fetchone()
+
+            if project:
+                project_id = project['id']
+            else:
+                # Create new project
+                await cur.execute(
+                    """INSERT INTO projects (manager_id, title, status)
+                       VALUES (%s, %s, 'draft')
+                       RETURNING id""",
+                    (user_id, company_name or 'Новый проект')
+                )
+                project = await cur.fetchone()
+                project_id = project['id']
+
+            # Create the request
+            await cur.execute(
+                """INSERT INTO requests (project_id, status, payload_json)
+                   VALUES (%s, 'draft', %s)
+                   RETURNING id, status, payload_json, created_at""",
+                (project_id, json.dumps(payload))
             )
             await conn.commit()
             row = await cur.fetchone()
-            if row.get('payload_json'):
-                row['payload'] = row.pop('payload_json')
+            if row:
+                row['company_name'] = company_name
+                row['client_name'] = client_name
+                if row.get('payload_json'):
+                    row['payload'] = row.pop('payload_json')
             return row
 
 
@@ -372,7 +411,8 @@ async def get_dashboard_stats() -> Dict:
             await cur.execute(
                 """SELECT u.id, u.first_name, u.last_name, u.username, COUNT(r.id) as request_count
                    FROM users u
-                   LEFT JOIN requests r ON r.user_id = u.id
+                   LEFT JOIN projects p ON p.manager_id = u.id
+                   LEFT JOIN requests r ON r.project_id = p.id
                    WHERE u.role = 'manager' AND u.approval_status = 'approved'
                    GROUP BY u.id
                    ORDER BY request_count DESC
@@ -432,7 +472,8 @@ async def get_manager_stats() -> List[Dict]:
                 """SELECT u.id, u.first_name, u.last_name, u.username,
                           COUNT(r.id) as request_count
                    FROM users u
-                   LEFT JOIN requests r ON r.user_id = u.id
+                   LEFT JOIN projects p ON p.manager_id = u.id
+                   LEFT JOIN requests r ON r.project_id = p.id
                    WHERE u.role = 'manager' AND u.approval_status = 'approved'
                    GROUP BY u.id
                    ORDER BY request_count DESC"""
@@ -445,12 +486,14 @@ async def get_user_stats(user_id: str) -> Dict:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT
-                   COUNT(*) as total_requests,
-                   COUNT(*) FILTER (WHERE status = 'success') as completed_requests,
-                   COUNT(*) FILTER (WHERE status NOT IN ('success', 'archived', 'closed')) as pending_requests,
-                   COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as this_week,
-                   COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as today
-                   FROM requests WHERE user_id = %s""",
+                   COUNT(r.id) as total_requests,
+                   COUNT(r.id) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) = 'generated_ok') as completed_requests,
+                   COUNT(r.id) FILTER (WHERE COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) NOT IN ('generated_ok', 'archived', 'closed')) as pending_requests,
+                   COUNT(r.id) FILTER (WHERE r.created_at >= CURRENT_DATE - INTERVAL '7 days') as this_week,
+                   COUNT(r.id) FILTER (WHERE DATE(r.created_at) = CURRENT_DATE) as today
+                   FROM projects p
+                   LEFT JOIN requests r ON r.project_id = p.id
+                   WHERE p.manager_id = %s""",
                 (user_id,)
             )
             return await cur.fetchone()

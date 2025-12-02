@@ -45,7 +45,7 @@ function App() {
             Добро пожаловать!
           </h1>
           <p className="text-tg-hint">
-            Откройте приложение через бота @AutoSites_bot
+            Откройте приложение через бота @weblyMN_bot
           </p>
         </div>
       </div>
