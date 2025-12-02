@@ -25,7 +25,7 @@ def _truncate(text: str, max_len: int = 25) -> str:
     return text[:max_len] + "…" if len(text) > max_len else text
 
 
-def requests_list_inline(reqs: List[dict], page: int, total: int, per_page: int = 10, show_back: bool = False) -> InlineKeyboardMarkup:
+def requests_list_inline(reqs: List[dict], page: int, total: int, per_page: int = 10, show_back: bool = False, is_admin: bool = False) -> InlineKeyboardMarkup:
     """Список заявок с эмодзи компании"""
     ikb = InlineKeyboardMarkup(row_width=1)
 
@@ -70,9 +70,9 @@ def requests_list_inline(reqs: List[dict], page: int, total: int, per_page: int 
     if nav:
         ikb.row(*nav)
 
-    # Кнопка возврата (для админа)
-    if show_back:
-        ikb.add(InlineKeyboardButton("⬅️ В меню", callback_data="admin_back"))
+    # Кнопка возврата
+    if show_back or is_admin:
+        ikb.add(InlineKeyboardButton("⬅️ В меню", callback_data="admin_back" if is_admin else "manager_menu"))
 
     return ikb
 
@@ -89,9 +89,11 @@ def request_card_inline(req_id: Any, is_owner: bool, is_admin: bool, status: str
         )
 
         # Действия в зависимости от статуса
-        if status in ("ready_to_generate", "collecting_photos", "draft", "awaiting_photos"):
+        # Можно генерировать: draft, collecting_info, collecting_photos, ready_to_generate
+        can_generate = status in ("draft", "collecting_info", "collecting_photos", "ready_to_generate", "awaiting_photos", None, "")
+
+        if can_generate:
             ikb.add(InlineKeyboardButton("⚙️ Сгенерировать сайт", callback_data=f"{CB_GEN}{req_id}"))
-            # Менеджер может архивировать черновики
             ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
         elif status == "generated_ok":
             ikb.add(
@@ -101,11 +103,14 @@ def request_card_inline(req_id: Any, is_owner: bool, is_admin: bool, status: str
         elif status in ("closed", "delivered"):
             ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
         elif status == "generating" or status == "queued":
-            # В процессе генерации - только ждать
-            pass
+            # В процессе генерации - показываем статус
+            ikb.add(InlineKeyboardButton("⏳ Генерация в процессе...", callback_data="noop"))
         elif status == "generated_error":
             # После ошибки можно перегенерить или архивировать
-            ikb.add(InlineKeyboardButton("🔄 Повторить", callback_data=f"{CB_GEN}{req_id}"))
+            ikb.add(InlineKeyboardButton("🔄 Повторить генерацию", callback_data=f"{CB_GEN}{req_id}"))
+            ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
+        else:
+            # Для любого другого статуса - показать архив
             ikb.add(InlineKeyboardButton("🗄 В архив", callback_data=f"{CB_ARCHIVE_REQ}{req_id}"))
 
         # Удаление только для админа и не для завершённых

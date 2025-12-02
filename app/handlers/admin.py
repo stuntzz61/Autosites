@@ -555,7 +555,7 @@ def register(dp, bot):
         rows = list_all_requests(0, 15)
         await message.answer(
             f"📦 <b>Все заявки</b> ({total})\n\nВыберите:",
-            reply_markup=requests_list_inline(rows, 1, total, 15, show_back=True)
+            reply_markup=requests_list_inline(rows, 1, total, 15, show_back=True, is_admin=True)
         )
 
     dp.register_message_handler(cmd_all_requests, commands=["all_requests", "admin_requests"], state="*")
@@ -572,7 +572,7 @@ def register(dp, bot):
         rows = list_all_requests(0, 15)
         await call.message.edit_text(
             f"📦 <b>Все заявки</b> ({total})",
-            reply_markup=requests_list_inline(rows, 1, total, 15, show_back=True)
+            reply_markup=requests_list_inline(rows, 1, total, 15, show_back=True, is_admin=True)
         )
 
     dp.register_callback_query_handler(cb_admin_requests, lambda c: c.data == "admin_requests")

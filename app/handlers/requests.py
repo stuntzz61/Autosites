@@ -164,7 +164,7 @@ def register(dp, bot):
         await message.answer(
             f"📋 <b>Мои заявки</b> ({total})\n\n"
             "Выберите заявку для просмотра:",
-            reply_markup=requests_list_inline(rows, page, total, per_page)
+            reply_markup=requests_list_inline(rows, page, total, per_page, show_back=True)
         )
 
     dp.register_message_handler(cmd_my_requests, commands=["my_requests"], state="*")
@@ -207,7 +207,7 @@ def register(dp, bot):
         rows = list_manager_requests(call.from_user.id, offset=(page - 1) * per_page, limit=per_page)
 
         try:
-            await call.message.edit_reply_markup(requests_list_inline(rows, page, total, per_page))
+            await call.message.edit_reply_markup(requests_list_inline(rows, page, total, per_page, show_back=True))
         except MessageNotModified:
             pass
 
@@ -260,10 +260,28 @@ def register(dp, bot):
         rows = list_manager_requests(call.from_user.id, offset=0, limit=per_page)
         await call.message.edit_text(
             f"📋 <b>Мои заявки</b> ({total})\n\nВыберите заявку:",
-            reply_markup=requests_list_inline(rows, page, total, per_page)
+            reply_markup=requests_list_inline(rows, page, total, per_page, show_back=True)
         )
 
     dp.register_callback_query_handler(cb_back_list, lambda c: c.data and c.data == CB_BACK_TO_LIST)
+
+    # Возврат в меню менеджера
+    async def cb_manager_menu(call: types.CallbackQuery):
+        await call.answer()
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(BTN_NEW)
+        kb.add(BTN_MY, BTN_ARCHIVE)
+        kb.add("👤 Мой профиль", BTN_RESET)
+        kb.add(BTN_ADMIN_LOGIN)
+
+        await call.message.delete()
+        await call.message.answer(
+            "📋 <b>Главное меню</b>\n\n"
+            "Выберите действие:",
+            reply_markup=kb
+        )
+
+    dp.register_callback_query_handler(cb_manager_menu, lambda c: c.data == "manager_menu")
 
     # ==================== ЗАКРЫТЬ ЗАЯВКУ ====================
 
