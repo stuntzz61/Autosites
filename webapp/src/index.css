@@ -87,7 +87,7 @@ body {
   }
 
   .input {
-    @apply w-full rounded-xl bg-tg-secondary-bg px-4 py-3 text-tg-text placeholder:text-tg-hint outline-none ring-0 focus:ring-2 focus:ring-tg-button/30 transition-all;
+    @apply w-full rounded-xl bg-tg-secondary-bg px-4 py-3 text-tg-text placeholder:text-tg-hint outline-none ring-0 focus:ring-2 focus:ring-blue-500/30 transition-all;
   }
 
   .section-header {
