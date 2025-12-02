@@ -22,6 +22,7 @@ import AdminManagers from './pages/admin/AdminManagers'
 import AdminRequests from './pages/admin/AdminRequests'
 import AdminStats from './pages/admin/AdminStats'
 import AdminBroadcast from './pages/admin/AdminBroadcast'
+import AdminLoginPage from './pages/AdminLoginPage'
 
 // Loading
 import LoadingScreen from './components/LoadingScreen'
@@ -65,8 +66,11 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
 
+        {/* Admin Login Route */}
+        <Route path="/admin-login" element={<AdminLoginPage />} />
+
         {/* Admin Routes */}
-        {isAdmin && (
+        {isAdmin ? (
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="managers" element={<AdminManagers />} />
@@ -74,6 +78,8 @@ function App() {
             <Route path="stats" element={<AdminStats />} />
             <Route path="broadcast" element={<AdminBroadcast />} />
           </Route>
+        ) : (
+          <Route path="/admin/*" element={<Navigate to="/admin-login" replace />} />
         )}
 
         {/* Fallback */}

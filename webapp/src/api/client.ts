@@ -60,8 +60,8 @@ export const requestsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
 
-  deletePhoto: (id: string, photoId: string) =>
-    api.delete(`/requests/${id}/photos/${photoId}`),
+  deletePhoto: (id: string, photoUrl: string) =>
+    api.delete(`/requests/${id}/photos`, { params: { url: photoUrl } }),
 }
 
 export const adminApi = {

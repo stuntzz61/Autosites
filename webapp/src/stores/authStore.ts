@@ -31,6 +31,7 @@ interface AuthState {
   init: (initData: string) => Promise<void>
   logout: () => void
   refreshUser: () => Promise<void>
+  setAdmin: (isAdmin: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -78,6 +79,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Refresh user error:', error)
     }
+  },
+
+  setAdmin: (isAdmin: boolean) => {
+    set((state) => ({
+      isAdmin,
+      user: state.user ? { ...state.user, role: isAdmin ? 'admin' : state.user.role } : null,
+    }))
   },
 }))
 

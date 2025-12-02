@@ -1,45 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Telegram WebApp Variables with nice defaults */
+/* Telegram WebApp Variables with distinctive modern theme */
 :root {
   --tg-viewport-height: 100vh;
   --tg-viewport-stable-height: 100vh;
-  
-  /* Light theme defaults */
-  --tg-theme-bg-color: #f8fafc;
-  --tg-theme-text-color: #1e293b;
-  --tg-theme-hint-color: #64748b;
-  --tg-theme-link-color: #3b82f6;
-  --tg-theme-button-color: #3b82f6;
+
+  /* Light theme - Warm coral/teal palette */
+  --tg-theme-bg-color: #faf9f7;
+  --tg-theme-text-color: #1a1a2e;
+  --tg-theme-hint-color: #6b7280;
+  --tg-theme-link-color: #0d9488;
+  --tg-theme-button-color: #f97316;
   --tg-theme-button-text-color: #ffffff;
-  --tg-theme-secondary-bg-color: #f1f5f9;
-  --tg-theme-header-bg-color: #ffffff;
+  --tg-theme-secondary-bg-color: #f3f2ef;
+  --tg-theme-header-bg-color: #faf9f7;
   --tg-theme-section-bg-color: #ffffff;
-  --tg-theme-section-header-text-color: #64748b;
-  --tg-theme-accent-text-color: #3b82f6;
-  --tg-theme-destructive-text-color: #ef4444;
-  --tg-theme-subtitle-text-color: #94a3b8;
-  --tg-theme-section-separator-color: #e2e8f0;
+  --tg-theme-section-header-text-color: #9ca3af;
+  --tg-theme-accent-text-color: #0d9488;
+  --tg-theme-destructive-text-color: #dc2626;
+  --tg-theme-subtitle-text-color: #9ca3af;
+  --tg-theme-section-separator-color: #e5e5e5;
+
+  /* Custom accent colors */
+  --accent-primary: #f97316;
+  --accent-secondary: #0d9488;
+  --accent-gradient-from: #f97316;
+  --accent-gradient-to: #ea580c;
 }
 
-/* Dark theme overrides */
-.dark {
-  --tg-theme-bg-color: #0f172a;
-  --tg-theme-text-color: #f1f5f9;
-  --tg-theme-hint-color: #94a3b8;
-  --tg-theme-link-color: #60a5fa;
-  --tg-theme-button-color: #3b82f6;
-  --tg-theme-button-text-color: #ffffff;
-  --tg-theme-secondary-bg-color: #1e293b;
-  --tg-theme-header-bg-color: #0f172a;
-  --tg-theme-section-bg-color: #1e293b;
-  --tg-theme-section-header-text-color: #94a3b8;
-  --tg-theme-accent-text-color: #60a5fa;
+/* Dark theme - Deep navy with coral accents */
+.dark, [data-theme="dark"] {
+  --tg-theme-bg-color: #0f0f1a;
+  --tg-theme-text-color: #f5f5f7;
+  --tg-theme-hint-color: #a1a1aa;
+  --tg-theme-link-color: #14b8a6;
+  --tg-theme-button-color: #fb923c;
+  --tg-theme-button-text-color: #0f0f1a;
+  --tg-theme-secondary-bg-color: #1a1a2e;
+  --tg-theme-header-bg-color: #0f0f1a;
+  --tg-theme-section-bg-color: #1a1a2e;
+  --tg-theme-section-header-text-color: #71717a;
+  --tg-theme-accent-text-color: #14b8a6;
   --tg-theme-destructive-text-color: #f87171;
-  --tg-theme-subtitle-text-color: #64748b;
-  --tg-theme-section-separator-color: #334155;
+  --tg-theme-subtitle-text-color: #71717a;
+  --tg-theme-section-separator-color: #27273a;
+
+  --accent-primary: #fb923c;
+  --accent-secondary: #14b8a6;
+  --accent-gradient-from: #fb923c;
+  --accent-gradient-to: #f97316;
 }
 
 /* Base styles */
@@ -51,12 +64,13 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--tg-theme-bg-color);
   color: var(--tg-theme-text-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
+  letter-spacing: -0.01em;
 }
 
 /* Scrollbar styles */
@@ -70,8 +84,9 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--tg-theme-hint-color, #999999);
+  background: var(--accent-primary);
   border-radius: 2px;
+  opacity: 0.5;
 }
 
 /* Safe areas for notch devices */
@@ -92,44 +107,60 @@ body {
   .tap-highlight-none {
     -webkit-tap-highlight-color: transparent;
   }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-orange-500 to-teal-500 bg-clip-text text-transparent;
+  }
+
+  .gradient-bg {
+    @apply bg-gradient-to-br from-orange-500 to-orange-600;
+  }
+
+  .glass {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl;
+  }
 }
 
 /* Card component styles */
 @layer components {
   .card {
-    @apply bg-tg-section rounded-2xl p-4 shadow-sm;
+    @apply bg-tg-section rounded-3xl p-5 shadow-sm border border-black/5 dark:border-white/5;
   }
 
   .card-elevated {
-    @apply bg-tg-section rounded-2xl p-4 shadow-md;
+    @apply bg-tg-section rounded-3xl p-5 shadow-lg shadow-black/5 border border-black/5 dark:border-white/5;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-medium transition-all active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 font-semibold transition-all active:scale-[0.97] duration-150;
   }
 
   .btn-primary {
-    @apply bg-tg-button text-tg-button-text hover:opacity-90;
+    @apply bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/25;
   }
 
   .btn-secondary {
-    @apply bg-tg-secondary-bg text-tg-text hover:opacity-90;
+    @apply bg-tg-secondary-bg text-tg-text hover:bg-opacity-80;
+  }
+
+  .btn-accent {
+    @apply bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 shadow-lg shadow-teal-500/25;
   }
 
   .btn-destructive {
-    @apply bg-red-500/10 text-tg-destructive hover:bg-red-500/20;
+    @apply bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20;
   }
 
   .input {
-    @apply w-full rounded-xl bg-tg-secondary-bg px-4 py-3 text-tg-text placeholder:text-tg-hint outline-none ring-0 focus:ring-2 focus:ring-blue-500/30 transition-all;
+    @apply w-full rounded-2xl bg-tg-secondary-bg px-4 py-3.5 text-tg-text placeholder:text-tg-hint outline-none ring-0 focus:ring-2 focus:ring-orange-500/30 transition-all border border-transparent focus:border-orange-500/30;
   }
 
   .section-header {
-    @apply text-xs font-medium uppercase tracking-wider text-tg-section-header px-4 py-2;
+    @apply text-xs font-bold uppercase tracking-wider text-tg-section-header px-1 py-2;
   }
 
   .list-item {
-    @apply flex items-center gap-3 px-4 py-3 bg-tg-section active:bg-tg-secondary-bg transition-colors;
+    @apply flex items-center gap-3 px-4 py-3.5 bg-tg-section active:bg-tg-secondary-bg transition-colors;
   }
 
   .divider {
@@ -160,24 +191,31 @@ body {
 
 /* Skeleton loading */
 .skeleton {
-  @apply animate-pulse bg-tg-secondary-bg rounded;
+  @apply animate-pulse bg-gradient-to-r from-tg-secondary-bg via-tg-section to-tg-secondary-bg rounded-2xl;
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* Status badges */
 .badge {
-  @apply inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium;
+  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
 }
 
 .badge-draft {
-  @apply bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400;
+  @apply bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400;
 }
 
 .badge-ready {
-  @apply bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400;
+  @apply bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400;
 }
 
 .badge-generating {
-  @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
+  @apply bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400;
 }
 
 .badge-success {
@@ -189,5 +227,31 @@ body {
 }
 
 .badge-archived {
-  @apply bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400;
+  @apply bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400;
+}
+
+/* Header gradient */
+.header-gradient {
+  @apply bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600;
+}
+
+/* Decorative patterns */
+.pattern-dots {
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Custom focus styles */
+*:focus-visible {
+  @apply outline-none ring-2 ring-orange-500/50 ring-offset-2 ring-offset-tg-bg;
+}
+
+/* Number animation */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count-up {
+  animation: count-up 0.5s ease-out forwards;
 }

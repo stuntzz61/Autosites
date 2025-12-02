@@ -1,19 +1,27 @@
 """
 Authentication routes
 """
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
 from app.auth import get_current_user, validate_telegram_init_data
-from app.database import get_user_by_tgid, create_user, get_manager_stats
+from app.database import get_user_by_tgid, create_user, get_manager_stats, update_user
 from app.config import settings
 
 router = APIRouter()
 
+# Admin password from environment
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
+
 
 class TelegramAuthRequest(BaseModel):
     init_data: str
+
+
+class AdminLoginRequest(BaseModel):
+    password: str
 
 
 class UserResponse(BaseModel):
@@ -97,4 +105,18 @@ async def get_me(user: dict = Depends(get_current_user)):
             "stats": stats,
         }
     }
+
+
+@router.post("/admin-login")
+async def admin_login(request: AdminLoginRequest, user: dict = Depends(get_current_user)):
+    """
+    Login as admin with password
+    """
+    if request.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=401, detail="Неверный пароль")
+
+    # Update user role to admin
+    update_user(str(user["id"]), role="admin", approval_status="approved")
+
+    return {"success": True, "message": "Вы авторизованы как администратор"}
 

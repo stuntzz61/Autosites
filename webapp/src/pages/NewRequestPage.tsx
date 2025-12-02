@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Building2, User, Globe, Briefcase, Phone, Mail, MapPin,
-  ArrowRight, ArrowLeft, Check, Loader2, Image, Plus, X,
-  Clock, Palette, Layout, FileText
+  Building2, User, Briefcase, Phone, Mail, MapPin,
+  ArrowRight, ArrowLeft, Check, Loader2, Plus, X,
+  Clock, Palette, FileText
 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -17,8 +17,11 @@ const steps = [
   { id: 'client', title: 'Клиент', icon: User },
   { id: 'contacts', title: 'Контакты', icon: Phone },
   { id: 'services', title: 'Услуги', icon: Briefcase },
-  { id: 'details', title: 'Детали', icon: FileText },
+  { id: 'details', title: 'Детали', icon: Palette },
 ]
+
+// Default site structure - fixed, not editable by manager
+const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты']
 
 interface ServiceItem {
   name: string
@@ -48,10 +51,7 @@ interface FormData {
 
   // Additional
   color_palette: string
-  structure: string[]
 }
-
-const defaultStructure = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты']
 
 export default function NewRequestPage() {
   const navigate = useNavigate()
@@ -72,7 +72,6 @@ export default function NewRequestPage() {
     work_hours: '',
     services: [{ name: '', summary: '', priceFrom: '' }],
     color_palette: 'На усмотрение дизайнера',
-    structure: [...defaultStructure],
   })
 
   const createMutation = useMutation({
@@ -93,7 +92,7 @@ export default function NewRequestPage() {
           work_hours: formData.work_hours,
           services: formData.services.filter(s => s.name.trim()),
           color_palette: formData.color_palette,
-          structure: formData.structure,
+          structure: DEFAULT_STRUCTURE,
           meta: {
             status: 'draft'
           }
@@ -145,15 +144,6 @@ export default function NewRequestPage() {
     }))
   }
 
-  const toggleStructure = (section: string) => {
-    setFormData(prev => ({
-      ...prev,
-      structure: prev.structure.includes(section)
-        ? prev.structure.filter(s => s !== section)
-        : [...prev.structure, section],
-    }))
-  }
-
   const validatePhone = (phone: string) => {
     if (!phone) return true
     const cleaned = phone.replace(/\D/g, '')
@@ -190,10 +180,6 @@ export default function NewRequestPage() {
       setCurrentStep(prev => prev - 1)
     }
   }
-
-  const structureSections = [
-    'Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты', 'Карта', 'FAQ', 'Команда'
-  ]
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -443,28 +429,28 @@ export default function NewRequestPage() {
             {/* Step 4: Details */}
             {currentStep === 4 && (
               <StepContent
-                icon={<Layout className="w-8 h-8 text-purple-500" />}
+                icon={<Palette className="w-8 h-8 text-violet-500" />}
                 title="Детали сайта"
                 subtitle="Дополнительные настройки"
               >
                 <div className="space-y-6">
+                  {/* Fixed Structure Info */}
                   <div>
                     <label className="text-sm text-tg-hint mb-2 block">Структура сайта</label>
-                    <div className="flex flex-wrap gap-2">
-                      {structureSections.map(section => (
-                        <button
-                          key={section}
-                          onClick={() => toggleStructure(section)}
-                          className={clsx(
-                            'px-3 py-2 rounded-xl text-sm font-medium transition-colors',
-                            formData.structure.includes(section)
-                              ? 'bg-tg-button text-tg-button-text'
-                              : 'bg-tg-secondary-bg text-tg-hint'
-                          )}
-                        >
-                          {section}
-                        </button>
-                      ))}
+                    <div className="bg-tg-secondary-bg rounded-2xl p-4">
+                      <div className="flex flex-wrap gap-2">
+                        {DEFAULT_STRUCTURE.map(section => (
+                          <span
+                            key={section}
+                            className="px-3 py-1.5 rounded-xl text-sm font-medium bg-tg-section text-tg-text border border-black/5 dark:border-white/5"
+                          >
+                            {section}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-xs text-tg-hint mt-3">
+                        Стандартная структура сайта
+                      </p>
                     </div>
                   </div>
 
@@ -482,10 +468,10 @@ export default function NewRequestPage() {
                     </div>
                   </div>
 
-                  <div className="bg-tg-secondary-bg rounded-2xl p-4">
-                    <p className="text-sm font-medium text-tg-text mb-2">📷 Фотографии</p>
+                  <div className="bg-gradient-to-br from-teal-500/10 to-teal-600/10 rounded-2xl p-4 border border-teal-500/20">
+                    <p className="text-sm font-semibold text-tg-text mb-2">📷 Фотографии</p>
                     <p className="text-xs text-tg-hint">
-                      После создания заявки вы сможете загрузить фотографии через бота или отредактировать заявку
+                      После создания заявки вы сможете загрузить фотографии для секций сайта
                     </p>
                   </div>
                 </div>

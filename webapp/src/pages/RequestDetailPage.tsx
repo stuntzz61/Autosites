@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Building2, User, Phone, Mail, MapPin, Globe, Briefcase,
-  FileText, Image, Edit2, Trash2, Archive, Play, CheckCircle2,
+  Building2, User, Phone, Mail, MapPin, Briefcase,
+  Image, Archive, Play, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronDown, Plus, X, ExternalLink,
-  Calendar, Palette, Layout
+  Palette, Upload, Camera, Trash2
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -40,12 +40,25 @@ interface ImageItem {
   category?: string
 }
 
+// Photo categories for upload
+const photoCategories = [
+  { id: 'hero', label: '🏠 Главный баннер', description: 'Главное фото для шапки сайта' },
+  { id: 'services', label: '🛠 Услуги', description: 'Фото для раздела услуг' },
+  { id: 'portfolio', label: '📁 Портфолио', description: 'Примеры работ' },
+  { id: 'team', label: '👥 Команда', description: 'Фото сотрудников' },
+  { id: 'gallery', label: '🖼 Галерея', description: 'Дополнительные фото' },
+]
+
 export default function RequestDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { haptic, webApp } = useTelegram()
   const [showStatusMenu, setShowStatusMenu] = useState(false)
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState('gallery')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: request, isLoading, error } = useQuery({
     queryKey: ['request', id],
@@ -85,6 +98,46 @@ export default function RequestDetailPage() {
     },
     onError: () => toast.error('Ошибка'),
   })
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !id) return
+
+    setUploadingPhoto(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('category', selectedCategory)
+
+      await requestsApi.uploadPhotos(id, formData)
+
+      queryClient.invalidateQueries({ queryKey: ['request', id] })
+      toast.success('Фото загружено!')
+      haptic?.notificationOccurred('success')
+      setShowPhotoUpload(false)
+    } catch (error) {
+      toast.error('Ошибка загрузки')
+      haptic?.notificationOccurred('error')
+    } finally {
+      setUploadingPhoto(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleDeletePhoto = async (photoUrl: string) => {
+    if (!id) return
+
+    try {
+      await requestsApi.deletePhoto(id, photoUrl)
+      queryClient.invalidateQueries({ queryKey: ['request', id] })
+      toast.success('Фото удалено')
+    } catch (error) {
+      toast.error('Ошибка удаления')
+    }
+  }
 
   if (isLoading) {
     return (
@@ -187,7 +240,7 @@ export default function RequestDetailPage() {
     <div className="min-h-screen pb-32">
       {/* Header Card */}
       <motion.div
-        className="m-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 text-white shadow-lg"
+        className="m-4 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-3xl p-6 text-white shadow-xl shadow-orange-500/20"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -263,6 +316,83 @@ export default function RequestDetailPage() {
                   </button>
                 ))}
               </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Photo Upload Modal */}
+      <AnimatePresence>
+        {showPhotoUpload && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !uploadingPhoto && setShowPhotoUpload(false)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25 }}
+            >
+              <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
+              <p className="text-lg font-semibold text-tg-text mb-2">Загрузить фото</p>
+              <p className="text-sm text-tg-hint mb-4">Выберите категорию для фото</p>
+
+              {/* Category Selection */}
+              <div className="space-y-2 mb-4">
+                {photoCategories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={clsx(
+                      'w-full flex items-center gap-3 p-3 rounded-2xl transition-colors text-left',
+                      selectedCategory === cat.id
+                        ? 'bg-orange-500/10 border-2 border-orange-500/30'
+                        : 'bg-tg-secondary-bg border-2 border-transparent'
+                    )}
+                  >
+                    <span className="text-xl">{cat.label.split(' ')[0]}</span>
+                    <div className="flex-1">
+                      <p className="font-medium text-tg-text">{cat.label.slice(2)}</p>
+                      <p className="text-xs text-tg-hint">{cat.description}</p>
+                    </div>
+                    {selectedCategory === cat.id && (
+                      <CheckCircle2 className="w-5 h-5 text-orange-500" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Upload Button */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handlePhotoUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="w-full btn btn-primary"
+              >
+                {uploadingPhoto ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Загрузка...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Выбрать фото
+                  </>
+                )}
+              </button>
             </motion.div>
           </>
         )}
@@ -348,37 +478,60 @@ export default function RequestDetailPage() {
           </Section>
         )}
 
-        {/* Photos by Category */}
-        {Object.keys(imagesByCategory).length > 0 && (
-          <Section title="Фотографии">
-            <div className="p-4 space-y-4">
-              {Object.entries(imagesByCategory).map(([category, imgs]) => (
+        {/* Photos Section */}
+        <Section title="Фотографии">
+          <div className="p-4 space-y-4">
+            {/* Upload Button */}
+            <button
+              onClick={() => setShowPhotoUpload(true)}
+              className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-orange-500/30 rounded-2xl text-orange-500 hover:bg-orange-500/5 transition-colors"
+            >
+              <Camera className="w-5 h-5" />
+              <span className="font-medium">Добавить фото</span>
+            </button>
+
+            {/* Photos by Category */}
+            {Object.entries(imagesByCategory).length > 0 ? (
+              Object.entries(imagesByCategory).map(([category, imgs]) => (
                 <div key={category}>
                   <p className="text-sm font-medium text-tg-text mb-2">
                     {categoryLabels[category] || category}
                   </p>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {imgs.map((img, i) => (
-                      <a
-                        key={i}
-                        href={img.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0"
-                      >
-                        <img
-                          src={img.url}
-                          alt={img.alt || category}
-                          className="w-20 h-20 rounded-xl object-cover hover:opacity-80 transition-opacity"
-                        />
-                      </a>
+                      <div key={i} className="relative flex-shrink-0 group">
+                        <a
+                          href={img.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <img
+                            src={img.url}
+                            alt={img.alt || category}
+                            className="w-20 h-20 rounded-xl object-cover hover:opacity-80 transition-opacity"
+                          />
+                        </a>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            handleDeletePhoto(img.url)
+                          }}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </Section>
-        )}
+              ))
+            ) : (
+              <p className="text-center text-tg-hint py-4">
+                Нет загруженных фотографий
+              </p>
+            )}
+          </div>
+        </Section>
       </div>
 
       {/* Bottom Actions */}

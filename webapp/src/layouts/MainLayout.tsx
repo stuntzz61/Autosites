@@ -86,22 +86,20 @@ export default function MainLayout() {
             )
           })}
 
-          {/* Admin button */}
-          {isAdmin && (
-            <button
-              onClick={() => {
-                haptic?.selectionChanged()
-                navigate('/admin')
-              }}
-              className={clsx(
-                'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
-                location.pathname.startsWith('/admin') ? 'text-tg-button' : 'text-tg-hint'
-              )}
-            >
-              <Shield className="w-6 h-6" strokeWidth={location.pathname.startsWith('/admin') ? 2 : 1.5} />
-              <span className="text-[10px] font-medium">Админ</span>
-            </button>
-          )}
+          {/* Admin button - visible for all, navigates to admin panel or login */}
+          <button
+            onClick={() => {
+              haptic?.selectionChanged()
+              navigate(isAdmin ? '/admin' : '/admin-login')
+            }}
+            className={clsx(
+              'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
+              location.pathname.startsWith('/admin') ? 'text-tg-button' : 'text-tg-hint'
+            )}
+          >
+            <Shield className="w-6 h-6" strokeWidth={location.pathname.startsWith('/admin') ? 2 : 1.5} />
+            <span className="text-[10px] font-medium">Админ</span>
+          </button>
         </div>
       </nav>
     </div>

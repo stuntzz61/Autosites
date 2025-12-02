@@ -141,7 +141,7 @@ export default function AdminDashboard() {
               <div key={manager.id}>
                 {i > 0 && <div className="divider" />}
                 <div className="list-item">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white font-bold text-sm">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -188,19 +188,19 @@ interface StatCardProps {
 
 function StatCard({ icon, value, label, color, onClick }: StatCardProps) {
   const colors = {
-    blue: 'bg-blue-500/10 text-blue-500',
-    green: 'bg-green-500/10 text-green-500',
-    amber: 'bg-amber-500/10 text-amber-500',
-    purple: 'bg-purple-500/10 text-purple-500',
+    blue: 'bg-teal-500/10 text-teal-500',
+    green: 'bg-emerald-500/10 text-emerald-500',
+    amber: 'bg-orange-500/10 text-orange-500',
+    purple: 'bg-violet-500/10 text-violet-500',
   }
 
   return (
     <motion.button
       onClick={onClick}
-      className="bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] transition-transform"
-      whileTap={{ scale: 0.98 }}
+      className="bg-tg-section rounded-3xl p-4 text-left active:scale-[0.97] transition-all border border-black/5 dark:border-white/5"
+      whileTap={{ scale: 0.97 }}
     >
-      <div className={`inline-flex p-2 rounded-xl ${colors[color]} mb-2`}>
+      <div className={`inline-flex p-2.5 rounded-xl ${colors[color]} mb-2`}>
         {icon}
       </div>
       <p className="text-2xl font-bold text-tg-text">{value}</p>
