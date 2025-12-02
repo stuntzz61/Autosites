@@ -144,10 +144,50 @@ export default function NewRequestPage() {
     }))
   }
 
+  const formatPhone = (value: string): string => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '')
+
+    // Limit to 11 digits (Russian phone format: 7 + 10 digits)
+    const limited = digits.slice(0, 11)
+
+    if (!limited) return ''
+
+    // Format as +7 (XXX) XXX-XX-XX
+    let formatted = ''
+    if (limited.length > 0) {
+      // Start with +7
+      const startDigit = limited[0] === '8' ? '7' : limited[0]
+      formatted = '+' + startDigit
+    }
+    if (limited.length > 1) {
+      formatted += ' (' + limited.slice(1, 4)
+    }
+    if (limited.length >= 4) {
+      formatted += ')'
+    }
+    if (limited.length > 4) {
+      formatted += ' ' + limited.slice(4, 7)
+    }
+    if (limited.length > 7) {
+      formatted += '-' + limited.slice(7, 9)
+    }
+    if (limited.length > 9) {
+      formatted += '-' + limited.slice(9, 11)
+    }
+
+    return formatted
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value)
+    updateField('phone', formatted)
+  }
+
   const validatePhone = (phone: string) => {
     if (!phone) return true
     const cleaned = phone.replace(/\D/g, '')
-    return cleaned.length >= 10 && cleaned.length <= 12
+    return cleaned.length === 11
   }
 
   const validateEmail = (email: string) => {
@@ -314,15 +354,17 @@ export default function NewRequestPage() {
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
                       <input
                         type="tel"
+                        inputMode="numeric"
                         value={formData.phone}
-                        onChange={(e) => updateField('phone', e.target.value)}
+                        onChange={handlePhoneChange}
                         placeholder="+7 (XXX) XXX-XX-XX"
+                        maxLength={18}
                         className={clsx('input pl-10', !validatePhone(formData.phone) && formData.phone && 'ring-2 ring-red-500/30')}
                         autoFocus
                       />
                     </div>
                     {formData.phone && !validatePhone(formData.phone) && (
-                      <p className="text-xs text-red-500 mt-1">Введите корректный номер</p>
+                      <p className="text-xs text-red-500 mt-1">Введите номер полностью (11 цифр)</p>
                     )}
                   </div>
                   <div>
@@ -468,7 +510,7 @@ export default function NewRequestPage() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-teal-500/10 to-teal-600/10 rounded-2xl p-4 border border-teal-500/20">
+                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 dark:from-zinc-800 dark:to-zinc-900 rounded-xl p-4 border border-blue-500/20 dark:border-zinc-700">
                     <p className="text-sm font-semibold text-tg-text mb-2">📷 Фотографии</p>
                     <p className="text-xs text-tg-hint">
                       После создания заявки вы сможете загрузить фотографии для секций сайта

@@ -240,7 +240,7 @@ export default function RequestDetailPage() {
     <div className="min-h-screen pb-32">
       {/* Header Card */}
       <motion.div
-        className="m-4 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 rounded-3xl p-6 text-white shadow-xl shadow-orange-500/20"
+        className="m-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-zinc-900 dark:via-black dark:to-zinc-900 rounded-2xl p-6 text-white shadow-xl shadow-blue-600/20 dark:shadow-black/30 border border-blue-500/20 dark:border-zinc-700"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -350,9 +350,9 @@ export default function RequestDetailPage() {
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
                     className={clsx(
-                      'w-full flex items-center gap-3 p-3 rounded-2xl transition-colors text-left',
+                      'w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left',
                       selectedCategory === cat.id
-                        ? 'bg-orange-500/10 border-2 border-orange-500/30'
+                        ? 'bg-blue-500/10 dark:bg-white/10 border-2 border-blue-500/30 dark:border-white/20'
                         : 'bg-tg-secondary-bg border-2 border-transparent'
                     )}
                   >
@@ -362,7 +362,7 @@ export default function RequestDetailPage() {
                       <p className="text-xs text-tg-hint">{cat.description}</p>
                     </div>
                     {selectedCategory === cat.id && (
-                      <CheckCircle2 className="w-5 h-5 text-orange-500" />
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-white" />
                     )}
                   </button>
                 ))}
@@ -484,7 +484,7 @@ export default function RequestDetailPage() {
             {/* Upload Button */}
             <button
               onClick={() => setShowPhotoUpload(true)}
-              className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-orange-500/30 rounded-2xl text-orange-500 hover:bg-orange-500/5 transition-colors"
+              className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-blue-500/30 dark:border-white/20 rounded-xl text-blue-600 dark:text-white hover:bg-blue-500/5 dark:hover:bg-white/5 transition-colors"
             >
               <Camera className="w-5 h-5" />
               <span className="font-medium">Добавить фото</span>
@@ -499,28 +499,12 @@ export default function RequestDetailPage() {
                   </p>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {imgs.map((img, i) => (
-                      <div key={i} className="relative flex-shrink-0 group">
-                        <a
-                          href={img.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <img
-                            src={img.url}
-                            alt={img.alt || category}
-                            className="w-20 h-20 rounded-xl object-cover hover:opacity-80 transition-opacity"
-                          />
-                        </a>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault()
-                            handleDeletePhoto(img.url)
-                          }}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
+                      <PhotoThumbnail
+                        key={i}
+                        url={img.url}
+                        alt={img.alt || category}
+                        onDelete={() => handleDeletePhoto(img.url)}
+                      />
                     ))}
                   </div>
                 </div>
@@ -605,6 +589,84 @@ function InfoItem({
         <p className="text-xs text-tg-hint">{label}</p>
         <p className="text-tg-text">{value || '—'}</p>
       </div>
+    </div>
+  )
+}
+
+function PhotoThumbnail({
+  url,
+  alt,
+  onDelete,
+}: {
+  url: string
+  alt: string
+  onDelete: () => void
+}) {
+  const [error, setError] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  // Transform URL to use proxy if needed (for Yandex S3)
+  const getProxiedUrl = (originalUrl: string) => {
+    // If URL is from yandex storage, use our proxy
+    if (originalUrl.includes('storage.yandexcloud.net')) {
+      const path = originalUrl.replace('https://storage.yandexcloud.net/', '')
+      return `/s3-proxy/${path}`
+    }
+    return originalUrl
+  }
+
+  const displayUrl = getProxiedUrl(url)
+
+  if (error) {
+    return (
+      <div className="relative flex-shrink-0 group">
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <div className="w-20 h-20 rounded-xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
+            <Image className="w-6 h-6 text-gray-400 dark:text-zinc-500" />
+          </div>
+        </a>
+        <button
+          onClick={(e) => {
+            e.preventDefault()
+            onDelete()
+          }}
+          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative flex-shrink-0 group">
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        {loading && (
+          <div className="absolute inset-0 w-20 h-20 rounded-xl bg-gray-100 dark:bg-zinc-800 animate-pulse" />
+        )}
+        <img
+          src={displayUrl}
+          alt={alt}
+          className={clsx(
+            'w-20 h-20 rounded-xl object-cover hover:opacity-80 transition-opacity',
+            loading && 'opacity-0'
+          )}
+          onLoad={() => setLoading(false)}
+          onError={() => {
+            setLoading(false)
+            setError(true)
+          }}
+        />
+      </a>
+      <button
+        onClick={(e) => {
+          e.preventDefault()
+          onDelete()
+        }}
+        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+      >
+        <X className="w-3 h-3" />
+      </button>
     </div>
   )
 }

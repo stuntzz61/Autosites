@@ -1,58 +1,58 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Telegram WebApp Variables with distinctive modern theme */
+/* Telegram WebApp Variables - Clean Blue & White Light Theme / Black & White Dark Theme */
 :root {
   --tg-viewport-height: 100vh;
   --tg-viewport-stable-height: 100vh;
 
-  /* Light theme - Warm coral/teal palette */
-  --tg-theme-bg-color: #faf9f7;
-  --tg-theme-text-color: #1a1a2e;
+  /* Light theme - Clean Blue & White */
+  --tg-theme-bg-color: #ffffff;
+  --tg-theme-text-color: #111827;
   --tg-theme-hint-color: #6b7280;
-  --tg-theme-link-color: #0d9488;
-  --tg-theme-button-color: #f97316;
+  --tg-theme-link-color: #2563eb;
+  --tg-theme-button-color: #2563eb;
   --tg-theme-button-text-color: #ffffff;
-  --tg-theme-secondary-bg-color: #f3f2ef;
-  --tg-theme-header-bg-color: #faf9f7;
+  --tg-theme-secondary-bg-color: #f3f4f6;
+  --tg-theme-header-bg-color: #ffffff;
   --tg-theme-section-bg-color: #ffffff;
-  --tg-theme-section-header-text-color: #9ca3af;
-  --tg-theme-accent-text-color: #0d9488;
+  --tg-theme-section-header-text-color: #6b7280;
+  --tg-theme-accent-text-color: #2563eb;
   --tg-theme-destructive-text-color: #dc2626;
   --tg-theme-subtitle-text-color: #9ca3af;
-  --tg-theme-section-separator-color: #e5e5e5;
+  --tg-theme-section-separator-color: #e5e7eb;
 
   /* Custom accent colors */
-  --accent-primary: #f97316;
-  --accent-secondary: #0d9488;
-  --accent-gradient-from: #f97316;
-  --accent-gradient-to: #ea580c;
+  --accent-primary: #2563eb;
+  --accent-secondary: #3b82f6;
+  --accent-gradient-from: #2563eb;
+  --accent-gradient-to: #1d4ed8;
 }
 
-/* Dark theme - Deep navy with coral accents */
+/* Dark theme - Elegant Black & White */
 .dark, [data-theme="dark"] {
-  --tg-theme-bg-color: #0f0f1a;
-  --tg-theme-text-color: #f5f5f7;
+  --tg-theme-bg-color: #0a0a0a;
+  --tg-theme-text-color: #fafafa;
   --tg-theme-hint-color: #a1a1aa;
-  --tg-theme-link-color: #14b8a6;
-  --tg-theme-button-color: #fb923c;
-  --tg-theme-button-text-color: #0f0f1a;
-  --tg-theme-secondary-bg-color: #1a1a2e;
-  --tg-theme-header-bg-color: #0f0f1a;
-  --tg-theme-section-bg-color: #1a1a2e;
+  --tg-theme-link-color: #ffffff;
+  --tg-theme-button-color: #ffffff;
+  --tg-theme-button-text-color: #0a0a0a;
+  --tg-theme-secondary-bg-color: #171717;
+  --tg-theme-header-bg-color: #0a0a0a;
+  --tg-theme-section-bg-color: #171717;
   --tg-theme-section-header-text-color: #71717a;
-  --tg-theme-accent-text-color: #14b8a6;
+  --tg-theme-accent-text-color: #ffffff;
   --tg-theme-destructive-text-color: #f87171;
   --tg-theme-subtitle-text-color: #71717a;
-  --tg-theme-section-separator-color: #27273a;
+  --tg-theme-section-separator-color: #27272a;
 
-  --accent-primary: #fb923c;
-  --accent-secondary: #14b8a6;
-  --accent-gradient-from: #fb923c;
-  --accent-gradient-to: #f97316;
+  --accent-primary: #ffffff;
+  --accent-secondary: #e5e5e5;
+  --accent-gradient-from: #ffffff;
+  --accent-gradient-to: #e5e5e5;
 }
 
 /* Base styles */
@@ -64,7 +64,7 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--tg-theme-bg-color);
   color: var(--tg-theme-text-color);
   -webkit-font-smoothing: antialiased;
@@ -109,58 +109,66 @@ body {
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-orange-500 to-teal-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-dark {
+    @apply bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent;
   }
 
   .gradient-bg {
-    @apply bg-gradient-to-br from-orange-500 to-orange-600;
+    @apply bg-gradient-to-br from-blue-600 to-blue-700;
+  }
+
+  .gradient-bg-dark {
+    @apply bg-gradient-to-br from-white to-gray-200;
   }
 
   .glass {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl;
+    @apply bg-white/90 dark:bg-black/90 backdrop-blur-xl;
   }
 }
 
 /* Card component styles */
 @layer components {
   .card {
-    @apply bg-tg-section rounded-3xl p-5 shadow-sm border border-black/5 dark:border-white/5;
+    @apply bg-tg-section rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-zinc-800;
   }
 
   .card-elevated {
-    @apply bg-tg-section rounded-3xl p-5 shadow-lg shadow-black/5 border border-black/5 dark:border-white/5;
+    @apply bg-tg-section rounded-2xl p-5 shadow-lg shadow-black/5 dark:shadow-black/20 border border-gray-100 dark:border-zinc-800;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 font-semibold transition-all active:scale-[0.97] duration-150;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold transition-all active:scale-[0.97] duration-150;
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-lg shadow-orange-500/25;
+    @apply bg-blue-600 text-white hover:bg-blue-700 dark:bg-white dark:text-black dark:hover:bg-gray-100 shadow-lg shadow-blue-600/20 dark:shadow-white/10;
   }
 
   .btn-secondary {
-    @apply bg-tg-secondary-bg text-tg-text hover:bg-opacity-80;
+    @apply bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700;
   }
 
   .btn-accent {
-    @apply bg-gradient-to-r from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 shadow-lg shadow-teal-500/25;
+    @apply bg-blue-500 text-white hover:bg-blue-600 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600;
   }
 
   .btn-destructive {
-    @apply bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20;
+    @apply bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30;
   }
 
   .input {
-    @apply w-full rounded-2xl bg-tg-secondary-bg px-4 py-3.5 text-tg-text placeholder:text-tg-hint outline-none ring-0 focus:ring-2 focus:ring-orange-500/30 transition-all border border-transparent focus:border-orange-500/30;
+    @apply w-full rounded-xl bg-gray-50 dark:bg-zinc-900 px-4 py-3 text-tg-text placeholder:text-tg-hint outline-none ring-0 focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-white/20 transition-all border border-gray-200 dark:border-zinc-700 focus:border-blue-500/50 dark:focus:border-white/30;
   }
 
   .section-header {
-    @apply text-xs font-bold uppercase tracking-wider text-tg-section-header px-1 py-2;
+    @apply text-xs font-semibold uppercase tracking-wider text-tg-section-header px-1 py-2;
   }
 
   .list-item {
-    @apply flex items-center gap-3 px-4 py-3.5 bg-tg-section active:bg-tg-secondary-bg transition-colors;
+    @apply flex items-center gap-3 px-4 py-3 bg-tg-section active:bg-tg-secondary-bg transition-colors;
   }
 
   .divider {
@@ -191,7 +199,7 @@ body {
 
 /* Skeleton loading */
 .skeleton {
-  @apply animate-pulse bg-gradient-to-r from-tg-secondary-bg via-tg-section to-tg-secondary-bg rounded-2xl;
+  @apply animate-pulse bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 dark:from-zinc-800 dark:via-zinc-900 dark:to-zinc-800 rounded-xl;
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s ease-in-out infinite;
 }
@@ -207,32 +215,32 @@ body {
 }
 
 .badge-draft {
-  @apply bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400;
+  @apply bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400;
 }
 
 .badge-ready {
-  @apply bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400;
+  @apply bg-blue-50 text-blue-700 dark:bg-zinc-800 dark:text-white;
 }
 
 .badge-generating {
-  @apply bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400;
+  @apply bg-blue-100 text-blue-700 dark:bg-zinc-700 dark:text-zinc-200;
 }
 
 .badge-success {
-  @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400;
+  @apply bg-emerald-50 text-emerald-700 dark:bg-zinc-800 dark:text-emerald-400;
 }
 
 .badge-error {
-  @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400;
+  @apply bg-red-50 text-red-700 dark:bg-zinc-800 dark:text-red-400;
 }
 
 .badge-archived {
-  @apply bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400;
+  @apply bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400;
 }
 
-/* Header gradient */
+/* Header gradient - Blue for light, Black/White for dark */
 .header-gradient {
-  @apply bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600;
+  @apply bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-zinc-900 dark:via-black dark:to-zinc-900;
 }
 
 /* Decorative patterns */
@@ -243,7 +251,7 @@ body {
 
 /* Custom focus styles */
 *:focus-visible {
-  @apply outline-none ring-2 ring-orange-500/50 ring-offset-2 ring-offset-tg-bg;
+  @apply outline-none ring-2 ring-blue-500/50 dark:ring-white/30 ring-offset-2 ring-offset-tg-bg;
 }
 
 /* Number animation */

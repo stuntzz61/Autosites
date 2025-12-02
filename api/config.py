@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = ""
     S3_BUCKET: str = "autosites"
     S3_REGION: str = "us-east-1"
+    S3_PUBLIC_URL: str = ""  # Public URL for accessing files, e.g., https://bucket.s3.yandexcloud.net
+
+    # Admin password
+    ADMIN_PASSWORD: str = "admin123"
 
     # n8n webhook
     N8N_WEBHOOK_URL: str = ""

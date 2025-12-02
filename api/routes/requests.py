@@ -1,13 +1,17 @@
 from typing import Optional, List
 import json
 import httpx
+import logging
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel
 
 from config import settings
 from routes.auth import get_current_user
 import db
+import s3
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -40,7 +44,7 @@ async def list_requests(
 
     # Regular users can only see their own requests
     user_id = str(user['id']) if user['role'] != 'admin' else None
-    
+
     print(f"[DEBUG] list_requests: user_id={user_id}, role={user.get('role')}, status={status}")
 
     requests = await db.list_requests(
@@ -49,7 +53,7 @@ async def list_requests(
         limit=limit,
         offset=offset
     )
-    
+
     print(f"[DEBUG] list_requests: found {len(requests)} requests")
 
     return {
@@ -209,7 +213,8 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
 async def upload_photos(
     request_id: str,
     category: str = Form(...),
-    files: List[UploadFile] = File(...),
+    files: List[UploadFile] = File(None),
+    file: UploadFile = File(None),
     user: dict = Depends(get_current_user)
 ):
     """Upload photos for a request."""
@@ -222,27 +227,91 @@ async def upload_photos(
     if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    # TODO: Implement S3 upload
-    # For now, return placeholder URLs
+    # Handle both single file and multiple files
+    upload_files = []
+    if files:
+        upload_files = files
+    elif file:
+        upload_files = [file]
+
+    if not upload_files:
+        raise HTTPException(status_code=422, detail="No files provided")
+
+    # Upload files to S3
     uploaded_urls = []
-    for file in files:
-        # Placeholder - implement actual S3 upload
-        url = f"https://placeholder.com/{request_id}/{category}/{file.filename}"
-        uploaded_urls.append(url)
+    for f in upload_files:
+        if not f.filename:
+            continue
+        try:
+            url = await s3.upload_file_to_s3(f, request_id, category)
+            uploaded_urls.append(url)
+            log.info(f"Uploaded photo: {url}")
+        except Exception as e:
+            log.error(f"Failed to upload file: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
+
+    if not uploaded_urls:
+        raise HTTPException(status_code=422, detail="No valid files to upload")
 
     # Update request payload with photo URLs
     payload = request.get('payload', {})
     site = payload.get('site', {})
-    photos = site.get('photos', {})
 
-    if category not in photos:
-        photos[category] = []
-    photos[category].extend(uploaded_urls)
+    # Store photos in assets.images for consistency
+    assets = site.get('assets', {})
+    images = assets.get('images', [])
 
-    site['photos'] = photos
+    for url in uploaded_urls:
+        images.append({
+            'url': url,
+            'category': category,
+            'alt': category
+        })
+
+    assets['images'] = images
+    site['assets'] = assets
     payload['site'] = site
 
     await db.update_request(request_id, {'payload': payload})
 
     return {"urls": uploaded_urls}
+
+
+@router.delete("/{request_id}/photos")
+async def delete_photo(
+    request_id: str,
+    url: str = Query(...),
+    user: dict = Depends(get_current_user)
+):
+    """Delete a photo from a request."""
+    request = await db.get_request(request_id)
+
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    # Check ownership
+    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Delete from S3
+    deleted = await s3.delete_file_from_s3(url)
+    if not deleted:
+        log.warning(f"Failed to delete photo from S3: {url}")
+
+    # Remove from payload
+    payload = request.get('payload', {})
+    site = payload.get('site', {})
+    assets = site.get('assets', {})
+    images = assets.get('images', [])
+
+    # Filter out the deleted image
+    images = [img for img in images if img.get('url') != url]
+
+    assets['images'] = images
+    site['assets'] = assets
+    payload['site'] = site
+
+    await db.update_request(request_id, {'payload': payload})
+
+    return {"success": True}
 
