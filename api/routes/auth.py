@@ -120,6 +120,15 @@ async def verify_init_data(request: VerifyRequest):
     if user.get('is_blocked'):
         raise HTTPException(status_code=403, detail="User is blocked")
 
+    # Check if user should be admin (from ADMIN_IDS env)
+    is_admin_by_config = tg_id in settings.admin_tg_ids
+    current_role = user.get('role', 'manager')
+
+    # Update role to admin if in ADMIN_IDS and not already admin
+    if is_admin_by_config and current_role != 'admin':
+        await db.update_user_role(str(user['id']), 'admin')
+        user['role'] = 'admin'
+
     # Get user stats
     stats = await db.get_user_stats(str(user['id']))
 

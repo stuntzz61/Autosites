@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # Telegram
     BOT_TOKEN: str
+    ADMIN_IDS: str = ""  # Comma-separated list of admin Telegram IDs
 
     # S3
     S3_ENDPOINT: str = ""
@@ -25,6 +26,13 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
+
+    @property
+    def admin_tg_ids(self) -> List[int]:
+        """Parse ADMIN_IDS into list of integers"""
+        if not self.ADMIN_IDS:
+            return []
+        return [int(x.strip()) for x in self.ADMIN_IDS.split(',') if x.strip().isdigit()]
 
     class Config:
         env_file = ".env"

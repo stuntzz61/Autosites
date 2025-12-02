@@ -159,6 +159,17 @@ async def unblock_user(user_id: str):
                 pass  # Column may not exist yet
 
 
+async def update_user_role(user_id: str, role: str):
+    """Update user role."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "UPDATE users SET role = %s WHERE id = %s",
+                (role, user_id)
+            )
+            await conn.commit()
+
+
 async def delete_user(user_id: str):
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
