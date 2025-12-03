@@ -199,7 +199,7 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
     # Send to n8n webhook
     webhook_url = settings.N8N_WEBHOOK_URL
     if not webhook_url:
-        log.warning("N8N_WEBHOOK_URL not configured")
+        log.warning("N8N_WEBHOOK_URL not configured - skipping webhook call")
     else:
         try:
             async with httpx.AsyncClient() as client:
@@ -214,11 +214,25 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
                 response.raise_for_status()
                 log.info(f"Successfully sent to n8n webhook: {webhook_url}")
         except httpx.HTTPStatusError as e:
-            log.error(f"n8n webhook returned {e.response.status_code}: {e.response.text}")
-            raise HTTPException(status_code=500, detail=f"Webhook error: {e.response.status_code}")
+            error_detail = ""
+            try:
+                error_json = e.response.json()
+                error_detail = error_json.get('message', '')
+                if 'not registered' in error_detail.lower() or 'not active' in error_detail.lower():
+                    log.warning(f"n8n webhook not active/registered: {error_detail}")
+                    log.warning("Workflow must be activated in n8n or use test URL (/webhook-test/)")
+                else:
+                    log.error(f"n8n webhook returned {e.response.status_code}: {error_detail}")
+            except:
+                log.error(f"n8n webhook returned {e.response.status_code}: {e.response.text}")
+
+            # Don't fail the request - webhook can be configured later
+            # Status is already updated to 'in_queue'
+            log.warning("Request status updated to 'in_queue' but webhook call failed")
         except Exception as e:
             log.error(f"Error sending to n8n: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to send to webhook: {str(e)}")
+            # Don't fail the request - webhook can be configured later
+            log.warning("Request status updated to 'in_queue' but webhook call failed")
 
     return {"success": True, "status": "in_queue"}
 

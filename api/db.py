@@ -217,7 +217,14 @@ async def list_requests(
             rows = await cur.fetchall()
             for row in rows:
                 if row.get('payload_json'):
-                    row['payload'] = row.pop('payload_json')
+                    payload = row.pop('payload_json')
+                    # Parse JSON if it's a string
+                    if isinstance(payload, str):
+                        try:
+                            payload = json.loads(payload)
+                        except:
+                            payload = {}
+                    row['payload'] = payload
             return rows
 
 
@@ -297,7 +304,14 @@ async def create_request(user_id: str, company_name: str, client_name: str, payl
                 row['company_name'] = company_name
                 row['client_name'] = client_name
                 if row.get('payload_json'):
-                    row['payload'] = row.pop('payload_json')
+                    payload = row.pop('payload_json')
+                    # Parse JSON if it's a string
+                    if isinstance(payload, str):
+                        try:
+                            payload = json.loads(payload)
+                        except:
+                            payload = {}
+                    row['payload'] = payload
             return row
 
 
