@@ -13,7 +13,7 @@ pool: Optional[AsyncConnectionPool] = None
 async def init_pool():
     global pool
     pool = AsyncConnectionPool(
-        settings.DATABASE_URL,
+        settings.database_url,
         min_size=2,
         max_size=10,
         open=False,
