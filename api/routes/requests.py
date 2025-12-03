@@ -197,20 +197,28 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
     await db.update_request_status(request_id, 'in_queue')
 
     # Send to n8n webhook
-    if settings.N8N_WEBHOOK_URL:
+    webhook_url = settings.N8N_WEBHOOK_URL
+    if not webhook_url:
+        log.warning("N8N_WEBHOOK_URL not configured")
+    else:
         try:
             async with httpx.AsyncClient() as client:
-                await client.post(
-                    settings.N8N_WEBHOOK_URL,
+                response = await client.post(
+                    webhook_url,
                     json={
                         "request_id": request_id,
                         "payload": request.get('payload', {}),
                     },
-                    timeout=10.0
+                    timeout=30.0
                 )
+                response.raise_for_status()
+                log.info(f"Successfully sent to n8n webhook: {webhook_url}")
+        except httpx.HTTPStatusError as e:
+            log.error(f"n8n webhook returned {e.response.status_code}: {e.response.text}")
+            raise HTTPException(status_code=500, detail=f"Webhook error: {e.response.status_code}")
         except Exception as e:
-            print(f"Error sending to n8n: {e}")
-            # Still return success - webhook might be processed later
+            log.error(f"Error sending to n8n: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to send to webhook: {str(e)}")
 
     return {"success": True, "status": "in_queue"}
 
@@ -260,12 +268,12 @@ async def upload_photos(
         raise HTTPException(status_code=422, detail="No valid files to upload")
 
     # Update request payload with photo URLs
-    payload = request.get('payload', {})
-    site = payload.get('site', {})
+    payload = request.get('payload', {}) or {}
+    site = payload.get('site', {}) or {}
 
     # Store photos in assets.images for consistency
-    assets = site.get('assets', {})
-    images = assets.get('images', [])
+    assets = site.get('assets', {}) or {}
+    images = assets.get('images', []) or []
 
     for url in uploaded_urls:
         images.append({
@@ -278,7 +286,13 @@ async def upload_photos(
     site['assets'] = assets
     payload['site'] = site
 
+    log.info(f"Updating request {request_id} with {len(images)} images")
     await db.update_request(request_id, {'payload': payload})
+
+    # Verify update
+    updated = await db.get_request(request_id)
+    updated_images = updated.get('payload', {}).get('site', {}).get('assets', {}).get('images', [])
+    log.info(f"Request {request_id} now has {len(updated_images)} images")
 
     return {"urls": uploaded_urls}
 

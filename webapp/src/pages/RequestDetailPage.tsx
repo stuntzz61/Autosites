@@ -20,7 +20,6 @@ const statusConfig: Record<string, { icon: React.ReactNode; label: string }> = {
   collecting_info: { icon: <Clock className="w-4 h-4" />, label: 'Сбор данных' },
   collecting_photos: { icon: <Image className="w-4 h-4" />, label: 'Сбор фото' },
   ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов к отправке' },
-  ready: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов к отправке' },
   generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'Генерация...' },
   in_queue: { icon: <Clock className="w-4 h-4" />, label: 'В очереди' },
   success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Сайт готов!' },

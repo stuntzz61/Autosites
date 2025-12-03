@@ -238,8 +238,24 @@ async def get_request(request_id: str) -> Optional[Dict]:
                 (request_id,)
             )
             row = await cur.fetchone()
-            if row and row.get('payload_json'):
-                row['payload'] = row.pop('payload_json')
+            if row:
+                if row.get('payload_json'):
+                    # Parse JSON if it's a string
+                    payload = row.pop('payload_json')
+                    if isinstance(payload, str):
+                        import json
+                        try:
+                            payload = json.loads(payload)
+                        except:
+                            payload = {}
+                    row['payload'] = payload
+
+                    # Debug: log images
+                    images = payload.get('site', {}).get('assets', {}).get('images', [])
+                    if images:
+                        print(f"[DEBUG] get_request {request_id}: found {len(images)} images")
+                else:
+                    row['payload'] = {}
             return row
 
 
@@ -290,21 +306,39 @@ async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
     if 'payload' not in data:
         return await get_request(request_id)
 
+    payload_to_save = data['payload']
+
+    # Debug: log images before save
+    images = payload_to_save.get('site', {}).get('assets', {}).get('images', [])
+    print(f"[DEBUG] update_request {request_id}: saving {len(images)} images")
+
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                """UPDATE requests SET payload_json = %s
+                """UPDATE requests SET payload_json = %s::jsonb
                     WHERE id = %s
                     RETURNING id, status, payload_json, created_at""",
-                (json.dumps(data['payload']), request_id)
+                (json.dumps(payload_to_save), request_id)
             )
             await conn.commit()
             row = await cur.fetchone()
             if row:
                 payload = row.get('payload_json') or {}
+                # Parse JSON if it's a string
+                if isinstance(payload, str):
+                    try:
+                        payload = json.loads(payload)
+                    except:
+                        payload = {}
+
                 row['payload'] = payload
                 row['company_name'] = payload.get('site', {}).get('company', '')
                 row['client_name'] = payload.get('client', {}).get('name', '')
+
+                # Debug: verify images after save
+                saved_images = payload.get('site', {}).get('assets', {}).get('images', [])
+                print(f"[DEBUG] update_request {request_id}: saved {len(saved_images)} images")
+
                 if 'payload_json' in row:
                     del row['payload_json']
             return row
