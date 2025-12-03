@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 const steps = [
-  { id: 'company', title: 'О компании', icon: Building2 },
+  { id: 'company', title: 'Компания', icon: Building2 },
   { id: 'client', title: 'Клиент', icon: User },
   { id: 'contacts', title: 'Контакты', icon: Phone },
   { id: 'services', title: 'Услуги', icon: Briefcase },
@@ -21,15 +21,13 @@ const steps = [
   { id: 'details', title: 'Детали', icon: Palette },
 ]
 
-// Default site structure - fixed, not editable by manager
 const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты']
 
-// Photo categories
 const photoCategories = [
-  { id: 'hero', label: 'Главный баннер', icon: '🏠', description: 'Главное фото для шапки' },
-  { id: 'services', label: 'Услуги', icon: '🛠', description: 'Фото для раздела услуг' },
-  { id: 'portfolio', label: 'Портфолио', icon: '📁', description: 'Примеры работ' },
-  { id: 'gallery', label: 'Галерея', icon: '🖼', description: 'Дополнительные фото' },
+  { id: 'hero', label: 'Баннер', icon: '🏠' },
+  { id: 'services', label: 'Услуги', icon: '🛠' },
+  { id: 'portfolio', label: 'Портфолио', icon: '📁' },
+  { id: 'gallery', label: 'Галерея', icon: '🖼' },
 ]
 
 interface ServiceItem {
@@ -45,29 +43,18 @@ interface PhotoItem {
 }
 
 interface FormData {
-  // Company info
   company: string
   business_type: string
   summary: string
-
-  // Client info
   client_name: string
   client_company: string
   client_contact: string
-
-  // Contacts for site
   phone: string
   email: string
   address: string
   work_hours: string
-
-  // Services
   services: ServiceItem[]
-
-  // Photos
   photos: PhotoItem[]
-
-  // Additional
   color_palette: string
 }
 
@@ -125,13 +112,10 @@ export default function NewRequestPage() {
           services: formData.services.filter(s => s.name.trim()),
           color_palette: formData.color_palette,
           structure: DEFAULT_STRUCTURE,
-          meta: {
-            status: 'draft'
-          }
+          meta: { status: 'draft' }
         }
       }
 
-      // Create request first
       const response = await requestsApi.create({
         company_name: formData.company,
         client_name: formData.client_name,
@@ -140,7 +124,6 @@ export default function NewRequestPage() {
 
       const requestId = response.data.id
 
-      // Upload photos if any
       if (formData.photos.length > 0) {
         setUploadingPhotos(true)
         for (const photo of formData.photos) {
@@ -165,7 +148,7 @@ export default function NewRequestPage() {
       navigate(`/requests/${data.id}`)
     },
     onError: () => {
-      toast.error('Ошибка создания заявки')
+      toast.error('Ошибка создания')
       haptic?.notificationOccurred('error')
       setUploadingPhotos(false)
     },
@@ -173,7 +156,6 @@ export default function NewRequestPage() {
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    // Clear error when field is updated
     if (errors[field as keyof ValidationErrors]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
     }
@@ -224,7 +206,6 @@ export default function NewRequestPage() {
       photos: [...prev.photos, ...newPhotos],
     }))
 
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -250,34 +231,22 @@ export default function NewRequestPage() {
       const startDigit = limited[0] === '8' ? '7' : limited[0]
       formatted = '+' + startDigit
     }
-    if (limited.length > 1) {
-      formatted += ' (' + limited.slice(1, 4)
-    }
-    if (limited.length >= 4) {
-      formatted += ')'
-    }
-    if (limited.length > 4) {
-      formatted += ' ' + limited.slice(4, 7)
-    }
-    if (limited.length > 7) {
-      formatted += '-' + limited.slice(7, 9)
-    }
-    if (limited.length > 9) {
-      formatted += '-' + limited.slice(9, 11)
-    }
+    if (limited.length > 1) formatted += ' (' + limited.slice(1, 4)
+    if (limited.length >= 4) formatted += ')'
+    if (limited.length > 4) formatted += ' ' + limited.slice(4, 7)
+    if (limited.length > 7) formatted += '-' + limited.slice(7, 9)
+    if (limited.length > 9) formatted += '-' + limited.slice(9, 11)
 
     return formatted
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value)
-    updateField('phone', formatted)
+    updateField('phone', formatPhone(e.target.value))
   }
 
   const validatePhone = (phone: string) => {
     if (!phone) return true
-    const cleaned = phone.replace(/\D/g, '')
-    return cleaned.length === 11
+    return phone.replace(/\D/g, '').length === 11
   }
 
   const validateEmail = (email: string) => {
@@ -289,40 +258,20 @@ export default function NewRequestPage() {
     const newErrors: ValidationErrors = {}
 
     switch (currentStep) {
-      case 0: // Company
-        if (!formData.company.trim()) {
-          newErrors.company = 'Введите название компании'
-        } else if (formData.company.trim().length < 2) {
-          newErrors.company = 'Название должно быть не менее 2 символов'
-        }
-        if (!formData.business_type.trim()) {
-          newErrors.business_type = 'Укажите сферу деятельности'
-        }
+      case 0:
+        if (!formData.company.trim()) newErrors.company = 'Введите название'
+        if (!formData.business_type.trim()) newErrors.business_type = 'Укажите сферу'
         break
-
-      case 1: // Client
-        if (!formData.client_name.trim()) {
-          newErrors.client_name = 'Введите имя клиента'
-        } else if (formData.client_name.trim().length < 2) {
-          newErrors.client_name = 'Имя должно быть не менее 2 символов'
-        }
+      case 1:
+        if (!formData.client_name.trim()) newErrors.client_name = 'Введите имя'
         break
-
-      case 2: // Contacts
-        if (!formData.phone.trim()) {
-          newErrors.phone = 'Введите номер телефона'
-        } else if (!validatePhone(formData.phone)) {
-          newErrors.phone = 'Введите номер полностью (11 цифр)'
-        }
-        if (formData.email && !validateEmail(formData.email)) {
-          newErrors.email = 'Введите корректный email'
-        }
+      case 2:
+        if (!formData.phone.trim()) newErrors.phone = 'Введите телефон'
+        else if (!validatePhone(formData.phone)) newErrors.phone = 'Неверный формат'
+        if (formData.email && !validateEmail(formData.email)) newErrors.email = 'Неверный email'
         break
-
-      case 3: // Services
-        if (!formData.services.some(s => s.name.trim().length > 0)) {
-          newErrors.services = 'Добавьте хотя бы одну услугу'
-        }
+      case 3:
+        if (!formData.services.some(s => s.name.trim())) newErrors.services = 'Добавьте услугу'
         break
     }
 
@@ -332,10 +281,10 @@ export default function NewRequestPage() {
 
   const canGoNext = () => {
     switch (currentStep) {
-      case 0: return formData.company.trim().length >= 2 && formData.business_type.trim().length > 0
-      case 1: return formData.client_name.trim().length >= 2
-      case 2: return validatePhone(formData.phone) && validateEmail(formData.email) && formData.phone.trim().length > 0
-      case 3: return formData.services.some(s => s.name.trim().length > 0)
+      case 0: return formData.company.trim() && formData.business_type.trim()
+      case 1: return formData.client_name.trim()
+      case 2: return validatePhone(formData.phone) && validateEmail(formData.email) && formData.phone.trim()
+      case 3: return formData.services.some(s => s.name.trim())
       default: return true
     }
   }
@@ -366,22 +315,20 @@ export default function NewRequestPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-tg-bg">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-tg-bg border-b border-tg-separator px-4 py-3">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-semibold text-tg-text">Новая заявка</h1>
-          <span className="text-sm text-tg-hint">{currentStep + 1} / {steps.length}</span>
+          <span className="text-sm text-tg-hint">{currentStep + 1}/{steps.length}</span>
         </div>
-
-        {/* Progress */}
         <div className="flex gap-1">
-          {steps.map((step, i) => (
+          {steps.map((_, i) => (
             <div
-              key={step.id}
+              key={i}
               className={clsx(
                 'flex-1 h-1 rounded-full transition-colors',
-                i <= currentStep ? 'bg-[#1877f2] dark:bg-white' : 'bg-tg-secondary-bg'
+                i <= currentStep ? 'bg-black dark:bg-white' : 'bg-tg-secondary-bg'
               )}
             />
           ))}
@@ -398,406 +345,268 @@ export default function NewRequestPage() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Step 0: Company */}
             {currentStep === 0 && (
-              <StepContent
-                icon={<Building2 className="w-8 h-8 text-[#1877f2] dark:text-white" />}
-                title="О компании"
-                subtitle="Расскажите о бизнесе клиента"
-              >
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Название компании *</label>
-                    <input
-                      type="text"
-                      value={formData.company}
-                      onChange={(e) => updateField('company', e.target.value)}
-                      placeholder="Например: Webly"
-                      className={clsx('input text-lg', errors.company && 'ring-2 ring-red-500/30 border-red-500/50')}
-                      autoFocus
-                    />
-                    {errors.company && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.company}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Сфера деятельности *</label>
-                    <input
-                      type="text"
-                      value={formData.business_type}
-                      onChange={(e) => updateField('business_type', e.target.value)}
-                      placeholder="Например: Создание сайтов под ключ"
-                      className={clsx('input', errors.business_type && 'ring-2 ring-red-500/30 border-red-500/50')}
-                    />
-                    {errors.business_type && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.business_type}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Описание компании</label>
-                    <textarea
-                      value={formData.summary}
-                      onChange={(e) => updateField('summary', e.target.value)}
-                      placeholder="Краткое описание для раздела 'О компании'..."
-                      className="input min-h-[120px] resize-none"
-                      rows={4}
-                    />
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Название компании *</label>
+                  <input
+                    type="text"
+                    value={formData.company}
+                    onChange={(e) => updateField('company', e.target.value)}
+                    placeholder="Webly"
+                    className={clsx('input', errors.company && 'border-red-500')}
+                    autoFocus
+                  />
+                  {errors.company && <p className="text-xs text-red-500 mt-1">{errors.company}</p>}
                 </div>
-              </StepContent>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Сфера деятельности *</label>
+                  <input
+                    type="text"
+                    value={formData.business_type}
+                    onChange={(e) => updateField('business_type', e.target.value)}
+                    placeholder="Создание сайтов"
+                    className={clsx('input', errors.business_type && 'border-red-500')}
+                  />
+                  {errors.business_type && <p className="text-xs text-red-500 mt-1">{errors.business_type}</p>}
+                </div>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Описание</label>
+                  <textarea
+                    value={formData.summary}
+                    onChange={(e) => updateField('summary', e.target.value)}
+                    placeholder="О компании..."
+                    className="input min-h-[100px] resize-none"
+                  />
+                </div>
+              </div>
             )}
 
-            {/* Step 1: Client */}
             {currentStep === 1 && (
-              <StepContent
-                icon={<User className="w-8 h-8 text-[#1877f2] dark:text-white" />}
-                title="Клиент"
-                subtitle="Кто заказывает сайт?"
-              >
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">ФИО клиента *</label>
-                    <input
-                      type="text"
-                      value={formData.client_name}
-                      onChange={(e) => updateField('client_name', e.target.value)}
-                      placeholder="Иванов Иван Иванович"
-                      className={clsx('input text-lg', errors.client_name && 'ring-2 ring-red-500/30 border-red-500/50')}
-                      autoFocus
-                    />
-                    {errors.client_name && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.client_name}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Компания клиента</label>
-                    <input
-                      type="text"
-                      value={formData.client_company}
-                      onChange={(e) => updateField('client_company', e.target.value)}
-                      placeholder="ООО «Рога и Копыта»"
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Контакт клиента</label>
-                    <input
-                      type="text"
-                      value={formData.client_contact}
-                      onChange={(e) => updateField('client_contact', e.target.value)}
-                      placeholder="+7..., email, @telegram"
-                      className="input"
-                    />
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">ФИО клиента *</label>
+                  <input
+                    type="text"
+                    value={formData.client_name}
+                    onChange={(e) => updateField('client_name', e.target.value)}
+                    placeholder="Иванов Иван"
+                    className={clsx('input', errors.client_name && 'border-red-500')}
+                    autoFocus
+                  />
+                  {errors.client_name && <p className="text-xs text-red-500 mt-1">{errors.client_name}</p>}
                 </div>
-              </StepContent>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Компания</label>
+                  <input
+                    type="text"
+                    value={formData.client_company}
+                    onChange={(e) => updateField('client_company', e.target.value)}
+                    placeholder="ООО «Компания»"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Контакт</label>
+                  <input
+                    type="text"
+                    value={formData.client_contact}
+                    onChange={(e) => updateField('client_contact', e.target.value)}
+                    placeholder="+7... или @telegram"
+                    className="input"
+                  />
+                </div>
+              </div>
             )}
 
-            {/* Step 2: Contacts */}
             {currentStep === 2 && (
-              <StepContent
-                icon={<Phone className="w-8 h-8 text-[#1877f2] dark:text-white" />}
-                title="Контакты для сайта"
-                subtitle="Эти данные будут на сайте"
-              >
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Телефон *</label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        value={formData.phone}
-                        onChange={handlePhoneChange}
-                        placeholder="+7 (XXX) XXX-XX-XX"
-                        maxLength={18}
-                        className={clsx('input pl-10', errors.phone && 'ring-2 ring-red-500/30 border-red-500/50')}
-                        autoFocus
-                      />
-                    </div>
-                    {errors.phone && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.phone}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Email</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => updateField('email', e.target.value)}
-                        placeholder="info@company.ru"
-                        className={clsx('input pl-10', errors.email && 'ring-2 ring-red-500/30 border-red-500/50')}
-                      />
-                    </div>
-                    {errors.email && (
-                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.email}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Адрес</label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
-                      <input
-                        type="text"
-                        value={formData.address}
-                        onChange={(e) => updateField('address', e.target.value)}
-                        placeholder="г. Москва, ул. Примерная, 123"
-                        className="input pl-10"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Часы работы</label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
-                      <input
-                        type="text"
-                        value={formData.work_hours}
-                        onChange={(e) => updateField('work_hours', e.target.value)}
-                        placeholder="Пн-Пт 9:00-18:00"
-                        className="input pl-10"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Телефон для сайта *</label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    placeholder="+7 (XXX) XXX-XX-XX"
+                    maxLength={18}
+                    className={clsx('input', errors.phone && 'border-red-500')}
+                    autoFocus
+                  />
+                  {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
                 </div>
-              </StepContent>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => updateField('email', e.target.value)}
+                    placeholder="info@company.ru"
+                    className={clsx('input', errors.email && 'border-red-500')}
+                  />
+                  {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+                </div>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Адрес</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => updateField('address', e.target.value)}
+                    placeholder="г. Москва, ул..."
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Часы работы</label>
+                  <input
+                    type="text"
+                    value={formData.work_hours}
+                    onChange={(e) => updateField('work_hours', e.target.value)}
+                    placeholder="Пн-Пт 9:00-18:00"
+                    className="input"
+                  />
+                </div>
+              </div>
             )}
 
-            {/* Step 3: Services */}
             {currentStep === 3 && (
-              <StepContent
-                icon={<Briefcase className="w-8 h-8 text-[#1877f2] dark:text-white" />}
-                title="Услуги"
-                subtitle="Что предлагает компания?"
-              >
-                <div className="space-y-4">
-                  {errors.services && (
-                    <p className="text-xs text-red-500 flex items-center gap-1 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.services}
-                    </p>
-                  )}
-                  {formData.services.map((service, i) => (
-                    <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium text-tg-text">Услуга {i + 1}</span>
-                        {formData.services.length > 1 && (
-                          <button
-                            onClick={() => removeService(i)}
-                            className="p-1.5 rounded-lg bg-red-500/10 text-red-500"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          value={service.name}
-                          onChange={(e) => updateService(i, 'name', e.target.value)}
-                          placeholder="Название услуги *"
-                          className="input"
-                          autoFocus={i === 0}
-                        />
-                        <input
-                          type="text"
-                          value={service.summary}
-                          onChange={(e) => updateService(i, 'summary', e.target.value)}
-                          placeholder="Краткое описание"
-                          className="input"
-                        />
-                        <input
-                          type="text"
-                          value={service.priceFrom}
-                          onChange={(e) => updateService(i, 'priceFrom', e.target.value)}
-                          placeholder="Цена (например: от 10 000 ₽)"
-                          className="input"
-                        />
-                      </div>
+              <div className="space-y-4">
+                {errors.services && (
+                  <p className="text-xs text-red-500 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.services}
+                  </p>
+                )}
+                {formData.services.map((service, i) => (
+                  <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
+                    <div className="flex justify-between mb-3">
+                      <span className="text-sm font-medium">Услуга {i + 1}</span>
+                      {formData.services.length > 1 && (
+                        <button onClick={() => removeService(i)} className="text-red-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
-                  ))}
-                  <button onClick={addService} className="btn btn-secondary w-full">
-                    <Plus className="w-5 h-5" />
-                    Добавить услугу
-                  </button>
-                </div>
-              </StepContent>
+                    <div className="space-y-3">
+                      <input
+                        value={service.name}
+                        onChange={(e) => updateService(i, 'name', e.target.value)}
+                        placeholder="Название *"
+                        className="input"
+                      />
+                      <input
+                        value={service.summary}
+                        onChange={(e) => updateService(i, 'summary', e.target.value)}
+                        placeholder="Описание"
+                        className="input"
+                      />
+                      <input
+                        value={service.priceFrom}
+                        onChange={(e) => updateService(i, 'priceFrom', e.target.value)}
+                        placeholder="от 10 000 ₽"
+                        className="input"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <button onClick={addService} className="btn btn-secondary w-full">
+                  <Plus className="w-5 h-5" /> Добавить
+                </button>
+              </div>
             )}
 
-            {/* Step 4: Photos */}
             {currentStep === 4 && (
-              <StepContent
-                icon={<Camera className="w-8 h-8 text-[#1877f2] dark:text-white" />}
-                title="Фотографии"
-                subtitle="Загрузите фото для сайта"
-              >
-                <div className="space-y-4">
-                  {/* Category selector */}
-                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
-                    {photoCategories.map(cat => (
-                      <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={clsx(
-                          'flex items-center gap-2 px-3 py-2 rounded-xl whitespace-nowrap transition-colors',
-                          selectedCategory === cat.id
-                            ? 'bg-[#1877f2] dark:bg-white text-white dark:text-[#18191a]'
-                            : 'bg-tg-secondary-bg text-tg-text'
-                        )}
-                      >
-                        <span>{cat.icon}</span>
-                        <span className="text-sm font-medium">{cat.label}</span>
-                        {getPhotosByCategory(cat.id).length > 0 && (
-                          <span className={clsx(
-                            'px-1.5 py-0.5 rounded-full text-xs',
-                            selectedCategory === cat.id
-                              ? 'bg-white/20 dark:bg-black/20'
-                              : 'bg-[#1877f2]/10 dark:bg-white/10 text-[#1877f2] dark:text-white'
-                          )}>
-                            {getPhotosByCategory(cat.id).length}
-                          </span>
-                        )}
-                      </button>
+              <div className="space-y-4">
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {photoCategories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={clsx(
+                        'px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap',
+                        selectedCategory === cat.id
+                          ? 'bg-black dark:bg-white text-white dark:text-black'
+                          : 'bg-tg-secondary-bg'
+                      )}
+                    >
+                      {cat.icon} {cat.label}
+                      {getPhotosByCategory(cat.id).length > 0 && (
+                        <span className="ml-1 opacity-60">({getPhotosByCategory(cat.id).length})</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoSelect}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint"
+                >
+                  <Upload className="w-5 h-5 mx-auto mb-2" />
+                  Добавить фото
+                </button>
+
+                {formData.photos.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {formData.photos.map((photo, i) => (
+                      <div key={i} className="relative flex-shrink-0">
+                        <img src={photo.preview} alt="" className="w-20 h-20 rounded-xl object-cover" />
+                        <button
+                          onClick={() => removePhoto(i)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
                     ))}
                   </div>
+                )}
 
-                  {/* Upload button */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handlePhotoSelect}
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-[#1877f2]/30 dark:border-white/20 rounded-xl text-[#1877f2] dark:text-white hover:bg-[#e7f3ff]/50 dark:hover:bg-white/5 transition-colors"
-                  >
-                    <Upload className="w-5 h-5" />
-                    <span className="font-medium">Добавить фото в "{photoCategories.find(c => c.id === selectedCategory)?.label}"</span>
-                  </button>
-
-                  {/* Photos grid */}
-                  {formData.photos.length > 0 && (
-                    <div className="space-y-4">
-                      {photoCategories.map(cat => {
-                        const photos = getPhotosByCategory(cat.id)
-                        if (photos.length === 0) return null
-
-                        return (
-                          <div key={cat.id}>
-                            <p className="text-sm font-medium text-tg-text mb-2">
-                              {cat.icon} {cat.label}
-                            </p>
-                            <div className="flex gap-2 overflow-x-auto pb-2">
-                              {photos.map((photo, index) => {
-                                const globalIndex = formData.photos.indexOf(photo)
-                                return (
-                                  <div key={index} className="relative flex-shrink-0 group">
-                                    <img
-                                      src={photo.preview}
-                                      alt={cat.label}
-                                      className="w-20 h-20 rounded-xl object-cover"
-                                    />
-                                    <button
-                                      onClick={() => removePhoto(globalIndex)}
-                                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {formData.photos.length === 0 && (
-                    <div className="text-center py-8 text-tg-hint">
-                      <Image className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>Фото можно добавить позже</p>
-                    </div>
-                  )}
-                </div>
-              </StepContent>
+                {formData.photos.length === 0 && (
+                  <p className="text-center text-tg-hint py-4">Фото можно добавить позже</p>
+                )}
+              </div>
             )}
 
-            {/* Step 5: Details */}
             {currentStep === 5 && (
-              <StepContent
-                icon={<Palette className="w-8 h-8 text-[#1877f2] dark:text-white" />}
-                title="Детали сайта"
-                subtitle="Дополнительные настройки"
-              >
-                <div className="space-y-6">
-                  {/* Fixed Structure Info */}
-                  <div>
-                    <label className="text-sm text-tg-hint mb-2 block">Структура сайта</label>
-                    <div className="bg-tg-secondary-bg rounded-xl p-4">
-                      <div className="flex flex-wrap gap-2">
-                        {DEFAULT_STRUCTURE.map(section => (
-                          <span
-                            key={section}
-                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-tg-section text-tg-text border border-[#e4e6eb] dark:border-[#3e4042]"
-                          >
-                            {section}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-xs text-tg-hint mt-3">
-                        Стандартная структура сайта
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm text-tg-hint mb-1 block">Цветовая палитра</label>
-                    <div className="relative">
-                      <Palette className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
-                      <input
-                        type="text"
-                        value={formData.color_palette}
-                        onChange={(e) => updateField('color_palette', e.target.value)}
-                        placeholder="Например: синий и белый"
-                        className="input pl-10"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="bg-[#e7f3ff] dark:bg-[#3e4042] rounded-xl p-4 border border-[#1877f2]/20 dark:border-[#3e4042]">
-                    <p className="text-sm font-semibold text-tg-text mb-2">📋 Итого</p>
-                    <div className="space-y-1 text-sm text-tg-hint">
-                      <p>Компания: <span className="text-tg-text">{formData.company || '—'}</span></p>
-                      <p>Клиент: <span className="text-tg-text">{formData.client_name || '—'}</span></p>
-                      <p>Услуг: <span className="text-tg-text">{formData.services.filter(s => s.name.trim()).length}</span></p>
-                      <p>Фото: <span className="text-tg-text">{formData.photos.length}</span></p>
-                    </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-tg-hint mb-2 block">Структура сайта</label>
+                  <div className="flex flex-wrap gap-2">
+                    {DEFAULT_STRUCTURE.map(s => (
+                      <span key={s} className="px-3 py-1.5 bg-tg-secondary-bg rounded-lg text-sm">{s}</span>
+                    ))}
                   </div>
                 </div>
-              </StepContent>
+
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Цветовая палитра</label>
+                  <input
+                    type="text"
+                    value={formData.color_palette}
+                    onChange={(e) => updateField('color_palette', e.target.value)}
+                    placeholder="синий и белый"
+                    className="input"
+                  />
+                </div>
+
+                <div className="bg-tg-secondary-bg rounded-xl p-4">
+                  <p className="font-medium mb-2">Итого</p>
+                  <div className="space-y-1 text-sm text-tg-hint">
+                    <p>Компания: <span className="text-tg-text">{formData.company || '—'}</span></p>
+                    <p>Клиент: <span className="text-tg-text">{formData.client_name || '—'}</span></p>
+                    <p>Услуг: <span className="text-tg-text">{formData.services.filter(s => s.name.trim()).length}</span></p>
+                    <p>Фото: <span className="text-tg-text">{formData.photos.length}</span></p>
+                  </div>
+                </div>
+              </div>
             )}
           </motion.div>
         </AnimatePresence>
@@ -819,49 +628,20 @@ export default function NewRequestPage() {
             {createMutation.isPending ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                {uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}
+                {uploadingPhotos ? 'Загрузка...' : 'Создание...'}
               </>
             ) : currentStep === steps.length - 1 ? (
               <>
-                <Check className="w-5 h-5" />
-                Создать заявку
+                <Check className="w-5 h-5" /> Создать
               </>
             ) : (
               <>
-                Далее
-                <ArrowRight className="w-5 h-5" />
+                Далее <ArrowRight className="w-5 h-5" />
               </>
             )}
           </button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function StepContent({
-  icon,
-  title,
-  subtitle,
-  children,
-}: {
-  icon: React.ReactNode
-  title: string
-  subtitle: string
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-[#e7f3ff] dark:bg-[#3e4042]">
-          {icon}
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold text-tg-text">{title}</h2>
-          <p className="text-sm text-tg-hint">{subtitle}</p>
-        </div>
-      </div>
-      {children}
     </div>
   )
 }

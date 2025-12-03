@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useAuthStore } from '../stores/authStore'
 
-// Telegram WebApp types
 interface TelegramUser {
   id: number
   first_name: string
@@ -125,13 +124,13 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
   const [webApp, setWebApp] = useState<WebApp | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check localStorage for saved preference
     const saved = localStorage.getItem('theme')
-    return saved === 'dark'
+    if (saved) return saved === 'dark'
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
   })
   const { init } = useAuthStore()
 
-  // Apply theme on mount and when isDarkMode changes
+  // Apply theme
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark')
@@ -146,23 +145,22 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     const tg = window.Telegram?.WebApp
 
     if (tg) {
-      // Initialize
       tg.ready()
       tg.expand()
 
-      // DO NOT apply Telegram theme colors - use our static colors
-      // Theme is controlled only by our toggle
+      // Use Telegram's color scheme
+      if (tg.colorScheme === 'dark') {
+        setIsDarkMode(true)
+      }
 
       setWebApp(tg)
 
-      // Initialize auth with Telegram init data
       if (tg.initData) {
         init(tg.initData)
       }
 
       setIsReady(true)
     } else {
-      // Development mode without Telegram
       console.log('Running outside of Telegram')
       setIsReady(true)
     }

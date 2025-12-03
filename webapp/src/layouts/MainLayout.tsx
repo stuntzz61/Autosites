@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Home, FileText, Archive, User, Shield, Sun, Moon } from 'lucide-react'
+import { Home, FileText, Archive, User, Shield } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useEffect } from 'react'
@@ -17,7 +17,7 @@ export default function MainLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { isAdmin } = useAuthStore()
-  const { backButton, haptic, isDarkMode, toggleTheme } = useTelegram()
+  const { backButton, haptic } = useTelegram()
 
   // Handle back button
   useEffect(() => {
@@ -42,22 +42,6 @@ export default function MainLayout() {
 
   return (
     <div className="flex flex-col min-h-screen bg-tg-secondary-bg">
-      {/* Theme Toggle Button - Fixed top right */}
-      <button
-        onClick={() => {
-          haptic?.impactOccurred('light')
-          toggleTheme()
-        }}
-        className="fixed top-4 right-4 z-50 w-10 h-10 rounded-full bg-tg-section border border-tg-separator shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-        aria-label={isDarkMode ? 'Включить светлую тему' : 'Включить тёмную тему'}
-      >
-        {isDarkMode ? (
-          <Sun className="w-5 h-5 text-yellow-500" />
-        ) : (
-          <Moon className="w-5 h-5 text-[#1877f2]" />
-        )}
-      </button>
-
       {/* Content */}
       <main className="flex-1 overflow-auto pb-20">
         <motion.div
@@ -87,22 +71,16 @@ export default function MainLayout() {
                 }}
                 className={clsx(
                   'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
-                  isActive ? 'text-[#1877f2] dark:text-white' : 'text-tg-hint'
+                  isActive ? 'text-tg-text' : 'text-tg-hint'
                 )}
               >
                 <Icon className="w-6 h-6" strokeWidth={isActive ? 2 : 1.5} />
                 <span className="text-[10px] font-medium">{label}</span>
-                {isActive && (
-                  <motion.div
-                    className="absolute bottom-1 w-1 h-1 rounded-full bg-[#1877f2] dark:bg-white"
-                    layoutId="navIndicator"
-                  />
-                )}
               </button>
             )
           })}
 
-          {/* Admin button - visible for all, navigates to admin panel or login */}
+          {/* Admin button */}
           <button
             onClick={() => {
               haptic?.selectionChanged()
@@ -110,7 +88,7 @@ export default function MainLayout() {
             }}
             className={clsx(
               'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
-              location.pathname.startsWith('/admin') ? 'text-[#1877f2] dark:text-white' : 'text-tg-hint'
+              location.pathname.startsWith('/admin') ? 'text-tg-text' : 'text-tg-hint'
             )}
           >
             <Shield className="w-6 h-6" strokeWidth={location.pathname.startsWith('/admin') ? 2 : 1.5} />

@@ -11,12 +11,12 @@ import { profileApi } from '@/api/client'
 import toast from 'react-hot-toast'
 
 const ranks = [
-  { min: 0, name: 'Новичок', color: 'text-[#65676b] dark:text-[#b0b3b8]', bg: 'bg-[#e4e6eb] dark:bg-[#3e4042]' },
-  { min: 5, name: 'Начинающий', color: 'text-[#42b72a]', bg: 'bg-green-100 dark:bg-green-900/30' },
-  { min: 15, name: 'Опытный', color: 'text-[#1877f2] dark:text-[#e4e6eb]', bg: 'bg-[#e7f3ff] dark:bg-[#3e4042]' },
-  { min: 30, name: 'Профессионал', color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30' },
-  { min: 50, name: 'Эксперт', color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30' },
-  { min: 100, name: 'Мастер', color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/30' },
+  { min: 0, name: 'Новичок' },
+  { min: 5, name: 'Начинающий' },
+  { min: 15, name: 'Опытный' },
+  { min: 30, name: 'Профессионал' },
+  { min: 50, name: 'Эксперт' },
+  { min: 100, name: 'Мастер' },
 ]
 
 export default function ProfilePage() {
@@ -36,7 +36,7 @@ export default function ProfilePage() {
     mutationFn: (data: { contact: string }) => profileApi.update(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] })
-      toast.success('Контакт обновлён')
+      toast.success('Сохранено')
       setEditContact(false)
     },
     onError: () => toast.error('Ошибка'),
@@ -47,22 +47,18 @@ export default function ProfilePage() {
   }
 
   const getNextRank = (count: number) => {
-    const currentRankIndex = ranks.findIndex(r => count < r.min) - 1
-    if (currentRankIndex < ranks.length - 1) {
-      return ranks[currentRankIndex + 1]
-    }
+    const idx = ranks.findIndex(r => count < r.min) - 1
+    if (idx < ranks.length - 1) return ranks[idx + 1]
     return null
   }
 
   const totalRequests = stats?.total_requests || 0
   const rank = getRank(totalRequests)
   const nextRank = getNextRank(totalRequests)
-  const progress = nextRank
-    ? ((totalRequests - rank.min) / (nextRank.min - rank.min)) * 100
-    : 100
+  const progress = nextRank ? ((totalRequests - rank.min) / (nextRank.min - rank.min)) * 100 : 100
 
   const handleLogout = () => {
-    webApp?.showConfirm('Выйти из аккаунта?', (confirmed) => {
+    webApp?.showConfirm('Выйти?', (confirmed) => {
       if (confirmed) {
         logout()
         webApp?.close()
@@ -71,48 +67,40 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen pb-8">
-      {/* Header Card */}
-      <motion.div
-        className="bg-gradient-to-br from-[#1877f2] via-[#166fe5] to-[#0d65d9] dark:from-[#242526] dark:via-[#18191a] dark:to-[#242526] p-6 pb-24"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <div className="text-center text-white">
-          <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur mx-auto mb-4 flex items-center justify-center text-3xl font-bold">
+    <div className="min-h-screen pb-8 bg-tg-bg">
+      {/* Header */}
+      <div className="bg-black dark:bg-white text-white dark:text-black p-6 pb-24">
+        <div className="text-center">
+          <div className="w-20 h-20 rounded-full bg-white/20 dark:bg-black/20 mx-auto mb-4 flex items-center justify-center text-3xl font-bold">
             {user?.first_name?.[0]?.toUpperCase()}
           </div>
           <h1 className="text-2xl font-bold">
             {user?.first_name} {user?.last_name}
           </h1>
-          {user?.username && (
-            <p className="text-white/70">@{user.username}</p>
-          )}
+          {user?.username && <p className="opacity-70">@{user.username}</p>}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Content */}
       <div className="px-4 -mt-16 space-y-4">
-        {/* Rank Card */}
+        {/* Rank */}
         <motion.div
-          className="bg-tg-section rounded-2xl p-5 shadow-lg border border-[#e4e6eb] dark:border-[#3e4042]"
+          className="bg-tg-section rounded-2xl p-5 border border-tg-separator"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex items-center gap-4 mb-4">
-            <div className={`p-3 rounded-xl ${rank.bg}`}>
-              <Award className={`w-6 h-6 ${rank.color}`} />
+            <div className="p-3 rounded-xl bg-tg-secondary-bg">
+              <Award className="w-6 h-6 text-tg-hint" />
             </div>
             <div className="flex-1">
-              <p className="text-sm text-tg-hint">Ваш ранг</p>
-              <p className={`text-lg font-bold ${rank.color}`}>{rank.name}</p>
+              <p className="text-sm text-tg-hint">Ранг</p>
+              <p className="text-lg font-bold">{rank.name}</p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-tg-text">{totalRequests}</p>
+              <p className="text-2xl font-bold">{totalRequests}</p>
               <p className="text-xs text-tg-hint">заявок</p>
             </div>
           </div>
-
           {nextRank && (
             <div>
               <div className="flex justify-between text-xs text-tg-hint mb-1">
@@ -121,56 +109,30 @@ export default function ProfilePage() {
               </div>
               <div className="h-2 bg-tg-secondary-bg rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-[#1877f2] to-[#42b72a] dark:from-[#e4e6eb] dark:to-[#b0b3b8] rounded-full"
+                  className="h-full bg-black dark:bg-white rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
                 />
               </div>
               <p className="text-xs text-tg-hint mt-1 text-center">
-                Ещё {nextRank.min - totalRequests} до следующего ранга
+                Ещё {nextRank.min - totalRequests} до следующего
               </p>
             </div>
           )}
         </motion.div>
 
         {/* Stats */}
-        <motion.div
-          className="grid grid-cols-2 gap-3"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <StatCard
-            icon={<FileText className="w-5 h-5 text-[#1877f2] dark:text-[#e4e6eb]" />}
-            value={stats?.total_requests || 0}
-            label="Всего заявок"
-          />
-          <StatCard
-            icon={<CheckCircle className="w-5 h-5 text-[#42b72a]" />}
-            value={stats?.completed_requests || 0}
-            label="Завершено"
-          />
-          <StatCard
-            icon={<Clock className="w-5 h-5 text-amber-500" />}
-            value={stats?.pending_requests || 0}
-            label="В работе"
-          />
-          <StatCard
-            icon={<TrendingUp className="w-5 h-5 text-purple-500" />}
-            value={stats?.this_week || 0}
-            label="За неделю"
-          />
-        </motion.div>
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard icon={<FileText className="w-5 h-5" />} value={stats?.total_requests || 0} label="Всего" />
+          <StatCard icon={<CheckCircle className="w-5 h-5" />} value={stats?.completed_requests || 0} label="Готово" />
+          <StatCard icon={<Clock className="w-5 h-5" />} value={stats?.pending_requests || 0} label="В работе" />
+          <StatCard icon={<TrendingUp className="w-5 h-5" />} value={stats?.this_week || 0} label="За неделю" />
+        </div>
 
-        {/* Contact Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <p className="section-header">Контактные данные</p>
-          <div className="bg-tg-section rounded-2xl overflow-hidden border border-[#e4e6eb] dark:border-[#3e4042]">
+        {/* Contact */}
+        <div>
+          <p className="section-header">Контакт</p>
+          <div className="bg-tg-section rounded-2xl border border-tg-separator">
             <button
               onClick={() => {
                 haptic?.impactOccurred('light')
@@ -181,27 +143,23 @@ export default function ProfilePage() {
             >
               <Phone className="w-5 h-5 text-tg-hint" />
               <div className="flex-1">
-                <p className="text-xs text-tg-hint">Контакт для связи</p>
-                <p className="text-tg-text">{user?.contact || 'Не указан'}</p>
+                <p className="text-xs text-tg-hint">Для связи</p>
+                <p>{user?.contact || 'Не указан'}</p>
               </div>
               <Edit2 className="w-4 h-4 text-tg-hint" />
             </button>
           </div>
-        </motion.div>
+        </div>
 
         {/* Account */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        <div>
           <p className="section-header">Аккаунт</p>
-          <div className="bg-tg-section rounded-2xl overflow-hidden border border-[#e4e6eb] dark:border-[#3e4042]">
+          <div className="bg-tg-section rounded-2xl border border-tg-separator">
             <div className="list-item">
               <User className="w-5 h-5 text-tg-hint" />
               <div className="flex-1">
                 <p className="text-xs text-tg-hint">Telegram ID</p>
-                <p className="text-tg-text">{user?.tg_id}</p>
+                <p>{user?.tg_id}</p>
               </div>
             </div>
             <div className="divider" />
@@ -209,24 +167,19 @@ export default function ProfilePage() {
               <Star className="w-5 h-5 text-tg-hint" />
               <div className="flex-1">
                 <p className="text-xs text-tg-hint">Роль</p>
-                <p className="text-tg-text capitalize">
-                  {user?.role === 'admin' ? 'Администратор' : 'Менеджер'}
-                </p>
+                <p>{user?.role === 'admin' ? 'Админ' : 'Менеджер'}</p>
               </div>
             </div>
             <div className="divider" />
-            <button
-              onClick={handleLogout}
-              className="list-item w-full text-left text-red-500"
-            >
+            <button onClick={handleLogout} className="list-item w-full text-left text-red-500">
               <LogOut className="w-5 h-5" />
               <span>Выйти</span>
             </button>
           </div>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Edit Contact Modal */}
+      {/* Edit Modal */}
       <AnimatePresence>
         {editContact && (
           <>
@@ -242,11 +195,10 @@ export default function ProfilePage() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25 }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-lg font-semibold text-tg-text">Контакт для связи</p>
-                <button onClick={() => setEditContact(false)} className="p-2 -mr-2">
+              <div className="flex justify-between mb-4">
+                <p className="text-lg font-semibold">Контакт</p>
+                <button onClick={() => setEditContact(false)}>
                   <X className="w-5 h-5 text-tg-hint" />
                 </button>
               </div>
@@ -263,11 +215,7 @@ export default function ProfilePage() {
                 disabled={updateMutation.isPending}
                 className="btn btn-primary w-full mt-4"
               >
-                {updateMutation.isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  'Сохранить'
-                )}
+                {updateMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Сохранить'}
               </button>
             </motion.div>
           </>
@@ -277,22 +225,14 @@ export default function ProfilePage() {
   )
 }
 
-function StatCard({
-  icon,
-  value,
-  label,
-}: {
-  icon: React.ReactNode
-  value: number
-  label: string
-}) {
+function StatCard({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   return (
-    <div className="bg-tg-section rounded-2xl p-4 border border-[#e4e6eb] dark:border-[#3e4042]">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="bg-tg-section rounded-2xl p-4 border border-tg-separator">
+      <div className="flex items-center gap-2 mb-2 text-tg-hint">
         {icon}
-        <span className="text-xs text-tg-hint">{label}</span>
+        <span className="text-xs">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-tg-text">{value}</p>
+      <p className="text-2xl font-bold">{value}</p>
     </div>
   )
 }

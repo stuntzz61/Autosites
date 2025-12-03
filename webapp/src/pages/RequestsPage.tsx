@@ -13,18 +13,17 @@ const statusFilters = [
   { value: 'ready_to_generate', label: 'Готовы' },
   { value: 'generating', label: 'В работе' },
   { value: 'success', label: 'Готово' },
-  { value: 'error', label: 'Ошибки' },
 ]
 
-const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  draft: { icon: <Clock className="w-4 h-4" />, color: 'text-[#65676b]', label: 'Черновик' },
-  collecting_info: { icon: <Clock className="w-4 h-4" />, color: 'text-amber-500', label: 'Сбор данных' },
-  collecting_photos: { icon: <Clock className="w-4 h-4" />, color: 'text-amber-500', label: 'Сбор фото' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a]', label: 'Готов' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-[#1877f2]', label: 'В работе' },
-  in_queue: { icon: <Clock className="w-4 h-4" />, color: 'text-[#1877f2]', label: 'В очереди' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a]', label: 'Готово' },
-  error: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-500', label: 'Ошибка' },
+const statusConfig: Record<string, { icon: React.ReactNode; label: string }> = {
+  draft: { icon: <Clock className="w-4 h-4" />, label: 'Черновик' },
+  collecting_info: { icon: <Clock className="w-4 h-4" />, label: 'Сбор данных' },
+  collecting_photos: { icon: <Clock className="w-4 h-4" />, label: 'Сбор фото' },
+  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов' },
+  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'В работе' },
+  in_queue: { icon: <Clock className="w-4 h-4" />, label: 'В очереди' },
+  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готово' },
+  error: { icon: <AlertCircle className="w-4 h-4" />, label: 'Ошибка' },
 }
 
 interface Request {
@@ -71,7 +70,7 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-tg-bg">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-tg-bg border-b border-tg-separator">
         <div className="p-4 space-y-3">
@@ -82,7 +81,7 @@ export default function RequestsPage() {
                 haptic?.impactOccurred('medium')
                 navigate('/requests/new')
               }}
-              className="p-2 rounded-xl bg-[#1877f2] dark:bg-[#e4e6eb] text-white dark:text-[#18191a]"
+              className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black"
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -93,7 +92,7 @@ export default function RequestsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
             <input
               type="text"
-              placeholder="Поиск по названию или клиенту..."
+              placeholder="Поиск..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input pl-10"
@@ -112,8 +111,8 @@ export default function RequestsPage() {
                 className={clsx(
                   'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
                   statusFilter === filter.value
-                    ? 'bg-[#1877f2] dark:bg-[#e4e6eb] text-white dark:text-[#18191a]'
-                    : 'bg-[#e4e6eb] dark:bg-[#3e4042] text-tg-hint'
+                    ? 'bg-black dark:bg-white text-white dark:text-black'
+                    : 'bg-tg-secondary-bg text-tg-hint'
                 )}
               >
                 {filter.label}
@@ -150,7 +149,7 @@ export default function RequestsPage() {
                 className="btn btn-primary"
               >
                 <Plus className="w-5 h-5" />
-                Создать заявку
+                Создать
               </button>
             )}
           </motion.div>
@@ -168,7 +167,7 @@ export default function RequestsPage() {
                       haptic?.impactOccurred('light')
                       navigate(`/requests/${request.id}`)
                     }}
-                    className="w-full bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] transition-transform border border-[#e4e6eb] dark:border-[#3e4042]"
+                    className="w-full bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] transition-transform border border-tg-separator"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -176,7 +175,7 @@ export default function RequestsPage() {
                     layout
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#1877f2] to-[#0d65d9] dark:from-[#3e4042] dark:to-[#242526] flex items-center justify-center text-white font-bold text-lg">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-black dark:bg-white flex items-center justify-center text-white dark:text-black font-bold text-lg">
                         {request.company_name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -186,7 +185,7 @@ export default function RequestsPage() {
                         <p className="text-sm text-tg-hint truncate">
                           {request.client_name || 'Без клиента'}
                         </p>
-                        <div className={`inline-flex items-center gap-1 mt-1 ${config.color}`}>
+                        <div className="inline-flex items-center gap-1 mt-1 text-tg-hint">
                           {config.icon}
                           <span className="text-xs font-medium">{config.label}</span>
                         </div>

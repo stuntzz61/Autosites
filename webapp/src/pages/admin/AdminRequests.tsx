@@ -1,10 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import {
-  FileText, Search, Archive, Trash2, CheckCircle2,
-  Clock, AlertCircle, Loader2, ChevronRight
-} from 'lucide-react'
+import { FileText, Search, Archive, Trash2, CheckCircle2, Clock, AlertCircle, Loader2, ChevronRight } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -17,17 +14,16 @@ const statusFilters = [
   { value: 'ready_to_generate', label: 'Готовы' },
   { value: 'generating', label: 'В работе' },
   { value: 'success', label: 'Готово' },
-  { value: 'error', label: 'Ошибки' },
   { value: 'archived', label: 'Архив' },
 ]
 
-const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  draft: { icon: <Clock className="w-4 h-4" />, color: 'text-[#65676b]', label: 'Черновик' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a]', label: 'Готов' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-[#1877f2]', label: 'В работе' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-500', label: 'Готово' },
-  error: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-500', label: 'Ошибка' },
-  archived: { icon: <Archive className="w-4 h-4" />, color: 'text-purple-500', label: 'Архив' },
+const statusConfig: Record<string, { icon: React.ReactNode; label: string }> = {
+  draft: { icon: <Clock className="w-4 h-4" />, label: 'Черновик' },
+  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов' },
+  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'В работе' },
+  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готово' },
+  error: { icon: <AlertCircle className="w-4 h-4" />, label: 'Ошибка' },
+  archived: { icon: <Archive className="w-4 h-4" />, label: 'Архив' },
 }
 
 export default function AdminRequests() {
@@ -48,7 +44,7 @@ export default function AdminRequests() {
     mutationFn: (ids: string[]) => adminApi.requests.massArchive(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-requests'] })
-      toast.success('Заявки архивированы')
+      toast.success('Архивировано')
       setSelectedIds([])
       setSelectionMode(false)
     },
@@ -59,7 +55,7 @@ export default function AdminRequests() {
     mutationFn: (ids: string[]) => adminApi.requests.massDelete(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-requests'] })
-      toast.success('Заявки удалены')
+      toast.success('Удалено')
       setSelectedIds([])
       setSelectionMode(false)
     },
@@ -67,71 +63,57 @@ export default function AdminRequests() {
   })
 
   const requests = data?.items || []
-
   const filteredRequests = requests.filter((req: any) => {
     if (!searchQuery) return true
-    const search = searchQuery.toLowerCase()
-    return (
-      req.company_name?.toLowerCase().includes(search) ||
-      req.client_name?.toLowerCase().includes(search)
-    )
+    const s = searchQuery.toLowerCase()
+    return req.company_name?.toLowerCase().includes(s) || req.client_name?.toLowerCase().includes(s)
   })
 
   const toggleSelection = (id: string) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    )
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
   }
 
   const handleMassArchive = () => {
-    webApp?.showConfirm(`Архивировать ${selectedIds.length} заявок?`, (confirmed) => {
-      if (confirmed) massArchiveMutation.mutate(selectedIds)
+    webApp?.showConfirm(`Архивировать ${selectedIds.length}?`, (ok) => {
+      if (ok) massArchiveMutation.mutate(selectedIds)
     })
   }
 
   const handleMassDelete = () => {
-    webApp?.showConfirm(`Удалить ${selectedIds.length} заявок? Это действие нельзя отменить.`, (confirmed) => {
-      if (confirmed) massDeleteMutation.mutate(selectedIds)
+    webApp?.showConfirm(`Удалить ${selectedIds.length}?`, (ok) => {
+      if (ok) massDeleteMutation.mutate(selectedIds)
     })
   }
 
   return (
     <div className="min-h-screen pb-20">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-tg-bg border-b border-tg-separator">
         <div className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-tg-text">
-              {filteredRequests.length} заявок
-            </h2>
+          <div className="flex justify-between">
+            <h2 className="font-semibold">{filteredRequests.length} заявок</h2>
             <button
               onClick={() => {
                 haptic?.impactOccurred('light')
                 setSelectionMode(!selectionMode)
                 setSelectedIds([])
               }}
-              className={clsx(
-                'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                selectionMode ? 'bg-[#1877f2] dark:bg-[#e4e6eb] text-white dark:text-[#18191a]' : 'text-[#1877f2] dark:text-[#e4e6eb]'
-              )}
+              className={clsx('px-3 py-1.5 rounded-lg text-sm font-medium', selectionMode ? 'bg-black dark:bg-white text-white dark:text-black' : '')}
             >
               {selectionMode ? 'Отмена' : 'Выбрать'}
             </button>
           </div>
 
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
             <input
               type="text"
-              placeholder="Поиск заявки..."
+              placeholder="Поиск..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input pl-10"
             />
           </div>
 
-          {/* Filters */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
             {statusFilters.map(filter => (
               <button
@@ -141,10 +123,8 @@ export default function AdminRequests() {
                   setStatusFilter(filter.value)
                 }}
                 className={clsx(
-                  'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
-                  statusFilter === filter.value
-                    ? 'bg-[#1877f2] dark:bg-[#e4e6eb] text-white dark:text-[#18191a]'
-                    : 'bg-[#e4e6eb] dark:bg-[#3e4042] text-tg-hint'
+                  'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap',
+                  statusFilter === filter.value ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-tg-secondary-bg text-tg-hint'
                 )}
               >
                 {filter.label}
@@ -154,27 +134,13 @@ export default function AdminRequests() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-4">
         {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="skeleton h-20 rounded-2xl" />
-            ))}
-          </div>
+          <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="skeleton h-20 rounded-2xl" />)}</div>
         ) : filteredRequests.length === 0 ? (
-          <motion.div
-            className="text-center py-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <div className="w-16 h-16 rounded-2xl bg-tg-secondary-bg mx-auto mb-4 flex items-center justify-center">
-              <FileText className="w-8 h-8 text-tg-hint" />
-            </div>
-            <p className="text-tg-text font-medium mb-1">Нет заявок</p>
-            <p className="text-sm text-tg-hint">
-              {searchQuery ? 'Попробуйте другой запрос' : 'Список пуст'}
-            </p>
+          <motion.div className="text-center py-12" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <FileText className="w-12 h-12 text-tg-hint mx-auto mb-4" />
+            <p className="font-medium mb-1">Нет заявок</p>
           </motion.div>
         ) : (
           <AnimatePresence mode="popLayout">
@@ -197,8 +163,8 @@ export default function AdminRequests() {
                       }
                     }}
                     className={clsx(
-                      'w-full bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] transition-all border border-[#e4e6eb] dark:border-[#3e4042]',
-                      isSelected && 'ring-2 ring-[#1877f2] dark:ring-white'
+                      'w-full bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] border border-tg-separator',
+                      isSelected && 'ring-2 ring-black dark:ring-white'
                     )}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -210,29 +176,23 @@ export default function AdminRequests() {
                       {selectionMode && (
                         <div className={clsx(
                           'w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1',
-                          isSelected ? 'bg-[#1877f2] dark:bg-white border-[#1877f2] dark:border-white' : 'border-tg-hint'
+                          isSelected ? 'bg-black dark:bg-white border-black dark:border-white' : 'border-tg-hint'
                         )}>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-white dark:text-[#18191a]" />}
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-white dark:text-black" />}
                         </div>
                       )}
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#1877f2] to-[#0d65d9] dark:from-[#3e4042] dark:to-[#242526] flex items-center justify-center text-white font-bold text-lg">
+                      <div className="w-10 h-10 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold">
                         {request.company_name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-tg-text truncate">
-                          {request.company_name || 'Без названия'}
-                        </p>
-                        <p className="text-sm text-tg-hint truncate">
-                          {request.client_name || 'Без клиента'}
-                        </p>
-                        <div className={`inline-flex items-center gap-1 mt-1 ${config.color}`}>
+                        <p className="font-semibold truncate">{request.company_name || 'Без названия'}</p>
+                        <p className="text-sm text-tg-hint truncate">{request.client_name || 'Без клиента'}</p>
+                        <div className="flex items-center gap-1 mt-1 text-tg-hint">
                           {config.icon}
-                          <span className="text-xs font-medium">{config.label}</span>
+                          <span className="text-xs">{config.label}</span>
                         </div>
                       </div>
-                      {!selectionMode && (
-                        <ChevronRight className="w-5 h-5 text-tg-hint flex-shrink-0" />
-                      )}
+                      {!selectionMode && <ChevronRight className="w-5 h-5 text-tg-hint" />}
                     </div>
                   </motion.button>
                 )
@@ -242,7 +202,6 @@ export default function AdminRequests() {
         )}
       </div>
 
-      {/* Selection Actions */}
       <AnimatePresence>
         {selectionMode && selectedIds.length > 0 && (
           <motion.div
@@ -251,45 +210,16 @@ export default function AdminRequests() {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
           >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm text-tg-text">
-                Выбрано: <span className="font-semibold">{selectedIds.length}</span>
-              </p>
-              <button
-                onClick={() => setSelectedIds(filteredRequests.map((r: any) => r.id))}
-                className="text-sm text-[#1877f2] dark:text-[#e4e6eb]"
-              >
-                Выбрать все
-              </button>
+            <div className="flex justify-between mb-3">
+              <p className="text-sm">Выбрано: <span className="font-semibold">{selectedIds.length}</span></p>
+              <button onClick={() => setSelectedIds(filteredRequests.map((r: any) => r.id))} className="text-sm">Выбрать все</button>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={handleMassArchive}
-                disabled={massArchiveMutation.isPending}
-                className="btn btn-secondary flex-1"
-              >
-                {massArchiveMutation.isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Archive className="w-5 h-5" />
-                    В архив
-                  </>
-                )}
+              <button onClick={handleMassArchive} disabled={massArchiveMutation.isPending} className="btn btn-secondary flex-1">
+                {massArchiveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Archive className="w-5 h-5" /> Архив</>}
               </button>
-              <button
-                onClick={handleMassDelete}
-                disabled={massDeleteMutation.isPending}
-                className="btn btn-destructive flex-1"
-              >
-                {massDeleteMutation.isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Trash2 className="w-5 h-5" />
-                    Удалить
-                  </>
-                )}
+              <button onClick={handleMassDelete} disabled={massDeleteMutation.isPending} className="btn btn-destructive flex-1">
+                {massDeleteMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Trash2 className="w-5 h-5" /> Удалить</>}
               </button>
             </div>
           </motion.div>
