@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import {
   BarChart3, TrendingUp, Users, FileText, Download,
-  Calendar, Award
+  Award
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
@@ -130,14 +130,14 @@ export default function AdminStats() {
       {/* By Day Chart */}
       <motion.div variants={item}>
         <p className="section-header">За последние 7 дней</p>
-        <div className="bg-tg-section rounded-2xl p-4">
+        <div className="bg-tg-section rounded-2xl p-4 border border-[#e4e6eb] dark:border-[#3e4042]">
           <div className="flex items-end justify-between gap-2 h-32">
             {byDay?.map((day: any, i: number) => {
               const height = maxDayValue > 0 ? (day.count / maxDayValue) * 100 : 0
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-2">
                   <motion.div
-                    className="w-full bg-gradient-to-t from-brand-500 to-brand-400 rounded-t-lg"
+                    className="w-full bg-gradient-to-t from-[#1877f2] to-[#42b72a] dark:from-[#e4e6eb] dark:to-[#b0b3b8] rounded-t-lg"
                     initial={{ height: 0 }}
                     animate={{ height: `${Math.max(height, 4)}%` }}
                     transition={{ delay: i * 0.1, duration: 0.5 }}
@@ -159,7 +159,7 @@ export default function AdminStats() {
       {/* By Status */}
       <motion.div variants={item}>
         <p className="section-header">По статусам</p>
-        <div className="bg-tg-section rounded-2xl p-4 space-y-3">
+        <div className="bg-tg-section rounded-2xl p-4 space-y-3 border border-[#e4e6eb] dark:border-[#3e4042]">
           {byStatus?.map((s: any) => (
             <StatusRow key={s.status} status={s.status} count={s.count} total={overview?.total_requests || 1} />
           ))}
@@ -169,7 +169,7 @@ export default function AdminStats() {
       {/* Top Managers */}
       <motion.div variants={item}>
         <p className="section-header">Топ менеджеров</p>
-        <div className="bg-tg-section rounded-2xl overflow-hidden">
+        <div className="bg-tg-section rounded-2xl overflow-hidden border border-[#e4e6eb] dark:border-[#3e4042]">
           {managers?.slice(0, 10).map((manager: any, i: number) => (
             <div key={manager.id}>
               {i > 0 && <div className="divider" />}
@@ -212,14 +212,14 @@ function StatCard({
   color: 'blue' | 'green' | 'amber' | 'purple'
 }) {
   const colors = {
-    blue: 'bg-blue-500/10 text-blue-500',
+    blue: 'bg-[#e7f3ff] text-[#1877f2] dark:bg-[#3e4042] dark:text-[#e4e6eb]',
     green: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
     purple: 'bg-purple-500/10 text-purple-500',
   }
 
   return (
-    <div className="bg-tg-section rounded-2xl p-4">
+    <div className="bg-tg-section rounded-2xl p-4 border border-[#e4e6eb] dark:border-[#3e4042]">
       <div className={`inline-flex p-2 rounded-xl ${colors[color]} mb-2`}>
         {icon}
       </div>
@@ -230,16 +230,16 @@ function StatCard({
 }
 
 const statusColors: Record<string, string> = {
-  draft: 'bg-gray-400',
+  draft: 'bg-[#65676b]',
   collecting_info: 'bg-amber-400',
   collecting_photos: 'bg-amber-500',
-  ready_to_generate: 'bg-green-500',
-  generating: 'bg-blue-500',
-  in_queue: 'bg-blue-400',
+  ready_to_generate: 'bg-[#42b72a]',
+  generating: 'bg-[#1877f2]',
+  in_queue: 'bg-[#1877f2]',
   success: 'bg-emerald-500',
   error: 'bg-red-500',
   archived: 'bg-purple-500',
-  closed: 'bg-gray-600',
+  closed: 'bg-[#65676b]',
 }
 
 const statusLabels: Record<string, string> = {
@@ -247,9 +247,9 @@ const statusLabels: Record<string, string> = {
   collecting_info: 'Сбор данных',
   collecting_photos: 'Сбор фото',
   ready_to_generate: 'Готовы',
-  generating: 'Генерация',
+  generating: 'В работе',
   in_queue: 'В очереди',
-  success: 'Успешно',
+  success: 'Завершено',
   error: 'Ошибки',
   archived: 'Архив',
   closed: 'Закрыто',

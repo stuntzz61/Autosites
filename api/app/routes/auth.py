@@ -7,13 +7,13 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.auth import get_current_user, validate_telegram_init_data
-from app.database import get_user_by_tgid, create_user, get_manager_stats, update_user
+from app.database import (
+    get_user_by_tgid, create_user, get_manager_stats, update_user,
+    verify_admin_password, set_admin_password
+)
 from app.config import settings
 
 router = APIRouter()
-
-# Admin password from environment
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 
 
 class TelegramAuthRequest(BaseModel):
@@ -22,6 +22,11 @@ class TelegramAuthRequest(BaseModel):
 
 class AdminLoginRequest(BaseModel):
     password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
 
 
 class UserResponse(BaseModel):
@@ -110,9 +115,10 @@ async def get_me(user: dict = Depends(get_current_user)):
 @router.post("/admin-login")
 async def admin_login(request: AdminLoginRequest, user: dict = Depends(get_current_user)):
     """
-    Login as admin with password
+    Login as admin with password (from database)
     """
-    if request.password != ADMIN_PASSWORD:
+    # Verify password against database
+    if not verify_admin_password(request.password):
         raise HTTPException(status_code=401, detail="Неверный пароль")
 
     # Update user role to admin
@@ -120,3 +126,24 @@ async def admin_login(request: AdminLoginRequest, user: dict = Depends(get_curre
 
     return {"success": True, "message": "Вы авторизованы как администратор"}
 
+
+@router.post("/admin-change-password")
+async def admin_change_password(request: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+    """
+    Change admin password (admin only)
+    """
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Доступ запрещён")
+
+    # Verify old password
+    if not verify_admin_password(request.old_password):
+        raise HTTPException(status_code=401, detail="Неверный текущий пароль")
+
+    # Validate new password
+    if len(request.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Пароль должен быть не менее 6 символов")
+
+    # Set new password
+    set_admin_password(request.new_password)
+
+    return {"success": True, "message": "Пароль успешно изменён"}

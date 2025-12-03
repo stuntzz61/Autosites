@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
-  FileText, Search, Filter, Archive, Trash2, CheckCircle2,
+  FileText, Search, Archive, Trash2, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronRight
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -15,19 +15,19 @@ const statusFilters = [
   { value: 'all', label: 'Все' },
   { value: 'draft', label: 'Черновики' },
   { value: 'ready_to_generate', label: 'Готовы' },
-  { value: 'generating', label: 'Генерация' },
+  { value: 'generating', label: 'В работе' },
   { value: 'success', label: 'Готово' },
   { value: 'error', label: 'Ошибки' },
   { value: 'archived', label: 'Архив' },
 ]
 
-const statusConfig: Record<string, { icon: React.ReactNode; color: string }> = {
-  draft: { icon: <Clock className="w-4 h-4" />, color: 'text-gray-500' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-green-500' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-blue-500' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-500' },
-  error: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-500' },
-  archived: { icon: <Archive className="w-4 h-4" />, color: 'text-purple-500' },
+const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+  draft: { icon: <Clock className="w-4 h-4" />, color: 'text-[#65676b]', label: 'Черновик' },
+  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a]', label: 'Готов' },
+  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-[#1877f2]', label: 'В работе' },
+  success: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-500', label: 'Готово' },
+  error: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-500', label: 'Ошибка' },
+  archived: { icon: <Archive className="w-4 h-4" />, color: 'text-purple-500', label: 'Архив' },
 }
 
 export default function AdminRequests() {
@@ -112,7 +112,7 @@ export default function AdminRequests() {
               }}
               className={clsx(
                 'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                selectionMode ? 'bg-tg-button text-tg-button-text' : 'text-tg-button'
+                selectionMode ? 'bg-[#1877f2] dark:bg-[#e4e6eb] text-white dark:text-[#18191a]' : 'text-[#1877f2] dark:text-[#e4e6eb]'
               )}
             >
               {selectionMode ? 'Отмена' : 'Выбрать'}
@@ -143,8 +143,8 @@ export default function AdminRequests() {
                 className={clsx(
                   'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
                   statusFilter === filter.value
-                    ? 'bg-tg-button text-tg-button-text'
-                    : 'bg-tg-secondary-bg text-tg-hint'
+                    ? 'bg-[#1877f2] dark:bg-[#e4e6eb] text-white dark:text-[#18191a]'
+                    : 'bg-[#e4e6eb] dark:bg-[#3e4042] text-tg-hint'
                 )}
               >
                 {filter.label}
@@ -197,8 +197,8 @@ export default function AdminRequests() {
                       }
                     }}
                     className={clsx(
-                      'w-full bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] transition-all',
-                      isSelected && 'ring-2 ring-tg-button'
+                      'w-full bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] transition-all border border-[#e4e6eb] dark:border-[#3e4042]',
+                      isSelected && 'ring-2 ring-[#1877f2] dark:ring-white'
                     )}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -210,12 +210,12 @@ export default function AdminRequests() {
                       {selectionMode && (
                         <div className={clsx(
                           'w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1',
-                          isSelected ? 'bg-tg-button border-tg-button' : 'border-tg-hint'
+                          isSelected ? 'bg-[#1877f2] dark:bg-white border-[#1877f2] dark:border-white' : 'border-tg-hint'
                         )}>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-tg-button-text" />}
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-white dark:text-[#18191a]" />}
                         </div>
                       )}
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white font-bold text-lg">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#1877f2] to-[#0d65d9] dark:from-[#3e4042] dark:to-[#242526] flex items-center justify-center text-white font-bold text-lg">
                         {request.company_name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -227,7 +227,7 @@ export default function AdminRequests() {
                         </p>
                         <div className={`inline-flex items-center gap-1 mt-1 ${config.color}`}>
                           {config.icon}
-                          <span className="text-xs font-medium">{status}</span>
+                          <span className="text-xs font-medium">{config.label}</span>
                         </div>
                       </div>
                       {!selectionMode && (
@@ -257,7 +257,7 @@ export default function AdminRequests() {
               </p>
               <button
                 onClick={() => setSelectedIds(filteredRequests.map((r: any) => r.id))}
-                className="text-sm text-tg-button"
+                className="text-sm text-[#1877f2] dark:text-[#e4e6eb]"
               >
                 Выбрать все
               </button>

@@ -115,6 +115,8 @@ interface TelegramContextValue {
   haptic: WebApp['HapticFeedback'] | null
   mainButton: WebApp['MainButton'] | null
   backButton: WebApp['BackButton'] | null
+  isDarkMode: boolean
+  toggleTheme: () => void
 }
 
 const TelegramContext = createContext<TelegramContextValue | null>(null)
@@ -122,7 +124,23 @@ const TelegramContext = createContext<TelegramContextValue | null>(null)
 export function TelegramProvider({ children }: { children: ReactNode }) {
   const [webApp, setWebApp] = useState<WebApp | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage for saved preference
+    const saved = localStorage.getItem('theme')
+    return saved === 'dark'
+  })
   const { init } = useAuthStore()
+
+  // Apply theme on mount and when isDarkMode changes
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }, [isDarkMode])
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp
@@ -132,67 +150,8 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       tg.ready()
       tg.expand()
 
-      // Set dark mode class first
-      const isDark = tg.colorScheme === 'dark'
-      if (isDark) {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
-      }
-
-      // Apply Telegram theme colors only if they exist and improve dark theme
-      const theme = tg.themeParams
-      if (theme.bg_color) {
-        // If Telegram sends pure black (#000000), use a nicer dark blue instead
-        const bgColor = (theme.bg_color === '#000000' || theme.bg_color === '#000') 
-          ? '#0f172a' 
-          : theme.bg_color
-        document.documentElement.style.setProperty('--tg-theme-bg-color', bgColor)
-      }
-      if (theme.text_color) {
-        document.documentElement.style.setProperty('--tg-theme-text-color', theme.text_color)
-      }
-      if (theme.hint_color) {
-        document.documentElement.style.setProperty('--tg-theme-hint-color', theme.hint_color)
-      }
-      if (theme.link_color) {
-        document.documentElement.style.setProperty('--tg-theme-link-color', theme.link_color)
-      }
-      if (theme.button_color) {
-        document.documentElement.style.setProperty('--tg-theme-button-color', theme.button_color)
-      }
-      if (theme.button_text_color) {
-        document.documentElement.style.setProperty('--tg-theme-button-text-color', theme.button_text_color)
-      }
-      if (theme.secondary_bg_color) {
-        // Improve pure black secondary bg too
-        const secBgColor = (theme.secondary_bg_color === '#000000' || theme.secondary_bg_color === '#000')
-          ? '#1e293b'
-          : theme.secondary_bg_color
-        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', secBgColor)
-      }
-      if (theme.header_bg_color) {
-        document.documentElement.style.setProperty('--tg-theme-header-bg-color', theme.header_bg_color)
-      }
-      if (theme.section_bg_color) {
-        // Improve pure black section bg
-        const secColor = (theme.section_bg_color === '#000000' || theme.section_bg_color === '#000')
-          ? '#1e293b'
-          : theme.section_bg_color
-        document.documentElement.style.setProperty('--tg-theme-section-bg-color', secColor)
-      }
-      if (theme.section_header_text_color) {
-        document.documentElement.style.setProperty('--tg-theme-section-header-text-color', theme.section_header_text_color)
-      }
-      if (theme.accent_text_color) {
-        document.documentElement.style.setProperty('--tg-theme-accent-text-color', theme.accent_text_color)
-      }
-      if (theme.destructive_text_color) {
-        document.documentElement.style.setProperty('--tg-theme-destructive-text-color', theme.destructive_text_color)
-      }
-      if (theme.subtitle_text_color) {
-        document.documentElement.style.setProperty('--tg-theme-subtitle-text-color', theme.subtitle_text_color)
-      }
+      // DO NOT apply Telegram theme colors - use our static colors
+      // Theme is controlled only by our toggle
 
       setWebApp(tg)
 
@@ -203,21 +162,27 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
 
       setIsReady(true)
     } else {
-      // Development mode without Telegram - use light theme
+      // Development mode without Telegram
       console.log('Running outside of Telegram')
       setIsReady(true)
     }
   }, [init])
 
+  const toggleTheme = () => {
+    setIsDarkMode(prev => !prev)
+  }
+
   const value: TelegramContextValue = {
     webApp,
     user: webApp?.initDataUnsafe?.user || null,
     initData: webApp?.initData || '',
-    colorScheme: webApp?.colorScheme || 'light',
+    colorScheme: isDarkMode ? 'dark' : 'light',
     isReady,
     haptic: webApp?.HapticFeedback || null,
     mainButton: webApp?.MainButton || null,
     backButton: webApp?.BackButton || null,
+    isDarkMode,
+    toggleTheme,
   }
 
   return (
@@ -234,4 +199,3 @@ export function useTelegram() {
   }
   return context
 }
-

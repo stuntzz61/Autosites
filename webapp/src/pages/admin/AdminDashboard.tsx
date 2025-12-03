@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
-  Users, FileText, CheckCircle, Clock, AlertCircle, TrendingUp,
-  Bell, UserPlus, ChevronRight
+  Users, FileText, CheckCircle, Clock,
+  UserPlus, ChevronRight
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
@@ -73,8 +73,8 @@ export default function AdminDashboard() {
               <UserPlus className="w-6 h-6 text-amber-600" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-amber-700">Новые регистрации</p>
-              <p className="text-sm text-amber-600">{pendingCount} ожидают подтверждения</p>
+              <p className="font-semibold text-amber-700 dark:text-amber-500">Новые регистрации</p>
+              <p className="text-sm text-amber-600 dark:text-amber-400">{pendingCount} ожидают подтверждения</p>
             </div>
             <ChevronRight className="w-5 h-5 text-amber-600" />
           </div>
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
       {/* Quick Stats */}
       <motion.div variants={item}>
         <p className="section-header">Статистика за сегодня</p>
-        <div className="bg-tg-section rounded-2xl p-4">
+        <div className="bg-tg-section rounded-2xl p-4 border border-[#e4e6eb] dark:border-[#3e4042]">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-2xl font-bold text-tg-text">{stats.today_requests || 0}</p>
@@ -122,7 +122,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <p className="text-2xl font-bold text-tg-text">{stats.today_generated || 0}</p>
-              <p className="text-xs text-tg-hint">Сгенерировано</p>
+              <p className="text-xs text-tg-hint">Завершено</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-tg-text">{stats.today_archived || 0}</p>
@@ -136,12 +136,12 @@ export default function AdminDashboard() {
       {dashboard?.top_managers?.length > 0 && (
         <motion.div variants={item}>
           <p className="section-header">Топ менеджеров</p>
-          <div className="bg-tg-section rounded-2xl overflow-hidden">
+          <div className="bg-tg-section rounded-2xl overflow-hidden border border-[#e4e6eb] dark:border-[#3e4042]">
             {dashboard.top_managers.slice(0, 5).map((manager: any, i: number) => (
               <div key={manager.id}>
                 {i > 0 && <div className="divider" />}
                 <div className="list-item">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1877f2] to-[#0d65d9] flex items-center justify-center text-white font-bold text-sm">
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -166,11 +166,11 @@ export default function AdminDashboard() {
       {/* Status Distribution */}
       <motion.div variants={item}>
         <p className="section-header">По статусам</p>
-        <div className="bg-tg-section rounded-2xl p-4 space-y-3">
-          <StatusBar label="Черновики" count={stats.draft_count || 0} total={stats.total_requests || 1} color="bg-gray-400" />
-          <StatusBar label="Готовы к генерации" count={stats.ready_count || 0} total={stats.total_requests || 1} color="bg-green-500" />
-          <StatusBar label="В процессе" count={stats.generating_count || 0} total={stats.total_requests || 1} color="bg-blue-500" />
-          <StatusBar label="Успешно" count={stats.success_count || 0} total={stats.total_requests || 1} color="bg-emerald-500" />
+        <div className="bg-tg-section rounded-2xl p-4 space-y-3 border border-[#e4e6eb] dark:border-[#3e4042]">
+          <StatusBar label="Черновики" count={stats.draft_count || 0} total={stats.total_requests || 1} color="bg-[#65676b]" />
+          <StatusBar label="Готовы к разработке" count={stats.ready_count || 0} total={stats.total_requests || 1} color="bg-[#42b72a]" />
+          <StatusBar label="В работе" count={stats.generating_count || 0} total={stats.total_requests || 1} color="bg-[#1877f2]" />
+          <StatusBar label="Завершено" count={stats.success_count || 0} total={stats.total_requests || 1} color="bg-emerald-500" />
           <StatusBar label="Ошибки" count={stats.error_count || 0} total={stats.total_requests || 1} color="bg-red-500" />
         </div>
       </motion.div>
@@ -188,7 +188,7 @@ interface StatCardProps {
 
 function StatCard({ icon, value, label, color, onClick }: StatCardProps) {
   const colors = {
-    blue: 'bg-teal-500/10 text-teal-500',
+    blue: 'bg-[#e7f3ff] text-[#1877f2] dark:bg-[#3e4042] dark:text-[#e4e6eb]',
     green: 'bg-emerald-500/10 text-emerald-500',
     amber: 'bg-orange-500/10 text-orange-500',
     purple: 'bg-violet-500/10 text-violet-500',
@@ -197,7 +197,7 @@ function StatCard({ icon, value, label, color, onClick }: StatCardProps) {
   return (
     <motion.button
       onClick={onClick}
-      className="bg-tg-section rounded-3xl p-4 text-left active:scale-[0.97] transition-all border border-black/5 dark:border-white/5"
+      className="bg-tg-section rounded-3xl p-4 text-left active:scale-[0.97] transition-all border border-[#e4e6eb] dark:border-[#3e4042]"
       whileTap={{ scale: 0.97 }}
     >
       <div className={`inline-flex p-2.5 rounded-xl ${colors[color]} mb-2`}>

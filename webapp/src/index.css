@@ -4,55 +4,55 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Telegram WebApp Variables - Clean Blue & White Light Theme / Black & White Dark Theme */
+/* Static Blue & White Theme (VK/Facebook style) */
 :root {
   --tg-viewport-height: 100vh;
   --tg-viewport-stable-height: 100vh;
 
-  /* Light theme - Clean Blue & White */
+  /* Light theme - Clean Blue & White (static) */
   --tg-theme-bg-color: #ffffff;
-  --tg-theme-text-color: #111827;
-  --tg-theme-hint-color: #6b7280;
-  --tg-theme-link-color: #2563eb;
-  --tg-theme-button-color: #2563eb;
+  --tg-theme-text-color: #1a1a1a;
+  --tg-theme-hint-color: #65676b;
+  --tg-theme-link-color: #1877f2;
+  --tg-theme-button-color: #1877f2;
   --tg-theme-button-text-color: #ffffff;
-  --tg-theme-secondary-bg-color: #f3f4f6;
+  --tg-theme-secondary-bg-color: #f0f2f5;
   --tg-theme-header-bg-color: #ffffff;
   --tg-theme-section-bg-color: #ffffff;
-  --tg-theme-section-header-text-color: #6b7280;
-  --tg-theme-accent-text-color: #2563eb;
-  --tg-theme-destructive-text-color: #dc2626;
-  --tg-theme-subtitle-text-color: #9ca3af;
-  --tg-theme-section-separator-color: #e5e7eb;
+  --tg-theme-section-header-text-color: #65676b;
+  --tg-theme-accent-text-color: #1877f2;
+  --tg-theme-destructive-text-color: #dc3545;
+  --tg-theme-subtitle-text-color: #8a8d91;
+  --tg-theme-section-separator-color: #e4e6eb;
 
-  /* Custom accent colors */
-  --accent-primary: #2563eb;
-  --accent-secondary: #3b82f6;
-  --accent-gradient-from: #2563eb;
-  --accent-gradient-to: #1d4ed8;
+  /* Static accent colors */
+  --accent-primary: #1877f2;
+  --accent-secondary: #42b72a;
+  --accent-gradient-from: #1877f2;
+  --accent-gradient-to: #0d65d9;
 }
 
-/* Dark theme - Elegant Black & White */
+/* Dark theme - Black & White (static) */
 .dark, [data-theme="dark"] {
-  --tg-theme-bg-color: #0a0a0a;
-  --tg-theme-text-color: #fafafa;
-  --tg-theme-hint-color: #a1a1aa;
-  --tg-theme-link-color: #ffffff;
-  --tg-theme-button-color: #ffffff;
-  --tg-theme-button-text-color: #0a0a0a;
-  --tg-theme-secondary-bg-color: #171717;
-  --tg-theme-header-bg-color: #0a0a0a;
-  --tg-theme-section-bg-color: #171717;
-  --tg-theme-section-header-text-color: #71717a;
-  --tg-theme-accent-text-color: #ffffff;
+  --tg-theme-bg-color: #18191a;
+  --tg-theme-text-color: #e4e6eb;
+  --tg-theme-hint-color: #b0b3b8;
+  --tg-theme-link-color: #e4e6eb;
+  --tg-theme-button-color: #e4e6eb;
+  --tg-theme-button-text-color: #18191a;
+  --tg-theme-secondary-bg-color: #242526;
+  --tg-theme-header-bg-color: #242526;
+  --tg-theme-section-bg-color: #242526;
+  --tg-theme-section-header-text-color: #b0b3b8;
+  --tg-theme-accent-text-color: #e4e6eb;
   --tg-theme-destructive-text-color: #f87171;
-  --tg-theme-subtitle-text-color: #71717a;
-  --tg-theme-section-separator-color: #27272a;
+  --tg-theme-subtitle-text-color: #8a8d91;
+  --tg-theme-section-separator-color: #3e4042;
 
-  --accent-primary: #ffffff;
-  --accent-secondary: #e5e5e5;
-  --accent-gradient-from: #ffffff;
-  --accent-gradient-to: #e5e5e5;
+  --accent-primary: #e4e6eb;
+  --accent-secondary: #b0b3b8;
+  --accent-gradient-from: #e4e6eb;
+  --accent-gradient-to: #b0b3b8;
 }
 
 /* Base styles */
@@ -109,7 +109,7 @@ body {
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-[#1877f2] to-[#42b72a] bg-clip-text text-transparent;
   }
 
   .gradient-text-dark {
@@ -117,26 +117,26 @@ body {
   }
 
   .gradient-bg {
-    @apply bg-gradient-to-br from-blue-600 to-blue-700;
+    @apply bg-gradient-to-br from-[#1877f2] to-[#0d65d9];
   }
 
   .gradient-bg-dark {
-    @apply bg-gradient-to-br from-white to-gray-200;
+    @apply bg-gradient-to-br from-[#242526] to-[#3e4042];
   }
 
   .glass {
-    @apply bg-white/90 dark:bg-black/90 backdrop-blur-xl;
+    @apply bg-white/95 dark:bg-[#242526]/95 backdrop-blur-xl;
   }
 }
 
 /* Card component styles */
 @layer components {
   .card {
-    @apply bg-tg-section rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-zinc-800;
+    @apply bg-tg-section rounded-2xl p-5 shadow-sm border border-[#e4e6eb] dark:border-[#3e4042];
   }
 
   .card-elevated {
-    @apply bg-tg-section rounded-2xl p-5 shadow-lg shadow-black/5 dark:shadow-black/20 border border-gray-100 dark:border-zinc-800;
+    @apply bg-tg-section rounded-2xl p-5 shadow-lg shadow-black/5 dark:shadow-black/20 border border-[#e4e6eb] dark:border-[#3e4042];
   }
 
   .btn {
@@ -144,15 +144,15 @@ body {
   }
 
   .btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-700 dark:bg-white dark:text-black dark:hover:bg-gray-100 shadow-lg shadow-blue-600/20 dark:shadow-white/10;
+    @apply bg-[#1877f2] text-white hover:bg-[#166fe5] dark:bg-[#e4e6eb] dark:text-[#18191a] dark:hover:bg-white shadow-lg shadow-[#1877f2]/20 dark:shadow-white/10;
   }
 
   .btn-secondary {
-    @apply bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700;
+    @apply bg-[#e4e6eb] text-[#1a1a1a] hover:bg-[#d8dadf] dark:bg-[#3e4042] dark:text-[#e4e6eb] dark:hover:bg-[#4e5052];
   }
 
   .btn-accent {
-    @apply bg-blue-500 text-white hover:bg-blue-600 dark:bg-zinc-700 dark:text-white dark:hover:bg-zinc-600;
+    @apply bg-[#42b72a] text-white hover:bg-[#36a420] dark:bg-[#3e4042] dark:text-white dark:hover:bg-[#4e5052];
   }
 
   .btn-destructive {
@@ -160,7 +160,7 @@ body {
   }
 
   .input {
-    @apply w-full rounded-xl bg-gray-50 dark:bg-zinc-900 px-4 py-3 text-tg-text placeholder:text-tg-hint outline-none ring-0 focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-white/20 transition-all border border-gray-200 dark:border-zinc-700 focus:border-blue-500/50 dark:focus:border-white/30;
+    @apply w-full rounded-xl bg-[#f0f2f5] dark:bg-[#3e4042] px-4 py-3 text-tg-text placeholder:text-tg-hint outline-none ring-0 focus:ring-2 focus:ring-[#1877f2]/30 dark:focus:ring-white/20 transition-all border border-[#e4e6eb] dark:border-[#3e4042] focus:border-[#1877f2]/50 dark:focus:border-white/30;
   }
 
   .section-header {
@@ -199,7 +199,7 @@ body {
 
 /* Skeleton loading */
 .skeleton {
-  @apply animate-pulse bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 dark:from-zinc-800 dark:via-zinc-900 dark:to-zinc-800 rounded-xl;
+  @apply animate-pulse bg-gradient-to-r from-[#e4e6eb] via-[#f0f2f5] to-[#e4e6eb] dark:from-[#3e4042] dark:via-[#242526] dark:to-[#3e4042] rounded-xl;
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s ease-in-out infinite;
 }
@@ -215,32 +215,32 @@ body {
 }
 
 .badge-draft {
-  @apply bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400;
+  @apply bg-[#e4e6eb] text-[#65676b] dark:bg-[#3e4042] dark:text-[#b0b3b8];
 }
 
 .badge-ready {
-  @apply bg-blue-50 text-blue-700 dark:bg-zinc-800 dark:text-white;
+  @apply bg-[#e7f3ff] text-[#1877f2] dark:bg-[#3e4042] dark:text-white;
 }
 
 .badge-generating {
-  @apply bg-blue-100 text-blue-700 dark:bg-zinc-700 dark:text-zinc-200;
+  @apply bg-[#e7f3ff] text-[#1877f2] dark:bg-[#3e4042] dark:text-[#b0b3b8];
 }
 
 .badge-success {
-  @apply bg-emerald-50 text-emerald-700 dark:bg-zinc-800 dark:text-emerald-400;
+  @apply bg-emerald-50 text-emerald-700 dark:bg-[#3e4042] dark:text-emerald-400;
 }
 
 .badge-error {
-  @apply bg-red-50 text-red-700 dark:bg-zinc-800 dark:text-red-400;
+  @apply bg-red-50 text-red-700 dark:bg-[#3e4042] dark:text-red-400;
 }
 
 .badge-archived {
-  @apply bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400;
+  @apply bg-[#e4e6eb] text-[#65676b] dark:bg-[#3e4042] dark:text-[#b0b3b8];
 }
 
-/* Header gradient - Blue for light, Black/White for dark */
+/* Header gradient - Blue for light, Dark for dark */
 .header-gradient {
-  @apply bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-zinc-900 dark:via-black dark:to-zinc-900;
+  @apply bg-gradient-to-br from-[#1877f2] via-[#166fe5] to-[#0d65d9] dark:from-[#242526] dark:via-[#18191a] dark:to-[#242526];
 }
 
 /* Decorative patterns */
@@ -251,7 +251,7 @@ body {
 
 /* Custom focus styles */
 *:focus-visible {
-  @apply outline-none ring-2 ring-blue-500/50 dark:ring-white/30 ring-offset-2 ring-offset-tg-bg;
+  @apply outline-none ring-2 ring-[#1877f2]/50 dark:ring-white/30 ring-offset-2 ring-offset-tg-bg;
 }
 
 /* Number animation */

@@ -45,7 +45,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-black">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1877f2] via-[#166fe5] to-[#0d65d9] dark:from-[#18191a] dark:via-[#242526] dark:to-[#18191a]">
       {/* Background pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDE0di0yaDIyek0zNiAxNHYySDRWMTRoMzJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
 
@@ -74,8 +74,8 @@ export default function AdminLoginPage() {
             transition={{ type: 'spring', delay: 0.1 }}
             className="flex justify-center mb-8"
           >
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-white to-gray-200 flex items-center justify-center shadow-lg shadow-white/20">
-              <Shield className="w-10 h-10 text-black" />
+            <div className="w-20 h-20 rounded-2xl bg-white dark:bg-[#e4e6eb] flex items-center justify-center shadow-lg shadow-black/20">
+              <Shield className="w-10 h-10 text-[#1877f2] dark:text-[#18191a]" />
             </div>
           </motion.div>
 
@@ -115,7 +115,7 @@ export default function AdminLoginPage() {
               <motion.p
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-red-400 text-sm text-center"
+                className="text-red-300 text-sm text-center"
               >
                 {error}
               </motion.p>
@@ -124,7 +124,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-white hover:bg-gray-100 text-black font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-white/20"
+              className="w-full bg-white dark:bg-[#e4e6eb] hover:bg-gray-100 text-[#1877f2] dark:text-[#18191a] font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-black/20"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -146,4 +146,3 @@ export default function AdminLoginPage() {
     </div>
   )
 }
-

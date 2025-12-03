@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Archive, ChevronRight, Globe, Search, RefreshCw } from 'lucide-react'
+import { Archive, ChevronRight, Search, RefreshCw } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -54,8 +54,8 @@ export default function ArchivePage() {
       <div className="sticky top-0 z-10 bg-tg-bg border-b border-tg-separator">
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-purple-100">
-              <Archive className="w-6 h-6 text-purple-600" />
+            <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/30">
+              <Archive className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-tg-text">Архив</h1>
@@ -105,7 +105,7 @@ export default function ArchivePage() {
               {filteredRequests.map((request: any, index: number) => (
                 <motion.div
                   key={request.id}
-                  className="bg-tg-section rounded-2xl overflow-hidden"
+                  className="bg-tg-section rounded-2xl overflow-hidden border border-[#e4e6eb] dark:border-[#3e4042]"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
@@ -120,7 +120,7 @@ export default function ArchivePage() {
                     className="w-full p-4 text-left"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-lg">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold text-lg">
                         {request.company_name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -141,7 +141,7 @@ export default function ArchivePage() {
                     <button
                       onClick={(e) => handleRestore(request.id, e)}
                       disabled={restoreMutation.isPending}
-                      className="flex items-center gap-2 text-sm text-tg-button"
+                      className="flex items-center gap-2 text-sm text-[#1877f2] dark:text-[#e4e6eb]"
                     >
                       <RefreshCw className="w-4 h-4" />
                       Восстановить

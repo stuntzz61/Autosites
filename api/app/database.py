@@ -463,3 +463,36 @@ def search_requests(query: str, limit: int = 20) -> List[Dict[str, Any]]:
         )
         return cur.fetchall()
 
+
+# ==================== Admin Settings ====================
+
+def get_admin_password() -> Optional[str]:
+    """Get admin password from database"""
+    with get_db() as conn:
+        cur = conn.execute(
+            "SELECT value FROM admin_settings WHERE key = 'admin_password'"
+        )
+        result = cur.fetchone()
+        return result['value'] if result else None
+
+
+def set_admin_password(password: str) -> bool:
+    """Set admin password in database"""
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO admin_settings (key, value, updated_at)
+            VALUES ('admin_password', %s, NOW())
+            ON CONFLICT (key) DO UPDATE SET value = %s, updated_at = NOW()
+            """,
+            (password, password)
+        )
+        return True
+
+
+def verify_admin_password(password: str) -> bool:
+    """Verify admin password"""
+    stored_password = get_admin_password()
+    if not stored_password:
+        return False
+    return stored_password == password

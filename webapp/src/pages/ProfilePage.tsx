@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, Phone, Mail, Star, FileText, CheckCircle, Clock,
+  User, Phone, Star, FileText, CheckCircle, Clock,
   TrendingUp, Award, Edit2, X, Loader2, LogOut
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -11,12 +11,12 @@ import { profileApi } from '@/api/client'
 import toast from 'react-hot-toast'
 
 const ranks = [
-  { min: 0, name: 'Новичок', color: 'text-gray-500', bg: 'bg-gray-100' },
-  { min: 5, name: 'Начинающий', color: 'text-green-600', bg: 'bg-green-100' },
-  { min: 15, name: 'Опытный', color: 'text-blue-600', bg: 'bg-blue-100' },
-  { min: 30, name: 'Профессионал', color: 'text-purple-600', bg: 'bg-purple-100' },
-  { min: 50, name: 'Эксперт', color: 'text-amber-600', bg: 'bg-amber-100' },
-  { min: 100, name: 'Мастер', color: 'text-red-600', bg: 'bg-red-100' },
+  { min: 0, name: 'Новичок', color: 'text-[#65676b] dark:text-[#b0b3b8]', bg: 'bg-[#e4e6eb] dark:bg-[#3e4042]' },
+  { min: 5, name: 'Начинающий', color: 'text-[#42b72a]', bg: 'bg-green-100 dark:bg-green-900/30' },
+  { min: 15, name: 'Опытный', color: 'text-[#1877f2] dark:text-[#e4e6eb]', bg: 'bg-[#e7f3ff] dark:bg-[#3e4042]' },
+  { min: 30, name: 'Профессионал', color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+  { min: 50, name: 'Эксперт', color: 'text-amber-600', bg: 'bg-amber-100 dark:bg-amber-900/30' },
+  { min: 100, name: 'Мастер', color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/30' },
 ]
 
 export default function ProfilePage() {
@@ -74,7 +74,7 @@ export default function ProfilePage() {
     <div className="min-h-screen pb-8">
       {/* Header Card */}
       <motion.div
-        className="bg-gradient-to-br from-brand-500 to-brand-600 p-6 pb-24"
+        className="bg-gradient-to-br from-[#1877f2] via-[#166fe5] to-[#0d65d9] dark:from-[#242526] dark:via-[#18191a] dark:to-[#242526] p-6 pb-24"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -95,7 +95,7 @@ export default function ProfilePage() {
       <div className="px-4 -mt-16 space-y-4">
         {/* Rank Card */}
         <motion.div
-          className="bg-tg-section rounded-2xl p-5 shadow-lg"
+          className="bg-tg-section rounded-2xl p-5 shadow-lg border border-[#e4e6eb] dark:border-[#3e4042]"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -121,7 +121,7 @@ export default function ProfilePage() {
               </div>
               <div className="h-2 bg-tg-secondary-bg rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-brand-500 to-brand-600 rounded-full"
+                  className="h-full bg-gradient-to-r from-[#1877f2] to-[#42b72a] dark:from-[#e4e6eb] dark:to-[#b0b3b8] rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -142,12 +142,12 @@ export default function ProfilePage() {
           transition={{ delay: 0.1 }}
         >
           <StatCard
-            icon={<FileText className="w-5 h-5 text-blue-500" />}
+            icon={<FileText className="w-5 h-5 text-[#1877f2] dark:text-[#e4e6eb]" />}
             value={stats?.total_requests || 0}
             label="Всего заявок"
           />
           <StatCard
-            icon={<CheckCircle className="w-5 h-5 text-green-500" />}
+            icon={<CheckCircle className="w-5 h-5 text-[#42b72a]" />}
             value={stats?.completed_requests || 0}
             label="Завершено"
           />
@@ -170,7 +170,7 @@ export default function ProfilePage() {
           transition={{ delay: 0.2 }}
         >
           <p className="section-header">Контактные данные</p>
-          <div className="bg-tg-section rounded-2xl overflow-hidden">
+          <div className="bg-tg-section rounded-2xl overflow-hidden border border-[#e4e6eb] dark:border-[#3e4042]">
             <button
               onClick={() => {
                 haptic?.impactOccurred('light')
@@ -196,7 +196,7 @@ export default function ProfilePage() {
           transition={{ delay: 0.3 }}
         >
           <p className="section-header">Аккаунт</p>
-          <div className="bg-tg-section rounded-2xl overflow-hidden">
+          <div className="bg-tg-section rounded-2xl overflow-hidden border border-[#e4e6eb] dark:border-[#3e4042]">
             <div className="list-item">
               <User className="w-5 h-5 text-tg-hint" />
               <div className="flex-1">
@@ -217,7 +217,7 @@ export default function ProfilePage() {
             <div className="divider" />
             <button
               onClick={handleLogout}
-              className="list-item w-full text-left text-tg-destructive"
+              className="list-item w-full text-left text-red-500"
             >
               <LogOut className="w-5 h-5" />
               <span>Выйти</span>
@@ -287,7 +287,7 @@ function StatCard({
   label: string
 }) {
   return (
-    <div className="bg-tg-section rounded-2xl p-4">
+    <div className="bg-tg-section rounded-2xl p-4 border border-[#e4e6eb] dark:border-[#3e4042]">
       <div className="flex items-center gap-2 mb-2">
         {icon}
         <span className="text-xs text-tg-hint">{label}</span>

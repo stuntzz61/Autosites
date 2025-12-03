@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Search, Filter, ChevronRight, Globe, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { Plus, Search, ChevronRight, Globe, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { requestsApi } from '@/api/client'
@@ -11,19 +11,19 @@ const statusFilters = [
   { value: 'all', label: 'Все' },
   { value: 'draft', label: 'Черновики' },
   { value: 'ready_to_generate', label: 'Готовы' },
-  { value: 'generating', label: 'Генерация' },
+  { value: 'generating', label: 'В работе' },
   { value: 'success', label: 'Готово' },
   { value: 'error', label: 'Ошибки' },
 ]
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  draft: { icon: <Clock className="w-4 h-4" />, color: 'text-gray-500', label: 'Черновик' },
+  draft: { icon: <Clock className="w-4 h-4" />, color: 'text-[#65676b]', label: 'Черновик' },
   collecting_info: { icon: <Clock className="w-4 h-4" />, color: 'text-amber-500', label: 'Сбор данных' },
   collecting_photos: { icon: <Clock className="w-4 h-4" />, color: 'text-amber-500', label: 'Сбор фото' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-green-500', label: 'Готов' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-blue-500', label: 'Генерация' },
-  in_queue: { icon: <Clock className="w-4 h-4" />, color: 'text-blue-500', label: 'В очереди' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-500', label: 'Готово' },
+  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a]', label: 'Готов' },
+  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-[#1877f2]', label: 'В работе' },
+  in_queue: { icon: <Clock className="w-4 h-4" />, color: 'text-[#1877f2]', label: 'В очереди' },
+  success: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a]', label: 'Готово' },
   error: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-500', label: 'Ошибка' },
 }
 
@@ -82,7 +82,7 @@ export default function RequestsPage() {
                 haptic?.impactOccurred('medium')
                 navigate('/requests/new')
               }}
-              className="p-2 rounded-xl bg-tg-button text-tg-button-text"
+              className="p-2 rounded-xl bg-[#1877f2] dark:bg-[#e4e6eb] text-white dark:text-[#18191a]"
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -112,8 +112,8 @@ export default function RequestsPage() {
                 className={clsx(
                   'px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
                   statusFilter === filter.value
-                    ? 'bg-tg-button text-tg-button-text'
-                    : 'bg-tg-secondary-bg text-tg-hint'
+                    ? 'bg-[#1877f2] dark:bg-[#e4e6eb] text-white dark:text-[#18191a]'
+                    : 'bg-[#e4e6eb] dark:bg-[#3e4042] text-tg-hint'
                 )}
               >
                 {filter.label}
@@ -168,7 +168,7 @@ export default function RequestsPage() {
                       haptic?.impactOccurred('light')
                       navigate(`/requests/${request.id}`)
                     }}
-                    className="w-full bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] transition-transform"
+                    className="w-full bg-tg-section rounded-2xl p-4 text-left active:scale-[0.98] transition-transform border border-[#e4e6eb] dark:border-[#3e4042]"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -176,7 +176,7 @@ export default function RequestsPage() {
                     layout
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 dark:from-zinc-700 dark:to-zinc-800 flex items-center justify-center text-white font-bold text-lg">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#1877f2] to-[#0d65d9] dark:from-[#3e4042] dark:to-[#242526] flex items-center justify-center text-white font-bold text-lg">
                         {request.company_name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">

@@ -3,9 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2, User, Phone, Mail, MapPin, Briefcase,
-  Image, Archive, Play, CheckCircle2,
-  Clock, AlertCircle, Loader2, ChevronDown, Plus, X, ExternalLink,
-  Palette, Upload, Camera, Trash2
+  Image, Archive, Send, CheckCircle2,
+  Clock, AlertCircle, Loader2, ChevronDown, X, ExternalLink,
+  Palette, Upload, Camera
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -14,15 +14,15 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; bgColor: string; label: string }> = {
-  draft: { icon: <Clock className="w-4 h-4" />, color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-800', label: 'Черновик' },
+  draft: { icon: <Clock className="w-4 h-4" />, color: 'text-[#65676b] dark:text-[#b0b3b8]', bgColor: 'bg-[#e4e6eb] dark:bg-[#3e4042]', label: 'Черновик' },
   awaiting_photos: { icon: <Image className="w-4 h-4" />, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-100 dark:bg-amber-900/30', label: 'Ожидание фото' },
   collecting_info: { icon: <Clock className="w-4 h-4" />, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-100 dark:bg-amber-900/30', label: 'Сбор данных' },
   collecting_photos: { icon: <Image className="w-4 h-4" />, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-100 dark:bg-amber-900/30', label: 'Сбор фото' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', label: 'Готов к генерации' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', label: 'Генерация...' },
-  in_queue: { icon: <Clock className="w-4 h-4" />, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', label: 'В очереди' },
-  generated_ok: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Сайт готов!' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Сайт готов!' },
+  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a] dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Готов к разработке' },
+  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, color: 'text-[#1877f2] dark:text-[#e4e6eb]', bgColor: 'bg-[#e7f3ff] dark:bg-[#3e4042]', label: 'В разработке...' },
+  in_queue: { icon: <Clock className="w-4 h-4" />, color: 'text-[#1877f2] dark:text-[#e4e6eb]', bgColor: 'bg-[#e7f3ff] dark:bg-[#3e4042]', label: 'В очереди' },
+  generated_ok: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a] dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Сайт готов!' },
+  success: { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-[#42b72a] dark:text-emerald-400', bgColor: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'Сайт готов!' },
   generated_error: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30', label: 'Ошибка' },
   error: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-100 dark:bg-red-900/30', label: 'Ошибка' },
   archived: { icon: <Archive className="w-4 h-4" />, color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30', label: 'В архиве' },
@@ -70,11 +70,11 @@ export default function RequestDetailPage() {
     mutationFn: () => requestsApi.generate(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request', id] })
-      toast.success('Заявка отправлена на генерацию')
+      toast.success('Заявка отправлена в разработку')
       haptic?.notificationOccurred('success')
     },
     onError: () => {
-      toast.error('Ошибка генерации')
+      toast.error('Ошибка отправки')
       haptic?.notificationOccurred('error')
     },
   })
@@ -209,7 +209,7 @@ export default function RequestDetailPage() {
 
   const handleGenerate = () => {
     if (webApp?.showConfirm) {
-      webApp.showConfirm('Запустить генерацию сайта?', (confirmed) => {
+      webApp.showConfirm('Отправить заявку в разработку?', (confirmed) => {
         if (confirmed) generateMutation.mutate()
       })
     } else {
@@ -240,7 +240,7 @@ export default function RequestDetailPage() {
     <div className="min-h-screen pb-32">
       {/* Header Card */}
       <motion.div
-        className="m-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 dark:from-zinc-900 dark:via-black dark:to-zinc-900 rounded-2xl p-6 text-white shadow-xl shadow-blue-600/20 dark:shadow-black/30 border border-blue-500/20 dark:border-zinc-700"
+        className="m-4 bg-gradient-to-br from-[#1877f2] via-[#166fe5] to-[#0d65d9] dark:from-[#242526] dark:via-[#18191a] dark:to-[#242526] rounded-2xl p-6 text-white shadow-xl shadow-[#1877f2]/20 dark:shadow-black/30 border border-[#1877f2]/20 dark:border-[#3e4042]"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -303,7 +303,7 @@ export default function RequestDetailPage() {
                     }}
                     className={clsx(
                       'w-full flex items-center gap-3 p-3 rounded-xl transition-colors',
-                      status === key ? 'bg-tg-button/10' : 'hover:bg-tg-secondary-bg'
+                      status === key ? 'bg-[#e7f3ff] dark:bg-[#3e4042]' : 'hover:bg-tg-secondary-bg'
                     )}
                   >
                     <div className={clsx('p-2 rounded-lg', cfg.bgColor, cfg.color)}>
@@ -311,7 +311,7 @@ export default function RequestDetailPage() {
                     </div>
                     <span className="font-medium text-tg-text">{cfg.label}</span>
                     {status === key && (
-                      <CheckCircle2 className="w-5 h-5 text-tg-button ml-auto" />
+                      <CheckCircle2 className="w-5 h-5 text-[#1877f2] dark:text-white ml-auto" />
                     )}
                   </button>
                 ))}
@@ -352,7 +352,7 @@ export default function RequestDetailPage() {
                     className={clsx(
                       'w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left',
                       selectedCategory === cat.id
-                        ? 'bg-blue-500/10 dark:bg-white/10 border-2 border-blue-500/30 dark:border-white/20'
+                        ? 'bg-[#e7f3ff] dark:bg-[#3e4042] border-2 border-[#1877f2]/30 dark:border-white/20'
                         : 'bg-tg-secondary-bg border-2 border-transparent'
                     )}
                   >
@@ -362,7 +362,7 @@ export default function RequestDetailPage() {
                       <p className="text-xs text-tg-hint">{cat.description}</p>
                     </div>
                     {selectedCategory === cat.id && (
-                      <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-white" />
+                      <CheckCircle2 className="w-5 h-5 text-[#1877f2] dark:text-white" />
                     )}
                   </button>
                 ))}
@@ -404,13 +404,13 @@ export default function RequestDetailPage() {
         {(clientName || clientCompany || clientContact) && (
           <Section title="Клиент">
             {clientName && (
-              <InfoItem icon={<User className="w-5 h-5 text-blue-500" />} label="Имя" value={clientName} />
+              <InfoItem icon={<User className="w-5 h-5 text-[#1877f2]" />} label="Имя" value={clientName} />
             )}
             {clientCompany && (
-              <InfoItem icon={<Building2 className="w-5 h-5 text-blue-500" />} label="Компания" value={clientCompany} />
+              <InfoItem icon={<Building2 className="w-5 h-5 text-[#1877f2]" />} label="Компания" value={clientCompany} />
             )}
             {clientContact && (
-              <InfoItem icon={<Phone className="w-5 h-5 text-blue-500" />} label="Контакт" value={clientContact} />
+              <InfoItem icon={<Phone className="w-5 h-5 text-[#1877f2]" />} label="Контакт" value={clientContact} />
             )}
           </Section>
         )}
@@ -418,8 +418,8 @@ export default function RequestDetailPage() {
         {/* Contacts */}
         {(phone || email || address) && (
           <Section title="Контакты сайта">
-            {phone && <InfoItem icon={<Phone className="w-5 h-5 text-green-500" />} label="Телефон" value={phone} />}
-            {email && <InfoItem icon={<Mail className="w-5 h-5 text-blue-500" />} label="Email" value={email} />}
+            {phone && <InfoItem icon={<Phone className="w-5 h-5 text-[#42b72a]" />} label="Телефон" value={phone} />}
+            {email && <InfoItem icon={<Mail className="w-5 h-5 text-[#1877f2]" />} label="Email" value={email} />}
             {address && <InfoItem icon={<MapPin className="w-5 h-5 text-red-500" />} label="Адрес" value={address} />}
             {workHours && <InfoItem icon={<Clock className="w-5 h-5 text-amber-500" />} label="Часы работы" value={workHours} />}
           </Section>
@@ -448,7 +448,7 @@ export default function RequestDetailPage() {
                         <p className="text-sm text-tg-hint mt-1">{service.summary}</p>
                       )}
                       {service.priceFrom && (
-                        <p className="text-sm text-green-600 dark:text-green-400 mt-1 font-medium">{service.priceFrom}</p>
+                        <p className="text-sm text-[#42b72a] mt-1 font-medium">{service.priceFrom}</p>
                       )}
                     </div>
                   </div>
@@ -484,7 +484,7 @@ export default function RequestDetailPage() {
             {/* Upload Button */}
             <button
               onClick={() => setShowPhotoUpload(true)}
-              className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-blue-500/30 dark:border-white/20 rounded-xl text-blue-600 dark:text-white hover:bg-blue-500/5 dark:hover:bg-white/5 transition-colors"
+              className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-[#1877f2]/30 dark:border-white/20 rounded-xl text-[#1877f2] dark:text-white hover:bg-[#e7f3ff]/50 dark:hover:bg-white/5 transition-colors"
             >
               <Camera className="w-5 h-5" />
               <span className="font-medium">Добавить фото</span>
@@ -531,8 +531,8 @@ export default function RequestDetailPage() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  <Play className="w-5 h-5" />
-                  Сгенерировать
+                  <Send className="w-5 h-5" />
+                  Отправить в разработку
                 </>
               )}
             </button>
@@ -566,7 +566,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       animate={{ opacity: 1, y: 0 }}
     >
       <p className="section-header">{title}</p>
-      <div className="bg-tg-section rounded-2xl overflow-hidden">
+      <div className="bg-tg-section rounded-2xl overflow-hidden border border-[#e4e6eb] dark:border-[#3e4042]">
         {children}
       </div>
     </motion.div>
@@ -621,8 +621,8 @@ function PhotoThumbnail({
     return (
       <div className="relative flex-shrink-0 group">
         <a href={url} target="_blank" rel="noopener noreferrer">
-          <div className="w-20 h-20 rounded-xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
-            <Image className="w-6 h-6 text-gray-400 dark:text-zinc-500" />
+          <div className="w-20 h-20 rounded-xl bg-[#e4e6eb] dark:bg-[#3e4042] flex items-center justify-center">
+            <Image className="w-6 h-6 text-[#65676b] dark:text-[#b0b3b8]" />
           </div>
         </a>
         <button
@@ -642,7 +642,7 @@ function PhotoThumbnail({
     <div className="relative flex-shrink-0 group">
       <a href={url} target="_blank" rel="noopener noreferrer">
         {loading && (
-          <div className="absolute inset-0 w-20 h-20 rounded-xl bg-gray-100 dark:bg-zinc-800 animate-pulse" />
+          <div className="absolute inset-0 w-20 h-20 rounded-xl bg-[#e4e6eb] dark:bg-[#3e4042] animate-pulse" />
         )}
         <img
           src={displayUrl}

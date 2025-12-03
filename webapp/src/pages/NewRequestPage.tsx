@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2, User, Briefcase, Phone, Mail, MapPin,
   ArrowRight, ArrowLeft, Check, Loader2, Plus, X,
-  Clock, Palette, Camera, Upload, Image
+  Clock, Palette, Camera, Upload, Image, AlertCircle
 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -71,6 +71,15 @@ interface FormData {
   color_palette: string
 }
 
+interface ValidationErrors {
+  company?: string
+  business_type?: string
+  client_name?: string
+  phone?: string
+  email?: string
+  services?: string
+}
+
 export default function NewRequestPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -80,6 +89,7 @@ export default function NewRequestPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState('hero')
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
+  const [errors, setErrors] = useState<ValidationErrors>({})
   const [formData, setFormData] = useState<FormData>({
     company: '',
     business_type: '',
@@ -163,6 +173,10 @@ export default function NewRequestPage() {
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    // Clear error when field is updated
+    if (errors[field as keyof ValidationErrors]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
   }
 
   const addService = () => {
@@ -177,6 +191,9 @@ export default function NewRequestPage() {
       ...prev,
       services: prev.services.map((s, i) => i === index ? { ...s, [field]: value } : s),
     }))
+    if (errors.services) {
+      setErrors(prev => ({ ...prev, services: undefined }))
+    }
   }
 
   const removeService = (index: number) => {
@@ -268,9 +285,54 @@ export default function NewRequestPage() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
+  const validateStep = (): boolean => {
+    const newErrors: ValidationErrors = {}
+
+    switch (currentStep) {
+      case 0: // Company
+        if (!formData.company.trim()) {
+          newErrors.company = 'Введите название компании'
+        } else if (formData.company.trim().length < 2) {
+          newErrors.company = 'Название должно быть не менее 2 символов'
+        }
+        if (!formData.business_type.trim()) {
+          newErrors.business_type = 'Укажите сферу деятельности'
+        }
+        break
+
+      case 1: // Client
+        if (!formData.client_name.trim()) {
+          newErrors.client_name = 'Введите имя клиента'
+        } else if (formData.client_name.trim().length < 2) {
+          newErrors.client_name = 'Имя должно быть не менее 2 символов'
+        }
+        break
+
+      case 2: // Contacts
+        if (!formData.phone.trim()) {
+          newErrors.phone = 'Введите номер телефона'
+        } else if (!validatePhone(formData.phone)) {
+          newErrors.phone = 'Введите номер полностью (11 цифр)'
+        }
+        if (formData.email && !validateEmail(formData.email)) {
+          newErrors.email = 'Введите корректный email'
+        }
+        break
+
+      case 3: // Services
+        if (!formData.services.some(s => s.name.trim().length > 0)) {
+          newErrors.services = 'Добавьте хотя бы одну услугу'
+        }
+        break
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const canGoNext = () => {
     switch (currentStep) {
-      case 0: return formData.company.trim().length >= 2
+      case 0: return formData.company.trim().length >= 2 && formData.business_type.trim().length > 0
       case 1: return formData.client_name.trim().length >= 2
       case 2: return validatePhone(formData.phone) && validateEmail(formData.email) && formData.phone.trim().length > 0
       case 3: return formData.services.some(s => s.name.trim().length > 0)
@@ -279,6 +341,11 @@ export default function NewRequestPage() {
   }
 
   const goNext = () => {
+    if (!validateStep()) {
+      haptic?.notificationOccurred('error')
+      return
+    }
+
     if (currentStep < steps.length - 1) {
       haptic?.impactOccurred('light')
       setCurrentStep(prev => prev + 1)
@@ -314,7 +381,7 @@ export default function NewRequestPage() {
               key={step.id}
               className={clsx(
                 'flex-1 h-1 rounded-full transition-colors',
-                i <= currentStep ? 'bg-blue-600 dark:bg-white' : 'bg-tg-secondary-bg'
+                i <= currentStep ? 'bg-[#1877f2] dark:bg-white' : 'bg-tg-secondary-bg'
               )}
             />
           ))}
@@ -334,7 +401,7 @@ export default function NewRequestPage() {
             {/* Step 0: Company */}
             {currentStep === 0 && (
               <StepContent
-                icon={<Building2 className="w-8 h-8 text-blue-600 dark:text-white" />}
+                icon={<Building2 className="w-8 h-8 text-[#1877f2] dark:text-white" />}
                 title="О компании"
                 subtitle="Расскажите о бизнесе клиента"
               >
@@ -346,9 +413,15 @@ export default function NewRequestPage() {
                       value={formData.company}
                       onChange={(e) => updateField('company', e.target.value)}
                       placeholder="Например: Webly"
-                      className="input text-lg"
+                      className={clsx('input text-lg', errors.company && 'ring-2 ring-red-500/30 border-red-500/50')}
                       autoFocus
                     />
+                    {errors.company && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.company}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-tg-hint mb-1 block">Сфера деятельности *</label>
@@ -357,8 +430,14 @@ export default function NewRequestPage() {
                       value={formData.business_type}
                       onChange={(e) => updateField('business_type', e.target.value)}
                       placeholder="Например: Создание сайтов под ключ"
-                      className="input"
+                      className={clsx('input', errors.business_type && 'ring-2 ring-red-500/30 border-red-500/50')}
                     />
+                    {errors.business_type && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.business_type}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-tg-hint mb-1 block">Описание компании</label>
@@ -377,7 +456,7 @@ export default function NewRequestPage() {
             {/* Step 1: Client */}
             {currentStep === 1 && (
               <StepContent
-                icon={<User className="w-8 h-8 text-blue-600 dark:text-white" />}
+                icon={<User className="w-8 h-8 text-[#1877f2] dark:text-white" />}
                 title="Клиент"
                 subtitle="Кто заказывает сайт?"
               >
@@ -389,9 +468,15 @@ export default function NewRequestPage() {
                       value={formData.client_name}
                       onChange={(e) => updateField('client_name', e.target.value)}
                       placeholder="Иванов Иван Иванович"
-                      className="input text-lg"
+                      className={clsx('input text-lg', errors.client_name && 'ring-2 ring-red-500/30 border-red-500/50')}
                       autoFocus
                     />
+                    {errors.client_name && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.client_name}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-tg-hint mb-1 block">Компания клиента</label>
@@ -420,7 +505,7 @@ export default function NewRequestPage() {
             {/* Step 2: Contacts */}
             {currentStep === 2 && (
               <StepContent
-                icon={<Phone className="w-8 h-8 text-blue-600 dark:text-white" />}
+                icon={<Phone className="w-8 h-8 text-[#1877f2] dark:text-white" />}
                 title="Контакты для сайта"
                 subtitle="Эти данные будут на сайте"
               >
@@ -436,12 +521,15 @@ export default function NewRequestPage() {
                         onChange={handlePhoneChange}
                         placeholder="+7 (XXX) XXX-XX-XX"
                         maxLength={18}
-                        className={clsx('input pl-10', !validatePhone(formData.phone) && formData.phone && 'ring-2 ring-red-500/30')}
+                        className={clsx('input pl-10', errors.phone && 'ring-2 ring-red-500/30 border-red-500/50')}
                         autoFocus
                       />
                     </div>
-                    {formData.phone && !validatePhone(formData.phone) && (
-                      <p className="text-xs text-red-500 mt-1">Введите номер полностью (11 цифр)</p>
+                    {errors.phone && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.phone}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -453,11 +541,14 @@ export default function NewRequestPage() {
                         value={formData.email}
                         onChange={(e) => updateField('email', e.target.value)}
                         placeholder="info@company.ru"
-                        className={clsx('input pl-10', !validateEmail(formData.email) && formData.email && 'ring-2 ring-red-500/30')}
+                        className={clsx('input pl-10', errors.email && 'ring-2 ring-red-500/30 border-red-500/50')}
                       />
                     </div>
-                    {formData.email && !validateEmail(formData.email) && (
-                      <p className="text-xs text-red-500 mt-1">Введите корректный email</p>
+                    {errors.email && (
+                      <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.email}
+                      </p>
                     )}
                   </div>
                   <div>
@@ -493,11 +584,17 @@ export default function NewRequestPage() {
             {/* Step 3: Services */}
             {currentStep === 3 && (
               <StepContent
-                icon={<Briefcase className="w-8 h-8 text-blue-600 dark:text-white" />}
+                icon={<Briefcase className="w-8 h-8 text-[#1877f2] dark:text-white" />}
                 title="Услуги"
                 subtitle="Что предлагает компания?"
               >
                 <div className="space-y-4">
+                  {errors.services && (
+                    <p className="text-xs text-red-500 flex items-center gap-1 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.services}
+                    </p>
+                  )}
                   {formData.services.map((service, i) => (
                     <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -548,7 +645,7 @@ export default function NewRequestPage() {
             {/* Step 4: Photos */}
             {currentStep === 4 && (
               <StepContent
-                icon={<Camera className="w-8 h-8 text-blue-600 dark:text-white" />}
+                icon={<Camera className="w-8 h-8 text-[#1877f2] dark:text-white" />}
                 title="Фотографии"
                 subtitle="Загрузите фото для сайта"
               >
@@ -562,7 +659,7 @@ export default function NewRequestPage() {
                         className={clsx(
                           'flex items-center gap-2 px-3 py-2 rounded-xl whitespace-nowrap transition-colors',
                           selectedCategory === cat.id
-                            ? 'bg-blue-600 dark:bg-white text-white dark:text-black'
+                            ? 'bg-[#1877f2] dark:bg-white text-white dark:text-[#18191a]'
                             : 'bg-tg-secondary-bg text-tg-text'
                         )}
                       >
@@ -573,7 +670,7 @@ export default function NewRequestPage() {
                             'px-1.5 py-0.5 rounded-full text-xs',
                             selectedCategory === cat.id
                               ? 'bg-white/20 dark:bg-black/20'
-                              : 'bg-blue-600/10 dark:bg-white/10 text-blue-600 dark:text-white'
+                              : 'bg-[#1877f2]/10 dark:bg-white/10 text-[#1877f2] dark:text-white'
                           )}>
                             {getPhotosByCategory(cat.id).length}
                           </span>
@@ -593,7 +690,7 @@ export default function NewRequestPage() {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-blue-500/30 dark:border-white/20 rounded-xl text-blue-600 dark:text-white hover:bg-blue-500/5 dark:hover:bg-white/5 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-[#1877f2]/30 dark:border-white/20 rounded-xl text-[#1877f2] dark:text-white hover:bg-[#e7f3ff]/50 dark:hover:bg-white/5 transition-colors"
                   >
                     <Upload className="w-5 h-5" />
                     <span className="font-medium">Добавить фото в "{photoCategories.find(c => c.id === selectedCategory)?.label}"</span>
@@ -650,7 +747,7 @@ export default function NewRequestPage() {
             {/* Step 5: Details */}
             {currentStep === 5 && (
               <StepContent
-                icon={<Palette className="w-8 h-8 text-blue-600 dark:text-white" />}
+                icon={<Palette className="w-8 h-8 text-[#1877f2] dark:text-white" />}
                 title="Детали сайта"
                 subtitle="Дополнительные настройки"
               >
@@ -663,7 +760,7 @@ export default function NewRequestPage() {
                         {DEFAULT_STRUCTURE.map(section => (
                           <span
                             key={section}
-                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-tg-section text-tg-text border border-gray-200 dark:border-zinc-700"
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-tg-section text-tg-text border border-[#e4e6eb] dark:border-[#3e4042]"
                           >
                             {section}
                           </span>
@@ -690,7 +787,7 @@ export default function NewRequestPage() {
                   </div>
 
                   {/* Summary */}
-                  <div className="bg-blue-50 dark:bg-zinc-800 rounded-xl p-4 border border-blue-200 dark:border-zinc-700">
+                  <div className="bg-[#e7f3ff] dark:bg-[#3e4042] rounded-xl p-4 border border-[#1877f2]/20 dark:border-[#3e4042]">
                     <p className="text-sm font-semibold text-tg-text mb-2">📋 Итого</p>
                     <div className="space-y-1 text-sm text-tg-hint">
                       <p>Компания: <span className="text-tg-text">{formData.company || '—'}</span></p>
@@ -756,7 +853,7 @@ function StepContent({
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-blue-50 dark:bg-zinc-800">
+        <div className="p-3 rounded-xl bg-[#e7f3ff] dark:bg-[#3e4042]">
           {icon}
         </div>
         <div>
