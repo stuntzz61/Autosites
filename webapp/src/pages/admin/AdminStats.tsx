@@ -62,7 +62,10 @@ export default function AdminStats() {
     }
   }
 
-  const maxDayValue = Math.max(...(byDay?.map((d: any) => d.count) || [1]))
+  // Safe calculation of max day value
+  const maxDayValue = byDay && byDay.length > 0
+    ? Math.max(...byDay.map((d: any) => d.count || 0)) || 1
+    : 1
 
   const statusLabels: Record<string, string> = {
     draft: 'Черновики',
@@ -102,22 +105,27 @@ export default function AdminStats() {
         <p className="section-header">7 дней</p>
         <div className="bg-tg-section rounded-2xl p-4 border border-tg-separator">
           <div className="flex items-end justify-between gap-2 h-32">
-            {byDay?.map((day: any, i: number) => {
-              const h = maxDayValue > 0 ? (day.count / maxDayValue) * 100 : 0
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                  <motion.div
-                    className="w-full bg-black dark:bg-white rounded-t-lg"
-                    initial={{ height: 0 }}
-                    animate={{ height: `${Math.max(h, 4)}%` }}
-                    transition={{ delay: i * 0.1, duration: 0.5 }}
-                  />
-                  <span className="text-[10px] text-tg-hint">
-                    {new Date(day.date).toLocaleDateString('ru-RU', { weekday: 'short' })}
-                  </span>
-                </div>
-              )
-            })}
+            {byDay && byDay.length > 0 ? (
+              byDay.map((day: any, i: number) => {
+                const h = maxDayValue > 0 ? ((day.count || 0) / maxDayValue) * 100 : 0
+                const dateStr = day.date ? new Date(day.date).toLocaleDateString('ru-RU', { weekday: 'short' }) : '?'
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                    <motion.div
+                      className="w-full bg-black dark:bg-white rounded-t-lg"
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max(h, 4)}%` }}
+                      transition={{ delay: i * 0.1, duration: 0.5 }}
+                    />
+                    <span className="text-[10px] text-tg-hint">{dateStr}</span>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-tg-hint text-sm">
+                Нет данных
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -126,9 +134,13 @@ export default function AdminStats() {
       <div>
         <p className="section-header">По статусам</p>
         <div className="bg-tg-section rounded-2xl p-4 space-y-3 border border-tg-separator">
-          {byStatus?.map((s: any) => (
-            <StatusRow key={s.status} label={statusLabels[s.status] || s.status} count={s.count} total={overview?.total_requests || 1} />
-          ))}
+          {byStatus && byStatus.length > 0 ? (
+            byStatus.map((s: any) => (
+              <StatusRow key={s.status || 'unknown'} label={statusLabels[s.status] || s.status || 'Неизвестно'} count={s.count || 0} total={overview?.total_requests || 1} />
+            ))
+          ) : (
+            <p className="text-tg-hint text-sm text-center py-2">Нет данных</p>
+          )}
         </div>
       </div>
 
@@ -136,26 +148,30 @@ export default function AdminStats() {
       <div>
         <p className="section-header">Топ менеджеров</p>
         <div className="bg-tg-section rounded-2xl border border-tg-separator">
-          {managers?.slice(0, 10).map((manager: any, i: number) => (
-            <div key={manager.id}>
-              {i > 0 && <div className="divider" />}
-              <div className="list-item">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                  i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-gray-400' : i === 2 ? 'bg-amber-700' : 'bg-tg-hint'
-                }`}>
-                  {i < 3 ? <Award className="w-4 h-4" /> : i + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{manager.first_name} {manager.last_name}</p>
-                  {manager.username && <p className="text-xs text-tg-hint">@{manager.username}</p>}
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">{manager.request_count}</p>
-                  <p className="text-xs text-tg-hint">заявок</p>
+          {managers && managers.length > 0 ? (
+            managers.slice(0, 10).map((manager: any, i: number) => (
+              <div key={manager.id}>
+                {i > 0 && <div className="divider" />}
+                <div className="list-item">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                    i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-gray-400' : i === 2 ? 'bg-amber-700' : 'bg-tg-hint'
+                  }`}>
+                    {i < 3 ? <Award className="w-4 h-4" /> : i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{manager.first_name} {manager.last_name}</p>
+                    {manager.username && <p className="text-xs text-tg-hint">@{manager.username}</p>}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">{manager.request_count}</p>
+                    <p className="text-xs text-tg-hint">заявок</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="p-4 text-center text-tg-hint text-sm">Нет менеджеров</div>
+          )}
         </div>
       </div>
     </div>

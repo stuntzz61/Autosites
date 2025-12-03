@@ -448,10 +448,10 @@ async def get_stats_by_status() -> List[Dict]:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                """SELECT COALESCE(payload_json->'site'->'meta'->>'status', status) as status,
+                """SELECT COALESCE(NULLIF(payload_json->'site'->'meta'->>'status', ''), status, 'draft') as status,
                           COUNT(*) as count
                    FROM requests
-                   GROUP BY COALESCE(payload_json->'site'->'meta'->>'status', status)
+                   GROUP BY COALESCE(NULLIF(payload_json->'site'->'meta'->>'status', ''), status, 'draft')
                    ORDER BY count DESC"""
             )
             return await cur.fetchall()
@@ -461,7 +461,7 @@ async def get_stats_by_day(days: int = 7) -> List[Dict]:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                """SELECT DATE(created_at) as date, COUNT(*) as count
+                """SELECT DATE(created_at)::text as date, COUNT(*) as count
                    FROM requests
                    WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
                    GROUP BY DATE(created_at)

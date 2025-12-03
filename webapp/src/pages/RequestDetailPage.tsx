@@ -49,7 +49,7 @@ export default function RequestDetailPage() {
   const [selectedCategory, setSelectedCategory] = useState('gallery')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Check if user is admin
   const isAdmin = user?.role === 'admin'
 
@@ -167,6 +167,9 @@ export default function RequestDetailPage() {
 
   const status = site.meta?.status || request.status || 'draft'
   const config = statusConfig[status] || statusConfig.draft
+
+  // Debug log
+  console.log('[RequestDetail] status:', status, 'payload:', request.payload)
 
   const companyName = site.company || request.company_name || 'Без названия'
   const clientName = client.name || request.client_name || ''
@@ -423,33 +426,33 @@ export default function RequestDetailPage() {
       {/* Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-tg-bg border-t border-tg-separator p-4 safe-bottom">
         <div className="flex gap-3">
-          {/* Edit button for drafts */}
-          {['draft', 'awaiting_photos', 'collecting_info', 'collecting_photos', 'ready_to_generate'].includes(status) && (
+          {/* Edit button - show for editable statuses */}
+          {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
             <button onClick={handleEdit} className="btn btn-secondary">
               <Edit3 className="w-5 h-5" />
             </button>
           )}
-          
-          {/* Generate button */}
-          {['draft', 'awaiting_photos', 'collecting_info', 'collecting_photos', 'ready_to_generate'].includes(status) && (
+
+          {/* Generate button - show for statuses that can be sent to generation */}
+          {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
             <button onClick={handleGenerate} disabled={generateMutation.isPending} className="btn btn-primary flex-1">
               {generateMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" /> В разработку</>}
             </button>
           )}
-          
+
           {/* Open result button */}
           {resultUrl && (
             <a href={resultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex-1">
               <ExternalLink className="w-5 h-5" /> Открыть
             </a>
           )}
-          
+
           {/* Archive button */}
           <button onClick={handleArchive} className="btn btn-secondary" disabled={archiveMutation.isPending}>
             {archiveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Archive className="w-5 h-5" />}
           </button>
-          
-          {/* Delete button (available for all users on drafts, or always for admins) */}
+
+          {/* Delete button (available for all users on drafts/errors, or always for admins) */}
           {(isAdmin || ['draft', 'error', 'generated_error'].includes(status)) && (
             <button onClick={handleDelete} disabled={deleteMutation.isPending} className="btn btn-destructive">
               {deleteMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
@@ -477,7 +480,7 @@ export default function RequestDetailPage() {
             >
               <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
               <p className="text-lg font-semibold mb-4">Редактирование</p>
-              
+
               <EditRequestForm
                 request={request}
                 onSave={() => {
@@ -518,14 +521,14 @@ function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string
   )
 }
 
-function EditRequestForm({ 
-  request, 
-  onSave, 
-  onCancel 
-}: { 
+function EditRequestForm({
+  request,
+  onSave,
+  onCancel
+}: {
   request: any
   onSave: () => void
-  onCancel: () => void 
+  onCancel: () => void
 }) {
   const payload = request.payload || {}
   const site = payload.site || {}
