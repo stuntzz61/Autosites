@@ -19,10 +19,11 @@ const statusConfig: Record<string, { icon: React.ReactNode; label: string }> = {
   draft: { icon: <Clock className="w-4 h-4" />, label: 'Черновик' },
   collecting_info: { icon: <Clock className="w-4 h-4" />, label: 'Сбор данных' },
   collecting_photos: { icon: <Clock className="w-4 h-4" />, label: 'Сбор фото' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'В работе' },
+  awaiting_photos: { icon: <Clock className="w-4 h-4" />, label: 'Ожидание фото' },
+  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов к отправке' },
+  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'Генерация...' },
   in_queue: { icon: <Clock className="w-4 h-4" />, label: 'В очереди' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готово' },
+  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Сайт готов!' },
   error: { icon: <AlertCircle className="w-4 h-4" />, label: 'Ошибка' },
 }
 
@@ -66,7 +67,14 @@ export default function RequestsPage() {
   })
 
   const getStatus = (req: Request) => {
-    return req.payload?.site?.meta?.status || req.status || 'draft'
+    const raw = req.payload?.site?.meta?.status || req.status || 'draft'
+    // Normalize legacy statuses
+    const map: Record<string, string> = {
+      'generated_ok': 'success',
+      'generated_error': 'error',
+      'ready': 'ready_to_generate',
+    }
+    return map[raw] || raw
   }
 
   return (

@@ -156,6 +156,41 @@ class AdminLoginRequest(BaseModel):
     password: str
 
 
+class DevLoginRequest(BaseModel):
+    tg_id: int
+
+
+@router.post("/dev-login")
+async def dev_login(request: DevLoginRequest):
+    """Dev mode login - bypass Telegram verification for development."""
+    if not settings.DEBUG:
+        raise HTTPException(status_code=403, detail="Dev login only available in DEBUG mode")
+
+    tg_id = request.tg_id
+
+    # Get or create user
+    user = await db.get_user_by_tg_id(tg_id)
+
+    if not user:
+        # Create test user
+        user = await db.create_user(tg_id, 'testuser', 'Test', 'User')
+
+    # Check if blocked
+    if user.get('is_blocked'):
+        raise HTTPException(status_code=403, detail="User is blocked")
+
+    # Get user stats
+    stats = await db.get_user_stats(str(user['id']))
+
+    return {
+        "user": {
+            **user,
+            "id": str(user['id']),
+            "stats": stats,
+        }
+    }
+
+
 @router.post("/admin-login")
 async def admin_login(request: AdminLoginRequest, x_telegram_init_data: str = Header(None)):
     """Admin login with password verification."""

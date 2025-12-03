@@ -19,11 +19,25 @@ const statusFilters = [
 
 const statusConfig: Record<string, { icon: React.ReactNode; label: string }> = {
   draft: { icon: <Clock className="w-4 h-4" />, label: 'Черновик' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'В работе' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готово' },
+  collecting_info: { icon: <Clock className="w-4 h-4" />, label: 'Сбор данных' },
+  collecting_photos: { icon: <Clock className="w-4 h-4" />, label: 'Сбор фото' },
+  awaiting_photos: { icon: <Clock className="w-4 h-4" />, label: 'Ожидание фото' },
+  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов к отправке' },
+  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'Генерация...' },
+  in_queue: { icon: <Clock className="w-4 h-4" />, label: 'В очереди' },
+  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Сайт готов!' },
   error: { icon: <AlertCircle className="w-4 h-4" />, label: 'Ошибка' },
-  archived: { icon: <Archive className="w-4 h-4" />, label: 'Архив' },
+  archived: { icon: <Archive className="w-4 h-4" />, label: 'В архиве' },
+}
+
+// Normalize legacy statuses
+const normalizeStatus = (status: string): string => {
+  const map: Record<string, string> = {
+    'generated_ok': 'success',
+    'generated_error': 'error',
+    'ready': 'ready_to_generate',
+  }
+  return map[status] || status
 }
 
 export default function AdminRequests() {
@@ -146,7 +160,8 @@ export default function AdminRequests() {
           <AnimatePresence mode="popLayout">
             <div className="space-y-3">
               {filteredRequests.map((request: any, index: number) => {
-                const status = request.payload?.site?.meta?.status || request.status || 'draft'
+                const rawStatus = request.payload?.site?.meta?.status || request.status || 'draft'
+                const status = normalizeStatus(rawStatus)
                 const config = statusConfig[status] || statusConfig.draft
                 const isSelected = selectedIds.includes(request.id)
 

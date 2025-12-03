@@ -19,14 +19,13 @@ const statusConfig: Record<string, { icon: React.ReactNode; label: string }> = {
   awaiting_photos: { icon: <Image className="w-4 h-4" />, label: 'Ожидание фото' },
   collecting_info: { icon: <Clock className="w-4 h-4" />, label: 'Сбор данных' },
   collecting_photos: { icon: <Image className="w-4 h-4" />, label: 'Сбор фото' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'В работе' },
+  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов к отправке' },
+  ready: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов к отправке' },
+  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'Генерация...' },
   in_queue: { icon: <Clock className="w-4 h-4" />, label: 'В очереди' },
-  generated_ok: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готово!' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готово!' },
-  generated_error: { icon: <AlertCircle className="w-4 h-4" />, label: 'Ошибка' },
-  error: { icon: <AlertCircle className="w-4 h-4" />, label: 'Ошибка' },
-  archived: { icon: <Archive className="w-4 h-4" />, label: 'Архив' },
+  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Сайт готов!' },
+  error: { icon: <AlertCircle className="w-4 h-4" />, label: 'Ошибка генерации' },
+  archived: { icon: <Archive className="w-4 h-4" />, label: 'В архиве' },
 }
 
 const photoCategories = [
@@ -165,11 +164,18 @@ export default function RequestDetailPage() {
   const site = payload.site || {}
   const client = payload.client || {}
 
-  const status = site.meta?.status || request.status || 'draft'
+// Normalize legacy statuses
+  const rawStatus = site.meta?.status || request.status || 'draft'
+  const statusMap: Record<string, string> = {
+    'generated_ok': 'success',
+    'generated_error': 'error',
+    'ready': 'ready_to_generate',
+  }
+  const status = statusMap[rawStatus] || rawStatus
   const config = statusConfig[status] || statusConfig.draft
 
   // Debug log
-  console.log('[RequestDetail] status:', status, 'payload:', request.payload)
+  console.log('[RequestDetail] rawStatus:', rawStatus, 'normalized:', status, 'images:', site.assets?.images)
 
   const companyName = site.company || request.company_name || 'Без названия'
   const clientName = client.name || request.client_name || ''
@@ -220,7 +226,7 @@ export default function RequestDetailPage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-tg-bg">
+    <div className="min-h-screen pb-48 bg-tg-bg">
       {/* Header */}
       <div className="m-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl p-6">
         <div className="flex items-start justify-between mb-4">
@@ -392,7 +398,7 @@ export default function RequestDetailPage() {
           </Section>
         )}
 
-        <Section title="Фото">
+        <Section title={`Фото (${images.length})`}>
           <div className="p-4 space-y-4">
             <button
               onClick={() => setShowPhotoUpload(true)}
@@ -403,16 +409,28 @@ export default function RequestDetailPage() {
             </button>
 
             {images.length > 0 ? (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="grid grid-cols-4 gap-2">
                 {images.map((img: any, i: number) => (
-                  <div key={i} className="relative flex-shrink-0 group">
-                    <img src={img.url} alt="" className="w-20 h-20 rounded-xl object-cover" />
+                  <div key={i} className="relative aspect-square">
+                    <img
+                      src={img.url}
+                      alt={img.category || 'Фото'}
+                      className="w-full h-full rounded-xl object-cover bg-tg-secondary-bg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
+                      }}
+                    />
                     <button
                       onClick={() => handleDeletePhoto(img.url)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100"
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg"
                     >
                       <X className="w-3 h-3" />
                     </button>
+                    {img.category && (
+                      <span className="absolute bottom-1 left-1 text-[10px] bg-black/50 text-white px-1 rounded">
+                        {img.category}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -423,8 +441,8 @@ export default function RequestDetailPage() {
         </Section>
       </div>
 
-      {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-tg-bg border-t border-tg-separator p-4 safe-bottom">
+      {/* Bottom Actions - positioned above bottom nav */}
+      <div className="fixed bottom-16 left-0 right-0 bg-tg-bg border-t border-tg-separator p-4 z-20">
         <div className="flex gap-3">
           {/* Edit button - show for editable statuses */}
           {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
