@@ -50,16 +50,26 @@ async def upload_file_to_s3(
     client = get_s3_client()
 
     try:
-        # Upload without ACL - bucket policy should handle public access
         client.put_object(
             Bucket=settings.S3_BUCKET,
             Key=filename,
             Body=content,
             ContentType=file.content_type or "image/jpeg",
+            ACL="public-read",
         )
     except ClientError as e:
-        log.error(f"Failed to upload to S3: {e}")
-        raise
+        # If ACL fails, try without it (bucket policy might handle access)
+        if "AccessControlListNotSupported" in str(e):
+            log.warning("ACL not supported, uploading without ACL")
+            client.put_object(
+                Bucket=settings.S3_BUCKET,
+                Key=filename,
+                Body=content,
+                ContentType=file.content_type or "image/jpeg",
+            )
+        else:
+            log.error(f"Failed to upload to S3: {e}")
+            raise
 
     # Construct public URL
     if settings.S3_PUBLIC_URL:
