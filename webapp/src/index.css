@@ -157,5 +157,10 @@ body {
 
 /* Custom focus styles */
 *:focus-visible {
-  @apply outline-none ring-2 ring-tg-text/30 ring-offset-2 ring-offset-tg-bg;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.dark *:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
