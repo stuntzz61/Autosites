@@ -55,6 +55,7 @@ async def upload_file_to_s3(
             Key=filename,
             Body=content,
             ContentType=file.content_type or "image/jpeg",
+            ACL="public-read",  # Make file publicly accessible
         )
     except ClientError as e:
         log.error(f"Failed to upload to S3: {e}")

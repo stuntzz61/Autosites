@@ -202,13 +202,22 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
         log.warning("N8N_WEBHOOK_URL not configured - skipping webhook call")
     else:
         try:
+            # Build payload in the expected format
+            payload = request.get('payload', {}) or {}
+            webhook_data = {
+                "request_id": request_id,
+                "manager_id": str(request.get('user_id', '')),
+                "client": payload.get('client', {}),
+                "site": payload.get('site', {}),
+            }
+
+            log.info(f"Sending to n8n webhook: {webhook_url}")
+            log.debug(f"Webhook data: {webhook_data}")
+
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     webhook_url,
-                    json={
-                        "request_id": request_id,
-                        "payload": request.get('payload', {}),
-                    },
+                    json=webhook_data,
                     timeout=30.0
                 )
                 response.raise_for_status()
