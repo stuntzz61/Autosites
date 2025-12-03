@@ -5,10 +5,11 @@ import {
   Building2, User, Phone, Mail, MapPin, Briefcase,
   Image, Archive, Send, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronDown, X, ExternalLink,
-  Palette, Upload, Camera
+  Palette, Upload, Camera, Edit3, Trash2
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
+import { useAuthStore } from '@/stores/authStore'
 import { requestsApi } from '@/api/client'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -41,11 +42,16 @@ export default function RequestDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { haptic, webApp } = useTelegram()
+  const { user } = useAuthStore()
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('gallery')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin'
 
   const { data: request, isLoading, error } = useQuery({
     queryKey: ['request', id],
@@ -84,6 +90,20 @@ export default function RequestDetailPage() {
       setShowStatusMenu(false)
     },
     onError: () => toast.error('Ошибка'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => requestsApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requests'] })
+      toast.success('Заявка удалена')
+      haptic?.notificationOccurred('success')
+      navigate('/requests')
+    },
+    onError: () => {
+      toast.error('Ошибка удаления')
+      haptic?.notificationOccurred('error')
+    },
   })
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,6 +199,21 @@ export default function RequestDetailPage() {
     } else {
       archiveMutation.mutate()
     }
+  }
+
+  const handleDelete = () => {
+    if (webApp?.showConfirm) {
+      webApp.showConfirm('Удалить заявку? Это действие нельзя отменить.', (confirmed) => {
+        if (confirmed) deleteMutation.mutate()
+      })
+    } else {
+      deleteMutation.mutate()
+    }
+  }
+
+  const handleEdit = () => {
+    haptic?.impactOccurred('light')
+    setShowEditModal(true)
   }
 
   return (
@@ -388,21 +423,74 @@ export default function RequestDetailPage() {
       {/* Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-tg-bg border-t border-tg-separator p-4 safe-bottom">
         <div className="flex gap-3">
+          {/* Edit button for drafts */}
+          {['draft', 'awaiting_photos', 'collecting_info', 'collecting_photos', 'ready_to_generate'].includes(status) && (
+            <button onClick={handleEdit} className="btn btn-secondary">
+              <Edit3 className="w-5 h-5" />
+            </button>
+          )}
+          
+          {/* Generate button */}
           {['draft', 'awaiting_photos', 'collecting_info', 'collecting_photos', 'ready_to_generate'].includes(status) && (
             <button onClick={handleGenerate} disabled={generateMutation.isPending} className="btn btn-primary flex-1">
               {generateMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" /> В разработку</>}
             </button>
           )}
+          
+          {/* Open result button */}
           {resultUrl && (
             <a href={resultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex-1">
               <ExternalLink className="w-5 h-5" /> Открыть
             </a>
           )}
-          <button onClick={handleArchive} className="btn btn-secondary">
-            <Archive className="w-5 h-5" />
+          
+          {/* Archive button */}
+          <button onClick={handleArchive} className="btn btn-secondary" disabled={archiveMutation.isPending}>
+            {archiveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Archive className="w-5 h-5" />}
           </button>
+          
+          {/* Delete button (available for all users on drafts, or always for admins) */}
+          {(isAdmin || ['draft', 'error', 'generated_error'].includes(status)) && (
+            <button onClick={handleDelete} disabled={deleteMutation.isPending} className="btn btn-destructive">
+              {deleteMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {showEditModal && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEditModal(false)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[80vh] overflow-y-auto"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+            >
+              <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
+              <p className="text-lg font-semibold mb-4">Редактирование</p>
+              
+              <EditRequestForm
+                request={request}
+                onSave={() => {
+                  queryClient.invalidateQueries({ queryKey: ['request', id] })
+                  setShowEditModal(false)
+                  toast.success('Сохранено')
+                }}
+                onCancel={() => setShowEditModal(false)}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -425,6 +513,168 @@ function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string
       <div className="flex-1">
         <p className="text-xs text-tg-hint">{label}</p>
         <p className="text-tg-text">{value || '—'}</p>
+      </div>
+    </div>
+  )
+}
+
+function EditRequestForm({ 
+  request, 
+  onSave, 
+  onCancel 
+}: { 
+  request: any
+  onSave: () => void
+  onCancel: () => void 
+}) {
+  const payload = request.payload || {}
+  const site = payload.site || {}
+  const client = payload.client || {}
+
+  const [formData, setFormData] = useState({
+    company: site.company || request.company_name || '',
+    business_type: site.business_type || '',
+    phone: site.phone || '',
+    email: site.email || '',
+    address: site.address || '',
+    client_name: client.name || request.client_name || '',
+    client_contact: client.contact || '',
+    summary: site.summary || '',
+  })
+
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const updatedPayload = {
+        ...payload,
+        client: {
+          ...client,
+          name: formData.client_name,
+          contact: formData.client_contact,
+        },
+        site: {
+          ...site,
+          company: formData.company,
+          business_type: formData.business_type,
+          phone: formData.phone,
+          email: formData.email,
+          address: formData.address,
+          summary: formData.summary,
+        }
+      }
+
+      await requestsApi.update(request.id, {
+        company_name: formData.company,
+        client_name: formData.client_name,
+        payload: updatedPayload,
+      })
+
+      onSave()
+    } catch (e) {
+      toast.error('Ошибка сохранения')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-xs text-tg-hint mb-1 block">Компания</label>
+        <input
+          type="text"
+          value={formData.company}
+          onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+          className="input"
+          placeholder="Название компании"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-tg-hint mb-1 block">Сфера деятельности</label>
+        <input
+          type="text"
+          value={formData.business_type}
+          onChange={(e) => setFormData(prev => ({ ...prev, business_type: e.target.value }))}
+          className="input"
+          placeholder="Услуги, товары..."
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-tg-hint mb-1 block">Клиент</label>
+        <input
+          type="text"
+          value={formData.client_name}
+          onChange={(e) => setFormData(prev => ({ ...prev, client_name: e.target.value }))}
+          className="input"
+          placeholder="ФИО клиента"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-tg-hint mb-1 block">Контакт клиента</label>
+        <input
+          type="text"
+          value={formData.client_contact}
+          onChange={(e) => setFormData(prev => ({ ...prev, client_contact: e.target.value }))}
+          className="input"
+          placeholder="+7... или @telegram"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-tg-hint mb-1 block">Телефон сайта</label>
+        <input
+          type="tel"
+          value={formData.phone}
+          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+          className="input"
+          placeholder="+7 (XXX) XXX-XX-XX"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-tg-hint mb-1 block">Email</label>
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+          className="input"
+          placeholder="info@company.ru"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-tg-hint mb-1 block">Адрес</label>
+        <input
+          type="text"
+          value={formData.address}
+          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+          className="input"
+          placeholder="г. Москва, ул..."
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-tg-hint mb-1 block">Описание</label>
+        <textarea
+          value={formData.summary}
+          onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
+          className="input min-h-[80px] resize-none"
+          placeholder="О компании..."
+        />
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button onClick={onCancel} className="btn btn-secondary flex-1">
+          Отмена
+        </button>
+        <button onClick={handleSave} disabled={saving} className="btn btn-primary flex-1">
+          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Сохранить'}
+        </button>
       </div>
     </div>
   )

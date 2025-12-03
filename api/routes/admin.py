@@ -1,13 +1,18 @@
 from typing import Optional, List
 import io
+import httpx
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from config import settings
 from routes.auth import get_admin_user
 import db
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -153,24 +158,91 @@ async def mass_delete(data: MassActionRequest, user: dict = Depends(get_admin_us
 
 # ==================== Broadcast ====================
 
+async def send_telegram_message(tg_id: int, text: str, photo_url: Optional[str] = None) -> bool:
+    """Send message to user via Telegram Bot API."""
+    try:
+        async with httpx.AsyncClient() as client:
+            if photo_url:
+                # Send photo with caption
+                response = await client.post(
+                    f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendPhoto",
+                    json={
+                        "chat_id": tg_id,
+                        "photo": photo_url,
+                        "caption": text,
+                        "parse_mode": "HTML"
+                    },
+                    timeout=10.0
+                )
+            else:
+                # Send text message
+                response = await client.post(
+                    f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage",
+                    json={
+                        "chat_id": tg_id,
+                        "text": text,
+                        "parse_mode": "HTML"
+                    },
+                    timeout=10.0
+                )
+
+            result = response.json()
+            if not result.get('ok'):
+                log.warning(f"Failed to send message to {tg_id}: {result}")
+                return False
+            return True
+    except Exception as e:
+        log.error(f"Error sending message to {tg_id}: {e}")
+        return False
+
+
 @router.post("/broadcast")
 async def send_broadcast(data: BroadcastRequest, user: dict = Depends(get_admin_user)):
     """Send broadcast message to managers."""
+    if not data.message:
+        raise HTTPException(status_code=400, detail="Message is required")
+
     # Get recipients
     if data.recipient_ids:
-        # Send to specific managers
-        recipients = data.recipient_ids
+        # Get specific managers by ID
+        managers = await db.list_managers()
+        recipients = [m for m in managers if str(m['id']) in data.recipient_ids and not m.get('is_blocked')]
     else:
         # Send to all active managers
         managers = await db.list_managers()
-        recipients = [str(m['id']) for m in managers if not m.get('is_blocked')]
+        recipients = [m for m in managers if not m.get('is_blocked')]
 
-    # TODO: Implement actual message sending via bot
-    # This would require calling the bot's API or using a message queue
+    if not recipients:
+        return {
+            "success": False,
+            "error": "No recipients found",
+            "sent_count": 0,
+            "failed_count": 0,
+        }
+
+    # Send messages
+    sent_count = 0
+    failed_count = 0
+
+    for manager in recipients:
+        tg_id = manager.get('tg_id')
+        if not tg_id:
+            failed_count += 1
+            continue
+
+        success = await send_telegram_message(tg_id, data.message, data.photo)
+        if success:
+            sent_count += 1
+        else:
+            failed_count += 1
+
+    log.info(f"Broadcast sent: {sent_count} success, {failed_count} failed")
 
     return {
         "success": True,
-        "recipients_count": len(recipients),
+        "sent_count": sent_count,
+        "failed_count": failed_count,
+        "total_recipients": len(recipients),
     }
 
 

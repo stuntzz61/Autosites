@@ -160,15 +160,21 @@ async def archive_request(request_id: str, user: dict = Depends(get_current_user
 
 @router.delete("/{request_id}")
 async def delete_request(request_id: str, user: dict = Depends(get_current_user)):
-    """Delete a request (admin only for permanent delete)."""
+    """Delete a request. Managers can delete their own drafts/errors, admins can delete any."""
     request = await db.get_request(request_id)
 
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    # Only admin can delete, managers can only archive
+    # Check ownership
+    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Managers can only delete drafts or error requests
     if user['role'] != 'admin':
-        raise HTTPException(status_code=403, detail="Only admins can delete requests")
+        status = request.get('payload', {}).get('site', {}).get('meta', {}).get('status') or request.get('status', 'draft')
+        if status not in ['draft', 'error', 'generated_error']:
+            raise HTTPException(status_code=403, detail="Можно удалить только черновики или заявки с ошибками")
 
     await db.delete_request(request_id)
 

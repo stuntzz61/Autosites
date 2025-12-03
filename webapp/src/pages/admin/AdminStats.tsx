@@ -45,6 +45,23 @@ export default function AdminStats() {
     }
   }
 
+  const handleExportPdf = async () => {
+    try {
+      haptic?.impactOccurred('medium')
+      const response = await adminApi.export.pdf()
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `stats_${new Date().toISOString().split('T')[0]}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      toast.success('Загружено')
+    } catch {
+      toast.error('Ошибка экспорта PDF')
+    }
+  }
+
   const maxDayValue = Math.max(...(byDay?.map((d: any) => d.count) || [1]))
 
   const statusLabels: Record<string, string> = {
@@ -63,9 +80,14 @@ export default function AdminStats() {
   return (
     <div className="p-4 space-y-6">
       {/* Export */}
-      <button onClick={handleExportExcel} className="btn btn-secondary w-full">
-        <Download className="w-5 h-5" /> Скачать Excel
-      </button>
+      <div className="flex gap-3">
+        <button onClick={handleExportExcel} className="btn btn-secondary flex-1">
+          <Download className="w-5 h-5" /> Excel
+        </button>
+        <button onClick={handleExportPdf} className="btn btn-secondary flex-1">
+          <Download className="w-5 h-5" /> PDF
+        </button>
+      </div>
 
       {/* Overview */}
       <div className="grid grid-cols-2 gap-3">

@@ -24,24 +24,25 @@ export default function AdminBroadcast() {
 
   const broadcastMutation = useMutation({
     mutationFn: async () => {
-      let photoBase64 = undefined
-      if (photo) {
-        const reader = new FileReader()
-        photoBase64 = await new Promise<string>((resolve) => {
-          reader.onload = () => resolve(reader.result as string)
-          reader.readAsDataURL(photo)
-        })
-      }
-
+      // Note: photo upload not implemented yet (requires S3 upload first)
       return adminApi.broadcast({
         message,
-        photo: photoBase64,
+        photo: undefined,
         recipient_ids: sendToAll ? undefined : selectedManagers,
       })
     },
-    onSuccess: () => {
-      toast.success('Рассылка отправлена!')
-      haptic?.notificationOccurred('success')
+    onSuccess: (response) => {
+      const data = response.data
+      if (data.sent_count > 0) {
+        toast.success(`Отправлено: ${data.sent_count} из ${data.total_recipients}`)
+        haptic?.notificationOccurred('success')
+      } else {
+        toast.error('Не удалось отправить')
+        haptic?.notificationOccurred('error')
+      }
+      if (data.failed_count > 0) {
+        toast(`Не доставлено: ${data.failed_count}`, { icon: '⚠️' })
+      }
       setMessage('')
       setPhoto(null)
       setPhotoPreview(null)

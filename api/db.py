@@ -38,14 +38,11 @@ async def get_user_by_tg_id(tg_id: int) -> Optional[Dict]:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT id, tg_id, username, first_name, last_name, contact, role,
-                          approval_status, created_at
+                          approval_status, created_at, COALESCE(is_blocked, FALSE) as is_blocked
                    FROM users WHERE tg_id = %s""",
                 (tg_id,)
             )
-            result = await cur.fetchone()
-            if result:
-                result['is_blocked'] = False  # Default until migration applied
-            return result
+            return await cur.fetchone()
 
 
 async def get_user_by_id(user_id: str) -> Optional[Dict]:
@@ -53,14 +50,11 @@ async def get_user_by_id(user_id: str) -> Optional[Dict]:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT id, tg_id, username, first_name, last_name, contact, role,
-                          approval_status, created_at
+                          approval_status, created_at, COALESCE(is_blocked, FALSE) as is_blocked
                    FROM users WHERE id = %s""",
                 (user_id,)
             )
-            result = await cur.fetchone()
-            if result:
-                result['is_blocked'] = False  # Default until migration applied
-            return result
+            return await cur.fetchone()
 
 
 async def create_user(tg_id: int, username: str, first_name: str, last_name: str) -> Dict:
@@ -82,6 +76,7 @@ async def list_managers() -> List[Dict]:
             await cur.execute(
                 """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name, u.contact,
                           u.role, u.approval_status, u.created_at,
+                          COALESCE(u.is_blocked, FALSE) as is_blocked,
                           COUNT(r.id) as request_count
                    FROM users u
                    LEFT JOIN projects p ON p.manager_id = u.id
@@ -90,10 +85,7 @@ async def list_managers() -> List[Dict]:
                    GROUP BY u.id
                    ORDER BY request_count DESC"""
             )
-            results = await cur.fetchall()
-            for r in results:
-                r['is_blocked'] = False  # Default until migration applied
-            return results
+            return await cur.fetchall()
 
 
 async def list_pending_registrations() -> List[Dict]:
@@ -130,33 +122,27 @@ async def reject_user(user_id: str, reason: str):
 
 
 async def block_user(user_id: str):
-    """Block user. Note: requires migration 005 to be applied."""
+    """Block user."""
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
-            # Try to update is_blocked, ignore error if column doesn't exist yet
-            try:
-                await cur.execute(
-                    "UPDATE users SET is_blocked = TRUE WHERE id = %s",
-                    (user_id,)
-                )
-                await conn.commit()
-            except Exception:
-                pass  # Column may not exist yet
+            await cur.execute(
+                "UPDATE users SET is_blocked = TRUE WHERE id = %s",
+                (user_id,)
+            )
+            await conn.commit()
+            print(f"[DEBUG] User {user_id} blocked successfully")
 
 
 async def unblock_user(user_id: str):
-    """Unblock user. Note: requires migration 005 to be applied."""
+    """Unblock user."""
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
-            # Try to update is_blocked, ignore error if column doesn't exist yet
-            try:
-                await cur.execute(
-                    "UPDATE users SET is_blocked = FALSE WHERE id = %s",
-                    (user_id,)
-                )
-                await conn.commit()
-            except Exception:
-                pass  # Column may not exist yet
+            await cur.execute(
+                "UPDATE users SET is_blocked = FALSE WHERE id = %s",
+                (user_id,)
+            )
+            await conn.commit()
+            print(f"[DEBUG] User {user_id} unblocked successfully")
 
 
 async def update_user_role(user_id: str, role: str):
@@ -324,7 +310,22 @@ async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
             return row
 
 
+def normalize_status(status: str) -> str:
+    """Normalize legacy status names to current standard."""
+    mapping = {
+        'generated_ok': 'success',
+        'generated_error': 'error',
+        'ready': 'ready_to_generate',
+        'in_progress': 'generating',
+        'pending': 'draft',
+    }
+    return mapping.get(status.lower(), status)
+
+
 async def update_request_status(request_id: str, status: str):
+    # Normalize status before saving
+    normalized_status = normalize_status(status)
+
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
             # Update both status field and payload status
@@ -337,7 +338,7 @@ async def update_request_status(request_id: str, status: str):
                            %s::jsonb
                        )
                    WHERE id = %s""",
-                (status, json.dumps(status), request_id)
+                (normalized_status, json.dumps(normalized_status), request_id)
             )
             await conn.commit()
 
