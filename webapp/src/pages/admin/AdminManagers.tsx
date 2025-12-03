@@ -1,12 +1,34 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
-import { User, CheckCircle, XCircle, Ban, Unlock, Trash2 } from 'lucide-react'
+import {
+  User, CheckCircle, XCircle, Ban, Unlock, Trash2,
+  ChevronRight, Shield, UserCog, X, FileText, BarChart3
+} from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+
+interface Manager {
+  id: string
+  tg_id: number
+  username?: string
+  first_name: string
+  last_name?: string
+  contact?: string
+  role: string
+  approval_status: string
+  is_blocked: boolean
+  request_count?: number
+  total_requests?: number
+  completed_requests?: number
+  created_at: string
+}
 
 export default function AdminManagers() {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<'all' | 'pending'>('all')
+  const [selectedManager, setSelectedManager] = useState<Manager | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const { data: managers, isLoading } = useQuery({
     queryKey: ['admin', 'managers'],
@@ -39,6 +61,7 @@ export default function AdminManagers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
       toast.success('Менеджер заблокирован')
+      setSelectedManager(null)
     },
   })
 
@@ -47,6 +70,32 @@ export default function AdminManagers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
       toast.success('Менеджер разблокирован')
+      setSelectedManager(null)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => adminApi.managers.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
+      toast.success('Менеджер удалён')
+      setSelectedManager(null)
+      setShowDeleteConfirm(false)
+    },
+    onError: () => {
+      toast.error('Ошибка удаления')
+    },
+  })
+
+  const makeAdminMutation = useMutation({
+    mutationFn: (id: string) => adminApi.managers.makeAdmin(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
+      toast.success('Роль изменена на админа')
+      setSelectedManager(null)
+    },
+    onError: () => {
+      toast.error('Ошибка')
     },
   })
 
@@ -118,12 +167,14 @@ export default function AdminManagers() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => approveMutation.mutate(user.id)}
+                      disabled={approveMutation.isPending}
                       className="p-2 rounded-xl bg-green-500/20 text-green-500"
                     >
                       <CheckCircle className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => rejectMutation.mutate(user.id)}
+                      disabled={rejectMutation.isPending}
                       className="p-2 rounded-xl bg-red-500/20 text-red-500"
                     >
                       <XCircle className="w-5 h-5" />
@@ -142,16 +193,25 @@ export default function AdminManagers() {
           {managers?.length === 0 ? (
             <p className="text-center text-tg-hint py-8">Нет менеджеров</p>
           ) : (
-            managers?.map((manager: any) => (
-              <div key={manager.id} className="bg-tg-secondary-bg rounded-2xl p-4">
-                <div className="flex items-start justify-between">
+            managers?.map((manager: Manager) => (
+              <button
+                key={manager.id}
+                onClick={() => setSelectedManager(manager)}
+                className="w-full bg-tg-secondary-bg rounded-2xl p-4 text-left"
+              >
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      manager.is_blocked ? 'bg-red-500/20' : 'bg-tg-accent/20'
+                      manager.is_blocked ? 'bg-red-500/20' :
+                      manager.role === 'admin' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
                     }`}>
-                      <User className={`w-5 h-5 ${
-                        manager.is_blocked ? 'text-red-500' : 'text-tg-accent'
-                      }`} />
+                      {manager.role === 'admin' ? (
+                        <Shield className={`w-5 h-5 text-purple-500`} />
+                      ) : (
+                        <User className={`w-5 h-5 ${
+                          manager.is_blocked ? 'text-red-500' : 'text-tg-accent'
+                        }`} />
+                      )}
                     </div>
                     <div>
                       <p className="font-medium text-tg-text">
@@ -159,41 +219,225 @@ export default function AdminManagers() {
                         {manager.is_blocked && (
                           <span className="ml-2 text-xs text-red-500">(заблокирован)</span>
                         )}
+                        {manager.role === 'admin' && (
+                          <span className="ml-2 text-xs text-purple-500">(админ)</span>
+                        )}
                       </p>
                       {manager.username && (
                         <p className="text-sm text-tg-hint">@{manager.username}</p>
                       )}
                       <p className="text-xs text-tg-hint">
-                        Заявок: {manager.total_requests || 0} | Завершено: {manager.completed_requests || 0}
+                        Заявок: {manager.request_count || manager.total_requests || 0}
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    {manager.is_blocked ? (
-                      <button
-                        onClick={() => unblockMutation.mutate(manager.id)}
-                        className="p-2 rounded-xl bg-green-500/20 text-green-500"
-                        title="Разблокировать"
-                      >
-                        <Unlock className="w-5 h-5" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => blockMutation.mutate(manager.id)}
-                        className="p-2 rounded-xl bg-orange-500/20 text-orange-500"
-                        title="Заблокировать"
-                      >
-                        <Ban className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
+                  <ChevronRight className="w-5 h-5 text-tg-hint" />
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>
       )}
+
+      {/* Manager Detail Modal */}
+      <AnimatePresence>
+        {selectedManager && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedManager(null)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[80vh] overflow-y-auto"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+            >
+              <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
+
+              {/* Header */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+                  selectedManager.is_blocked ? 'bg-red-500/20' :
+                  selectedManager.role === 'admin' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
+                }`}>
+                  {selectedManager.role === 'admin' ? (
+                    <Shield className="w-8 h-8 text-purple-500" />
+                  ) : (
+                    <User className={`w-8 h-8 ${
+                      selectedManager.is_blocked ? 'text-red-500' : 'text-tg-accent'
+                    }`} />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-tg-text">
+                    {selectedManager.first_name} {selectedManager.last_name}
+                  </h2>
+                  {selectedManager.username && (
+                    <a
+                      href={`https://t.me/${selectedManager.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-tg-accent"
+                    >
+                      @{selectedManager.username}
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="bg-tg-secondary-bg rounded-xl p-3">
+                  <div className="flex items-center gap-2 text-tg-hint mb-1">
+                    <FileText className="w-4 h-4" />
+                    <span className="text-xs">Заявок</span>
+                  </div>
+                  <p className="text-2xl font-bold text-tg-text">
+                    {selectedManager.request_count || selectedManager.total_requests || 0}
+                  </p>
+                </div>
+                <div className="bg-tg-secondary-bg rounded-xl p-3">
+                  <div className="flex items-center gap-2 text-tg-hint mb-1">
+                    <BarChart3 className="w-4 h-4" />
+                    <span className="text-xs">Завершено</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-500">
+                    {selectedManager.completed_requests || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="bg-tg-secondary-bg rounded-xl p-4 mb-6 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-tg-hint">Telegram ID</span>
+                  <span className="text-tg-text">{selectedManager.tg_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-tg-hint">Роль</span>
+                  <span className="text-tg-text">{selectedManager.role === 'admin' ? 'Администратор' : 'Менеджер'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-tg-hint">Статус</span>
+                  <span className={selectedManager.is_blocked ? 'text-red-500' : 'text-green-500'}>
+                    {selectedManager.is_blocked ? 'Заблокирован' : 'Активен'}
+                  </span>
+                </div>
+                {selectedManager.contact && (
+                  <div className="flex justify-between">
+                    <span className="text-tg-hint">Контакт</span>
+                    <span className="text-tg-text">{selectedManager.contact}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-tg-hint">Регистрация</span>
+                  <span className="text-tg-text">
+                    {new Date(selectedManager.created_at).toLocaleDateString('ru')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-2">
+                {/* Block/Unblock */}
+                {selectedManager.is_blocked ? (
+                  <button
+                    onClick={() => unblockMutation.mutate(selectedManager.id)}
+                    disabled={unblockMutation.isPending}
+                    className="w-full p-3 rounded-xl bg-green-500/20 text-green-600 font-medium flex items-center justify-center gap-2"
+                  >
+                    <Unlock className="w-5 h-5" />
+                    Разблокировать
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => blockMutation.mutate(selectedManager.id)}
+                    disabled={blockMutation.isPending}
+                    className="w-full p-3 rounded-xl bg-orange-500/20 text-orange-600 font-medium flex items-center justify-center gap-2"
+                  >
+                    <Ban className="w-5 h-5" />
+                    Заблокировать
+                  </button>
+                )}
+
+                {/* Make Admin */}
+                {selectedManager.role !== 'admin' && (
+                  <button
+                    onClick={() => makeAdminMutation.mutate(selectedManager.id)}
+                    disabled={makeAdminMutation.isPending}
+                    className="w-full p-3 rounded-xl bg-purple-500/20 text-purple-600 font-medium flex items-center justify-center gap-2"
+                  >
+                    <Shield className="w-5 h-5" />
+                    Сделать админом
+                  </button>
+                )}
+
+                {/* Delete */}
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full p-3 rounded-xl bg-red-500/20 text-red-600 font-medium flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Удалить менеджера
+                </button>
+
+                {/* Close */}
+                <button
+                  onClick={() => setSelectedManager(null)}
+                  className="w-full p-3 rounded-xl bg-tg-secondary-bg text-tg-text font-medium"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation */}
+      <AnimatePresence>
+        {showDeleteConfirm && selectedManager && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDeleteConfirm(false)}
+            />
+            <motion.div
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-tg-bg rounded-2xl p-6 z-50 w-[90%] max-w-sm"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <h3 className="text-lg font-semibold text-tg-text mb-2">Удалить менеджера?</h3>
+              <p className="text-tg-hint mb-4">
+                {selectedManager.first_name} {selectedManager.last_name} будет удалён. Это действие нельзя отменить.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 p-3 rounded-xl bg-tg-secondary-bg text-tg-text font-medium"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => deleteMutation.mutate(selectedManager.id)}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 p-3 rounded-xl bg-red-500 text-white font-medium"
+                >
+                  {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
-

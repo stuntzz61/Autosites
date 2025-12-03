@@ -79,6 +79,13 @@ async def delete_manager(manager_id: str, user: dict = Depends(get_admin_user)):
     return {"success": True}
 
 
+@router.post("/managers/{manager_id}/make-admin")
+async def make_manager_admin(manager_id: str, user: dict = Depends(get_admin_user)):
+    """Promote manager to admin role."""
+    await db.update_user_role(manager_id, 'admin')
+    return {"success": True}
+
+
 # ==================== Pending Registrations ====================
 
 @router.get("/pending")

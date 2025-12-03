@@ -538,6 +538,12 @@ function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string
   )
 }
 
+interface ServiceItem {
+  name: string
+  summary: string
+  priceFrom: string
+}
+
 function EditRequestForm({
   request,
   onSave,
@@ -551,18 +557,49 @@ function EditRequestForm({
   const site = payload.site || {}
   const client = payload.client || {}
 
+  // Parse existing services
+  const existingServices = (site.services || []).map((s: any) =>
+    typeof s === 'string' ? { name: s, summary: '', priceFrom: '' } : s
+  )
+
+  const [activeTab, setActiveTab] = useState<'info' | 'services' | 'details'>('info')
   const [formData, setFormData] = useState({
     company: site.company || request.company_name || '',
     business_type: site.business_type || '',
     phone: site.phone || '',
     email: site.email || '',
     address: site.address || '',
+    work_hours: site.work_hours || '',
     client_name: client.name || request.client_name || '',
+    client_company: client.company || '',
     client_contact: client.contact || '',
     summary: site.summary || '',
+    color_palette: site.color_palette || '',
+    services: existingServices.length > 0 ? existingServices : [{ name: '', summary: '', priceFrom: '' }],
   })
 
   const [saving, setSaving] = useState(false)
+
+  const addService = () => {
+    setFormData(prev => ({
+      ...prev,
+      services: [...prev.services, { name: '', summary: '', priceFrom: '' }],
+    }))
+  }
+
+  const updateService = (index: number, field: keyof ServiceItem, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      services: prev.services.map((s, i) => i === index ? { ...s, [field]: value } : s),
+    }))
+  }
+
+  const removeService = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      services: prev.services.filter((_, i) => i !== index),
+    }))
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -572,6 +609,7 @@ function EditRequestForm({
         client: {
           ...client,
           name: formData.client_name,
+          company: formData.client_company,
           contact: formData.client_contact,
         },
         site: {
@@ -581,7 +619,10 @@ function EditRequestForm({
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
+          work_hours: formData.work_hours,
           summary: formData.summary,
+          color_palette: formData.color_palette,
+          services: formData.services.filter(s => s.name.trim()),
         }
       }
 
@@ -601,94 +642,213 @@ function EditRequestForm({
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="text-xs text-tg-hint mb-1 block">Компания</label>
-        <input
-          type="text"
-          value={formData.company}
-          onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
-          className="input"
-          placeholder="Название компании"
-        />
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-tg-separator pb-3">
+        <button
+          onClick={() => setActiveTab('info')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+            activeTab === 'info' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-tg-hint'
+          }`}
+        >
+          Основное
+        </button>
+        <button
+          onClick={() => setActiveTab('services')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+            activeTab === 'services' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-tg-hint'
+          }`}
+        >
+          Услуги ({formData.services.filter(s => s.name.trim()).length})
+        </button>
+        <button
+          onClick={() => setActiveTab('details')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+            activeTab === 'details' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-tg-hint'
+          }`}
+        >
+          Детали
+        </button>
       </div>
 
-      <div>
-        <label className="text-xs text-tg-hint mb-1 block">Сфера деятельности</label>
-        <input
-          type="text"
-          value={formData.business_type}
-          onChange={(e) => setFormData(prev => ({ ...prev, business_type: e.target.value }))}
-          className="input"
-          placeholder="Услуги, товары..."
-        />
-      </div>
+      {/* Info Tab */}
+      {activeTab === 'info' && (
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Название компании</label>
+            <input
+              type="text"
+              value={formData.company}
+              onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+              className="input"
+              placeholder="Webly"
+            />
+          </div>
 
-      <div>
-        <label className="text-xs text-tg-hint mb-1 block">Клиент</label>
-        <input
-          type="text"
-          value={formData.client_name}
-          onChange={(e) => setFormData(prev => ({ ...prev, client_name: e.target.value }))}
-          className="input"
-          placeholder="ФИО клиента"
-        />
-      </div>
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Сфера деятельности</label>
+            <input
+              type="text"
+              value={formData.business_type}
+              onChange={(e) => setFormData(prev => ({ ...prev, business_type: e.target.value }))}
+              className="input"
+              placeholder="Создание сайтов"
+            />
+          </div>
 
-      <div>
-        <label className="text-xs text-tg-hint mb-1 block">Контакт клиента</label>
-        <input
-          type="text"
-          value={formData.client_contact}
-          onChange={(e) => setFormData(prev => ({ ...prev, client_contact: e.target.value }))}
-          className="input"
-          placeholder="+7... или @telegram"
-        />
-      </div>
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">ФИО клиента</label>
+            <input
+              type="text"
+              value={formData.client_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, client_name: e.target.value }))}
+              className="input"
+              placeholder="Иванов Иван"
+            />
+          </div>
 
-      <div>
-        <label className="text-xs text-tg-hint mb-1 block">Телефон сайта</label>
-        <input
-          type="tel"
-          value={formData.phone}
-          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-          className="input"
-          placeholder="+7 (XXX) XXX-XX-XX"
-        />
-      </div>
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Компания клиента</label>
+            <input
+              type="text"
+              value={formData.client_company}
+              onChange={(e) => setFormData(prev => ({ ...prev, client_company: e.target.value }))}
+              className="input"
+              placeholder="ООО «Компания»"
+            />
+          </div>
 
-      <div>
-        <label className="text-xs text-tg-hint mb-1 block">Email</label>
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-          className="input"
-          placeholder="info@company.ru"
-        />
-      </div>
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Контакт клиента</label>
+            <input
+              type="text"
+              value={formData.client_contact}
+              onChange={(e) => setFormData(prev => ({ ...prev, client_contact: e.target.value }))}
+              className="input"
+              placeholder="+7... или @telegram"
+            />
+          </div>
 
-      <div>
-        <label className="text-xs text-tg-hint mb-1 block">Адрес</label>
-        <input
-          type="text"
-          value={formData.address}
-          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-          className="input"
-          placeholder="г. Москва, ул..."
-        />
-      </div>
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Телефон для сайта</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              className="input"
+              placeholder="+7 (XXX) XXX-XX-XX"
+            />
+          </div>
 
-      <div>
-        <label className="text-xs text-tg-hint mb-1 block">Описание</label>
-        <textarea
-          value={formData.summary}
-          onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
-          className="input min-h-[80px] resize-none"
-          placeholder="О компании..."
-        />
-      </div>
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              className="input"
+              placeholder="info@company.ru"
+            />
+          </div>
 
-      <div className="flex gap-3 pt-2">
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Адрес</label>
+            <input
+              type="text"
+              value={formData.address}
+              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+              className="input"
+              placeholder="г. Москва, ул..."
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Часы работы</label>
+            <input
+              type="text"
+              value={formData.work_hours}
+              onChange={(e) => setFormData(prev => ({ ...prev, work_hours: e.target.value }))}
+              className="input"
+              placeholder="Пн-Пт 9:00-18:00"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Services Tab */}
+      {activeTab === 'services' && (
+        <div className="space-y-4">
+          {formData.services.map((service, i) => (
+            <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-medium text-tg-text">Услуга {i + 1}</span>
+                {formData.services.length > 1 && (
+                  <button
+                    onClick={() => removeService(i)}
+                    className="text-red-500 text-sm"
+                  >
+                    Удалить
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3">
+                <input
+                  value={service.name}
+                  onChange={(e) => updateService(i, 'name', e.target.value)}
+                  placeholder="Название услуги *"
+                  className="input"
+                />
+                <input
+                  value={service.summary}
+                  onChange={(e) => updateService(i, 'summary', e.target.value)}
+                  placeholder="Описание"
+                  className="input"
+                />
+                <input
+                  value={service.priceFrom}
+                  onChange={(e) => updateService(i, 'priceFrom', e.target.value)}
+                  placeholder="от 10 000 ₽"
+                  className="input"
+                />
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={addService}
+            className="w-full py-3 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint"
+          >
+            + Добавить услугу
+          </button>
+        </div>
+      )}
+
+      {/* Details Tab */}
+      {activeTab === 'details' && (
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">О компании</label>
+            <textarea
+              value={formData.summary}
+              onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
+              className="input min-h-[100px] resize-none"
+              placeholder="Подробное описание компании..."
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Цветовая палитра</label>
+            <input
+              type="text"
+              value={formData.color_palette}
+              onChange={(e) => setFormData(prev => ({ ...prev, color_palette: e.target.value }))}
+              className="input"
+              placeholder="синий и белый"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-4 border-t border-tg-separator">
         <button onClick={onCancel} className="btn btn-secondary flex-1">
           Отмена
         </button>

@@ -204,9 +204,15 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
         try:
             # Build payload in the expected format
             payload = request.get('payload', {}) or {}
+
+            # Get manager's tg_id for notifications
+            manager = await db.get_user_by_id(str(request.get('user_id', '')))
+            manager_tg_id = manager.get('tg_id') if manager else None
+
             webhook_data = {
                 "request_id": request_id,
                 "manager_id": str(request.get('user_id', '')),
+                "manager_tg_id": manager_tg_id,  # Chat ID for Telegram notifications
                 "client": payload.get('client', {}),
                 "site": payload.get('site', {}),
             }

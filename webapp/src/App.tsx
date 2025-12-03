@@ -41,6 +41,74 @@ function App() {
     return <LoadingScreen />
   }
 
+  // Check if user is blocked
+  if (user?.is_blocked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-tg-text mb-2">
+            Аккаунт заблокирован
+          </h1>
+          <p className="text-tg-hint mb-4">
+            Ваш аккаунт был заблокирован администратором.
+          </p>
+          <p className="text-sm text-tg-hint">
+            Для разблокировки свяжитесь с администратором.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Check if user is pending approval
+  if (user && user.approval_status === 'pending') {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-tg-text mb-2">
+            Ожидание одобрения
+          </h1>
+          <p className="text-tg-hint">
+            Ваша заявка на регистрацию находится на рассмотрении.
+            Мы уведомим вас, когда администратор примет решение.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Check if user is rejected
+  if (user && user.approval_status === 'rejected') {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-semibold text-tg-text mb-2">
+            Заявка отклонена
+          </h1>
+          <p className="text-tg-hint">
+            К сожалению, ваша заявка была отклонена.
+            Свяжитесь с администратором для уточнения деталей.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   // Not authenticated
   if (!user) {
     // In browser, show dev login page

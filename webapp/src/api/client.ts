@@ -73,6 +73,7 @@ export const adminApi = {
     block: (id: string) => api.post(`/admin/managers/${id}/block`),
     unblock: (id: string) => api.post(`/admin/managers/${id}/unblock`),
     delete: (id: string) => api.delete(`/admin/managers/${id}`),
+    makeAdmin: (id: string) => api.post(`/admin/managers/${id}/make-admin`),
   },
 
   pending: {
