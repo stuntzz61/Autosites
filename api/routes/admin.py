@@ -1,5 +1,6 @@
 from typing import Optional, List
 import io
+import base64
 import httpx
 import logging
 from datetime import datetime
@@ -165,22 +166,68 @@ async def mass_delete(data: MassActionRequest, user: dict = Depends(get_admin_us
 
 # ==================== Broadcast ====================
 
-async def send_telegram_message(tg_id: int, text: str, photo_url: Optional[str] = None) -> bool:
+async def send_telegram_message(tg_id: int, text: str, photo_data: Optional[str] = None) -> bool:
     """Send message to user via Telegram Bot API."""
     try:
         async with httpx.AsyncClient() as client:
-            if photo_url:
-                # Send photo with caption
-                response = await client.post(
-                    f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendPhoto",
-                    json={
-                        "chat_id": tg_id,
-                        "photo": photo_url,
-                        "caption": text,
-                        "parse_mode": "HTML"
-                    },
-                    timeout=10.0
-                )
+            if photo_data:
+                # Check if it's a base64 data URL
+                if photo_data.startswith('data:'):
+                    # Extract base64 content
+                    # Format: data:image/jpeg;base64,/9j/4AAQ...
+                    try:
+                        header, b64_content = photo_data.split(',', 1)
+                        image_bytes = base64.b64decode(b64_content)
+
+                        # Determine file extension from header
+                        ext = 'jpg'
+                        if 'png' in header:
+                            ext = 'png'
+                        elif 'gif' in header:
+                            ext = 'gif'
+                        elif 'webp' in header:
+                            ext = 'webp'
+
+                        # Send as multipart/form-data
+                        files = {
+                            'photo': (f'photo.{ext}', image_bytes, f'image/{ext}')
+                        }
+                        data = {
+                            'chat_id': str(tg_id),
+                            'caption': text,
+                            'parse_mode': 'HTML'
+                        }
+
+                        response = await client.post(
+                            f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendPhoto",
+                            data=data,
+                            files=files,
+                            timeout=30.0
+                        )
+                    except Exception as e:
+                        log.error(f"Failed to decode base64 image: {e}")
+                        # Fallback to text-only message
+                        response = await client.post(
+                            f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage",
+                            json={
+                                "chat_id": tg_id,
+                                "text": text,
+                                "parse_mode": "HTML"
+                            },
+                            timeout=10.0
+                        )
+                else:
+                    # It's a regular URL
+                    response = await client.post(
+                        f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendPhoto",
+                        json={
+                            "chat_id": tg_id,
+                            "photo": photo_data,
+                            "caption": text,
+                            "parse_mode": "HTML"
+                        },
+                        timeout=10.0
+                    )
             else:
                 # Send text message
                 response = await client.post(
