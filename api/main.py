@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routes import auth, requests, admin, profile, services
+from routes import auth, requests, admin, profile, services, sites
 from db import init_pool, close_pool
 
 logging.basicConfig(
@@ -46,6 +46,7 @@ app.include_router(requests.router, prefix="/api/requests", tags=["requests"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(services.router, prefix="/api", tags=["services"])
+app.include_router(sites.router, prefix="/api/sites", tags=["sites"])
 
 
 @app.get("/api/health")

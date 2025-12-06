@@ -804,3 +804,475 @@ async def count_new_feedback() -> int:
             )
             result = await cur.fetchone()
             return result[0] if result else 0
+
+
+# ==================== Client Sites ====================
+
+async def create_client_site(
+    request_id: str,
+    manager_id: str,
+    company_name: str,
+    client_name: str = None,
+    client_contact: str = None,
+    hosting_plan: str = 'trial',
+    notes: str = None
+) -> Dict:
+    """Create a new client site record."""
+    from datetime import timedelta
+
+    # Calculate hosting expiration based on plan
+    hosting_expires = None
+    if hosting_plan == 'trial':
+        hosting_expires = datetime.now(timezone.utc) + timedelta(days=7)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO client_sites
+                   (request_id, manager_id, company_name, client_name, client_contact,
+                    hosting_plan, hosting_expires_at, notes)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                   RETURNING *""",
+                (request_id, manager_id, company_name, client_name, client_contact,
+                 hosting_plan, hosting_expires, notes)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def get_client_site(site_id: str) -> Optional[Dict]:
+    """Get client site by ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT cs.*,
+                          u.first_name as manager_first_name,
+                          u.last_name as manager_last_name,
+                          u.tg_id as manager_tg_id
+                   FROM client_sites cs
+                   JOIN users u ON u.id = cs.manager_id
+                   WHERE cs.id = %s""",
+                (site_id,)
+            )
+            return await cur.fetchone()
+
+
+async def get_client_site_by_request(request_id: str) -> Optional[Dict]:
+    """Get client site by request ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT cs.*,
+                          u.first_name as manager_first_name,
+                          u.last_name as manager_last_name,
+                          u.tg_id as manager_tg_id
+                   FROM client_sites cs
+                   JOIN users u ON u.id = cs.manager_id
+                   WHERE cs.request_id = %s""",
+                (request_id,)
+            )
+            return await cur.fetchone()
+
+
+async def get_client_site_by_deploy_id(deploy_id: str) -> Optional[Dict]:
+    """Get client site by deploy ID from deploy-node."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT * FROM client_sites WHERE deploy_id = %s",
+                (deploy_id,)
+            )
+            return await cur.fetchone()
+
+
+async def list_client_sites(
+    manager_id: str = None,
+    deploy_status: str = None,
+    hosting_plan: str = None,
+    limit: int = 50,
+    offset: int = 0
+) -> List[Dict]:
+    """List client sites with filters."""
+    conditions = []
+    params = []
+
+    if manager_id:
+        conditions.append("cs.manager_id = %s")
+        params.append(manager_id)
+
+    if deploy_status:
+        conditions.append("cs.deploy_status = %s")
+        params.append(deploy_status)
+
+    if hosting_plan:
+        conditions.append("cs.hosting_plan = %s")
+        params.append(hosting_plan)
+
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    params.extend([limit, offset])
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""SELECT cs.*,
+                           u.first_name as manager_first_name,
+                           u.last_name as manager_last_name,
+                           u.username as manager_username
+                    FROM client_sites cs
+                    JOIN users u ON u.id = cs.manager_id
+                    WHERE {where_clause}
+                    ORDER BY cs.created_at DESC
+                    LIMIT %s OFFSET %s""",
+                params
+            )
+            return await cur.fetchall()
+
+
+async def update_client_site(site_id: str, data: Dict) -> Optional[Dict]:
+    """Update client site."""
+    allowed_fields = [
+        'company_name', 'client_name', 'client_contact',
+        'deploy_id', 'preview_slug', 'preview_url',
+        'domain', 'domain_status', 'ssl_enabled',
+        'generation_status', 'deploy_status',
+        'hosting_plan', 'hosting_expires_at', 'hosting_auto_renew',
+        'archive_s3_key', 'archive_size_bytes',
+        'server_id', 'server_name', 'server_host', 'container_port',
+        'last_error', 'last_error_at',
+        'notes', 'metadata',
+        'generated_at', 'deployed_at'
+    ]
+
+    updates = []
+    params = []
+
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f"{field} = %s")
+            value = data[field]
+            # Convert dict to JSON string for JSONB fields
+            if field == 'metadata' and isinstance(value, dict):
+                value = json.dumps(value)
+            params.append(value)
+
+    if not updates:
+        return await get_client_site(site_id)
+
+    params.append(site_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE client_sites
+                    SET {", ".join(updates)}
+                    WHERE id = %s
+                    RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def update_site_deploy_status(
+    site_id: str,
+    deploy_status: str,
+    deploy_id: str = None,
+    preview_slug: str = None,
+    preview_url: str = None,
+    server_id: str = None,
+    server_name: str = None,
+    error: str = None
+) -> Optional[Dict]:
+    """Update deployment status of a site."""
+    updates = ["deploy_status = %s"]
+    params = [deploy_status]
+
+    if deploy_id:
+        updates.append("deploy_id = %s")
+        params.append(deploy_id)
+
+    if preview_slug:
+        updates.append("preview_slug = %s")
+        params.append(preview_slug)
+
+    if preview_url:
+        updates.append("preview_url = %s")
+        params.append(preview_url)
+
+    if server_id:
+        updates.append("server_id = %s")
+        params.append(server_id)
+
+    if server_name:
+        updates.append("server_name = %s")
+        params.append(server_name)
+
+    if deploy_status == 'active':
+        updates.append("deployed_at = NOW()")
+
+    if error:
+        updates.append("last_error = %s")
+        updates.append("last_error_at = NOW()")
+        params.append(error)
+
+    params.append(site_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE client_sites
+                    SET {", ".join(updates)}
+                    WHERE id = %s
+                    RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def update_site_generation_status(
+    site_id: str,
+    status: str,
+    archive_s3_key: str = None,
+    archive_size_bytes: int = None,
+    error: str = None
+) -> Optional[Dict]:
+    """Update generation status of a site."""
+    updates = ["generation_status = %s"]
+    params = [status]
+
+    if archive_s3_key:
+        updates.append("archive_s3_key = %s")
+        params.append(archive_s3_key)
+
+    if archive_size_bytes:
+        updates.append("archive_size_bytes = %s")
+        params.append(archive_size_bytes)
+
+    if status == 'completed':
+        updates.append("generated_at = NOW()")
+
+    if error:
+        updates.append("last_error = %s")
+        updates.append("last_error_at = NOW()")
+        params.append(error)
+
+    params.append(site_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE client_sites
+                    SET {", ".join(updates)}
+                    WHERE id = %s
+                    RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def assign_domain_to_site(
+    site_id: str,
+    domain: str,
+    ssl_enabled: bool = False
+) -> Optional[Dict]:
+    """Assign a custom domain to a site."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """UPDATE client_sites
+                   SET domain = %s, domain_status = 'pending', ssl_enabled = %s
+                   WHERE id = %s
+                   RETURNING *""",
+                (domain, ssl_enabled, site_id)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def extend_hosting(
+    site_id: str,
+    plan: str,
+    months: int = 1
+) -> Optional[Dict]:
+    """Extend hosting for a site."""
+    from datetime import timedelta
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            # Get current expiration
+            await cur.execute(
+                "SELECT hosting_expires_at FROM client_sites WHERE id = %s",
+                (site_id,)
+            )
+            current = await cur.fetchone()
+
+            if not current:
+                return None
+
+            # Calculate new expiration
+            base_date = current['hosting_expires_at']
+            if not base_date or base_date < datetime.now(timezone.utc):
+                base_date = datetime.now(timezone.utc)
+
+            new_expiration = base_date + timedelta(days=30 * months)
+
+            # Update
+            await cur.execute(
+                """UPDATE client_sites
+                   SET hosting_plan = %s, hosting_expires_at = %s
+                   WHERE id = %s
+                   RETURNING *""",
+                (plan, new_expiration, site_id)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def get_expiring_sites(days: int = 7) -> List[Dict]:
+    """Get sites with expiring hosting."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT cs.*,
+                          u.first_name as manager_first_name,
+                          u.last_name as manager_last_name,
+                          u.tg_id as manager_tg_id,
+                          EXTRACT(DAY FROM cs.hosting_expires_at - NOW()) as days_remaining
+                   FROM client_sites cs
+                   JOIN users u ON u.id = cs.manager_id
+                   WHERE cs.deploy_status = 'active'
+                     AND cs.hosting_expires_at IS NOT NULL
+                     AND cs.hosting_expires_at <= NOW() + INTERVAL '%s days'
+                   ORDER BY cs.hosting_expires_at ASC""",
+                (days,)
+            )
+            return await cur.fetchall()
+
+
+async def get_sites_stats() -> Dict:
+    """Get statistics about client sites."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT
+                   COUNT(*) as total_sites,
+                   COUNT(*) FILTER (WHERE deploy_status = 'active') as active_sites,
+                   COUNT(*) FILTER (WHERE deploy_status IN ('pending', 'deploying')) as pending_sites,
+                   COUNT(*) FILTER (WHERE deploy_status = 'failed') as failed_sites,
+                   COUNT(*) FILTER (WHERE generation_status = 'generating') as generating_sites,
+                   COUNT(*) FILTER (WHERE hosting_plan = 'trial') as trial_sites,
+                   COUNT(*) FILTER (WHERE hosting_plan != 'trial' AND hosting_plan IS NOT NULL) as paid_sites,
+                   COUNT(*) FILTER (WHERE hosting_expires_at < NOW() AND deploy_status = 'active') as expired_sites
+                   FROM client_sites"""
+            )
+            return await cur.fetchone()
+
+
+async def delete_client_site(site_id: str):
+    """Delete a client site."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("DELETE FROM client_sites WHERE id = %s", (site_id,))
+            await conn.commit()
+
+
+# ==================== Deploy History ====================
+
+async def create_deploy_history(
+    client_site_id: str,
+    deploy_id: str,
+    action: str,
+    initiated_by: str = None,
+    archive_s3_key: str = None
+) -> Dict:
+    """Create a deploy history record."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO deploy_history
+                   (client_site_id, deploy_id, action, status, initiated_by, archive_s3_key)
+                   VALUES (%s, %s, %s, 'pending', %s, %s)
+                   RETURNING *""",
+                (client_site_id, deploy_id, action, initiated_by, archive_s3_key)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def update_deploy_history(
+    history_id: str,
+    status: str,
+    build_output: str = None,
+    error_message: str = None
+) -> Optional[Dict]:
+    """Update deploy history record."""
+    updates = ["status = %s"]
+    params = [status]
+
+    if build_output:
+        updates.append("build_output = %s")
+        params.append(build_output)
+
+    if error_message:
+        updates.append("error_message = %s")
+        params.append(error_message)
+
+    if status in ('success', 'failed'):
+        updates.append("completed_at = NOW()")
+
+    params.append(history_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE deploy_history
+                    SET {", ".join(updates)}
+                    WHERE id = %s
+                    RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def get_deploy_history(client_site_id: str, limit: int = 10) -> List[Dict]:
+    """Get deploy history for a site."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT dh.*, u.first_name, u.last_name
+                   FROM deploy_history dh
+                   LEFT JOIN users u ON u.id = dh.initiated_by
+                   WHERE dh.client_site_id = %s
+                   ORDER BY dh.started_at DESC
+                   LIMIT %s""",
+                (client_site_id, limit)
+            )
+            return await cur.fetchall()
+
+
+# ==================== Hosting Plans ====================
+
+async def list_hosting_plans(active_only: bool = True) -> List[Dict]:
+    """List available hosting plans."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            query = "SELECT * FROM hosting_plans"
+            if active_only:
+                query += " WHERE is_active = TRUE"
+            query += " ORDER BY sort_order"
+            await cur.execute(query)
+            return await cur.fetchall()
+
+
+async def get_hosting_plan(plan_id: str) -> Optional[Dict]:
+    """Get a specific hosting plan."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT * FROM hosting_plans WHERE id = %s",
+                (plan_id,)
+            )
+            return await cur.fetchone()

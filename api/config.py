@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # Bot webhook (for notifications)
     BOT_WEBHOOK_URL: str = ""
 
+    # Deploy Node
+    DEPLOY_NODE_URL: str = ""  # e.g. https://deploy.autosites.ru
+    AUTO_DEPLOY_ENABLED: bool = False  # Auto-deploy after generation
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
 
