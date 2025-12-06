@@ -5,7 +5,8 @@ import {
   Building2, User, Phone, Mail, MapPin, Briefcase,
   Image, Archive, Send, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronDown, X, ExternalLink,
-  Palette, Upload, Camera, Edit3, Trash2, Plus, Sparkles
+  Palette, Upload, Camera, Edit3, Trash2, Plus, Sparkles,
+  ChevronLeft, ChevronRight, ZoomIn, ImageIcon
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -47,6 +48,7 @@ export default function RequestDetailPage() {
   const [showServicesModal, setShowServicesModal] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('gallery')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Check if user is admin
@@ -475,45 +477,160 @@ export default function RequestDetailPage() {
 
         <Section title={`Фото (${images.length})`}>
           <div className="p-4 space-y-4">
+            {/* Upload button */}
             <button
               onClick={() => setShowPhotoUpload(true)}
-              className="w-full p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint"
+              className="w-full p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-tg-link hover:text-tg-link transition-colors"
             >
-              <Camera className="w-5 h-5 mx-auto mb-2" />
-              Добавить фото
+              <Camera className="w-6 h-6 mx-auto mb-2" />
+              <span className="text-sm font-medium">Добавить фото</span>
             </button>
 
             {images.length > 0 ? (
-              <div className="grid grid-cols-4 gap-2">
-                {images.map((img: any, i: number) => (
-                  <div key={i} className="relative aspect-square">
-                    <img
-                      src={img.url}
-                      alt={img.category || 'Фото'}
-                      className="w-full h-full rounded-xl object-cover bg-tg-secondary-bg"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
-                      }}
-                    />
-                    <button
-                      onClick={() => handleDeletePhoto(img.url)}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg"
+              <div className="space-y-3">
+                {/* Main grid - 2 columns for larger previews */}
+                <div className="grid grid-cols-2 gap-3">
+                  {images.map((img: any, i: number) => (
+                    <motion.div
+                      key={i}
+                      className="relative aspect-[4/3] group"
+                      whileTap={{ scale: 0.98 }}
                     >
-                      <X className="w-3 h-3" />
-                    </button>
-                    {img.category && (
-                      <span className="absolute bottom-1 left-1 text-[10px] bg-black/50 text-white px-1 rounded">
-                        {img.category}
-                      </span>
-                    )}
-                  </div>
-                ))}
+                      <img
+                        src={img.url}
+                        alt={img.category || 'Фото'}
+                        className="w-full h-full rounded-2xl object-cover bg-tg-secondary-bg cursor-pointer"
+                        onClick={() => {
+                          haptic?.impactOccurred('light')
+                          setViewingPhotoIndex(i)
+                        }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
+                        }}
+                      />
+
+                      {/* Overlay on hover/tap */}
+                      <div
+                        className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-2xl flex items-center justify-center cursor-pointer"
+                        onClick={() => {
+                          haptic?.impactOccurred('light')
+                          setViewingPhotoIndex(i)
+                        }}
+                      >
+                        <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                      </div>
+
+                      {/* Delete button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeletePhoto(img.url)
+                        }}
+                        className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg opacity-90 hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
+                      {/* Category badge */}
+                      {img.category && (
+                        <div className="absolute bottom-2 left-2 px-2.5 py-1 bg-black/70 backdrop-blur-sm text-white text-xs font-medium rounded-lg">
+                          {photoCategories.find(c => c.id === img.category)?.label || img.category}
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             ) : (
-              <p className="text-center text-tg-hint py-4">Нет фото</p>
+              <div className="text-center py-8">
+                <ImageIcon className="w-12 h-12 text-tg-hint/50 mx-auto mb-3" />
+                <p className="text-tg-hint">Нет фото</p>
+                <p className="text-xs text-tg-hint/70 mt-1">Добавьте фото для заявки</p>
+              </div>
             )}
           </div>
         </Section>
+
+        {/* Photo Viewer Modal */}
+        <AnimatePresence>
+          {viewingPhotoIndex !== null && images[viewingPhotoIndex] && (
+            <>
+              <motion.div
+                className="fixed inset-0 bg-black z-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setViewingPhotoIndex(null)}
+              />
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+              >
+                {/* Close button */}
+                <button
+                  onClick={() => setViewingPhotoIndex(null)}
+                  className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+
+                {/* Photo counter */}
+                <div className="absolute top-4 left-4 z-10 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+                  {viewingPhotoIndex + 1} / {images.length}
+                </div>
+
+                {/* Previous button */}
+                {images.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      haptic?.impactOccurred('light')
+                      setViewingPhotoIndex(prev =>
+                        prev !== null ? (prev === 0 ? images.length - 1 : prev - 1) : 0
+                      )
+                    }}
+                    className="absolute left-2 z-10 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                  >
+                    <ChevronLeft className="w-7 h-7" />
+                  </button>
+                )}
+
+                {/* Next button */}
+                {images.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      haptic?.impactOccurred('light')
+                      setViewingPhotoIndex(prev =>
+                        prev !== null ? (prev === images.length - 1 ? 0 : prev + 1) : 0
+                      )
+                    }}
+                    className="absolute right-2 z-10 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                  >
+                    <ChevronRight className="w-7 h-7" />
+                  </button>
+                )}
+
+                {/* Image */}
+                <img
+                  src={images[viewingPhotoIndex].url}
+                  alt={images[viewingPhotoIndex].category || 'Фото'}
+                  className="max-w-full max-h-full object-contain rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                />
+
+                {/* Category label at bottom */}
+                {images[viewingPhotoIndex].category && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+                    {photoCategories.find(c => c.id === images[viewingPhotoIndex].category)?.label || images[viewingPhotoIndex].category}
+                  </div>
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Bottom Actions - positioned above bottom nav */}
