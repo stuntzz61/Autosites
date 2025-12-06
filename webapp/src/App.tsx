@@ -28,6 +28,10 @@ import DevLoginPage from './pages/DevLoginPage'
 
 // Manager Pages
 import FeedbackPage from './pages/FeedbackPage'
+import PaymentPage from './pages/PaymentPage'
+
+// Admin Pages
+import AdminSites from './pages/admin/AdminSites'
 
 // Loading
 import LoadingScreen from './components/LoadingScreen'
@@ -149,6 +153,7 @@ function App() {
           <Route path="/archive" element={<ArchivePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
+          <Route path="/sites/:siteId/payment" element={<PaymentPage />} />
         </Route>
 
         {/* Dev & Admin Login Routes */}
@@ -164,6 +169,7 @@ function App() {
             <Route path="stats" element={<AdminStats />} />
             <Route path="broadcast" element={<AdminBroadcast />} />
             <Route path="feedback" element={<AdminFeedback />} />
+            <Route path="sites" element={<AdminSites />} />
           </Route>
         ) : (
           <Route path="/admin/*" element={<Navigate to="/admin-login" replace />} />

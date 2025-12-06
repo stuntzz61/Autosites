@@ -1,11 +1,13 @@
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routes import auth, requests, admin, profile, services, sites
+from routes import auth, requests, admin, profile, services, sites, payments
 from db import init_pool, close_pool
+import cron_jobs
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,9 +21,20 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting API server...")
     await init_pool()
+
+    # Start cron jobs scheduler
+    cron_task = asyncio.create_task(cron_jobs.start_cron_scheduler())
+    logger.info("Cron jobs scheduler started")
+
     yield
+
     # Shutdown
     logger.info("Shutting down...")
+    cron_task.cancel()
+    try:
+        await cron_task
+    except asyncio.CancelledError:
+        pass
     await close_pool()
 
 
@@ -47,6 +60,7 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(services.router, prefix="/api", tags=["services"])
 app.include_router(sites.router, prefix="/api/sites", tags=["sites"])
+app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
 
 
 @app.get("/api/health")

@@ -167,3 +167,70 @@ export const feedbackApi = {
   // Admin: get new count
   adminCount: () => api.get('/admin/feedback/count'),
 }
+
+// Sites API
+export const sitesApi = {
+  // List sites (for manager)
+  list: (params?: { deploy_status?: string; hosting_plan?: string; page?: number; limit?: number }) =>
+    api.get('/sites', { params }),
+
+  // Get site details
+  get: (id: string) => api.get(`/sites/${id}`),
+
+  // Get deployment history
+  getHistory: (id: string, limit?: number) =>
+    api.get(`/sites/${id}/history`, { params: { limit } }),
+
+  // Create site from request
+  create: (data: { request_id: string; company_name: string; hosting_plan?: string }) =>
+    api.post('/sites', data),
+
+  // Update site
+  update: (id: string, data: any) => api.patch(`/sites/${id}`, data),
+
+  // Deploy site
+  deploy: (id: string) => api.post(`/sites/${id}/deploy`),
+
+  // Stop site
+  stop: (id: string) => api.post(`/sites/${id}/stop`),
+
+  // Assign domain
+  assignDomain: (id: string, domain: string, enableSsl?: boolean) =>
+    api.post(`/sites/${id}/domain`, { domain, enable_ssl: enableSsl }),
+
+  // Extend hosting
+  extendHosting: (id: string, plan: string, months: number) =>
+    api.post(`/sites/${id}/extend`, { plan, months }),
+
+  // Delete site
+  delete: (id: string) => api.delete(`/sites/${id}`),
+
+  // Admin: list all sites
+  adminList: (params?: { deploy_status?: string; manager_id?: string; page?: number; limit?: number }) =>
+    api.get('/sites/admin/all', { params }),
+
+  // Admin: force redeploy
+  adminForceDeploy: (id: string) => api.post(`/sites/admin/${id}/force-deploy`),
+
+  // Get hosting plans
+  getPlans: () => api.get('/sites/plans'),
+}
+
+// Payment API
+export const paymentApi = {
+  // Create payment
+  create: (data: { site_id: string; plan: string; months: number }) =>
+    api.post('/payments', data),
+
+  // Get payment details
+  get: (id: string) => api.get(`/payments/${id}`),
+
+  // Get payment QR code
+  getQR: (id: string) => api.get(`/payments/${id}/qr`),
+
+  // Verify payment status
+  verify: (id: string) => api.post(`/payments/${id}/verify`),
+
+  // List payments for site
+  listBySite: (siteId: string) => api.get('/payments', { params: { site_id: siteId } }),
+}

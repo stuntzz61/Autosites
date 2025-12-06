@@ -1276,3 +1276,208 @@ async def get_hosting_plan(plan_id: str) -> Optional[Dict]:
                 (plan_id,)
             )
             return await cur.fetchone()
+
+
+# ==================== Hosting Transactions ====================
+
+async def create_hosting_transaction(
+    client_site_id: str,
+    type: str,
+    amount: float,
+    currency: str,
+    plan_id: str,
+    period_months: int,
+    qr_code_url: str = None,
+    payment_url: str = None,
+    expires_at: datetime = None,
+    external_id: str = None
+) -> Dict:
+    """Create a hosting transaction."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO hosting_transactions
+                   (client_site_id, type, amount, currency, plan_id, period_months,
+                    qr_code_url, payment_url, expires_at, external_id, status)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending')
+                   RETURNING *""",
+                (client_site_id, type, amount, currency, plan_id, period_months,
+                 qr_code_url, payment_url, expires_at, external_id)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def get_hosting_transaction(transaction_id: str) -> Optional[Dict]:
+    """Get hosting transaction by ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT * FROM hosting_transactions WHERE id = %s",
+                (transaction_id,)
+            )
+            return await cur.fetchone()
+
+
+async def update_hosting_transaction(
+    transaction_id: str,
+    data: Dict
+) -> Optional[Dict]:
+    """Update hosting transaction."""
+    allowed_fields = [
+        'status', 'payment_method', 'external_id', 'verified_at',
+        'completed_at', 'notes', 'metadata', 'qr_code_url', 'payment_url'
+    ]
+
+    updates = []
+    params = []
+
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f"{field} = %s")
+            params.append(data[field])
+
+    if not updates:
+        return await get_hosting_transaction(transaction_id)
+
+    params.append(transaction_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE hosting_transactions
+                    SET {", ".join(updates)}
+                    WHERE id = %s
+                    RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def list_hosting_transactions(
+    client_site_id: str = None,
+    status: str = None,
+    limit: int = 50
+) -> List[Dict]:
+    """List hosting transactions."""
+    conditions = []
+    params = []
+
+    if client_site_id:
+        conditions.append("client_site_id = %s")
+        params.append(client_site_id)
+
+    if status:
+        conditions.append("status = %s")
+        params.append(status)
+
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    params.append(limit)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""SELECT * FROM hosting_transactions
+                    WHERE {where_clause}
+                    ORDER BY created_at DESC
+                    LIMIT %s""",
+                params
+            )
+            return await cur.fetchall()
+
+
+# ==================== Auto-disable/Delete Functions ====================
+
+async def get_sites_needing_payment_warning() -> List[Dict]:
+    """Get sites that need payment warning (2 weeks before expiry)."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT cs.*, u.tg_id as manager_tg_id
+                   FROM client_sites cs
+                   JOIN users u ON u.id = cs.manager_id
+                   WHERE cs.deploy_status = 'active'
+                     AND cs.hosting_expires_at IS NOT NULL
+                     AND cs.hosting_expires_at <= NOW() + INTERVAL '14 days'
+                     AND cs.hosting_expires_at > NOW()
+                     AND (cs.payment_warning_sent_at IS NULL
+                          OR cs.payment_warning_sent_at < cs.hosting_expires_at - INTERVAL '13 days')
+                   ORDER BY cs.hosting_expires_at ASC"""
+            )
+            return await cur.fetchall()
+
+
+async def get_sites_to_auto_disable() -> List[Dict]:
+    """Get sites that should be auto-disabled (2 weeks after expiry)."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT cs.*, u.tg_id as manager_tg_id
+                   FROM client_sites cs
+                   JOIN users u ON u.id = cs.manager_id
+                   WHERE cs.deploy_status = 'active'
+                     AND cs.hosting_expires_at IS NOT NULL
+                     AND cs.hosting_expires_at < NOW() - INTERVAL '14 days'
+                     AND cs.auto_disabled_at IS NULL"""
+            )
+            return await cur.fetchall()
+
+
+async def get_sites_to_delete() -> List[Dict]:
+    """Get sites scheduled for deletion (2 months after expiry)."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT cs.*, u.tg_id as manager_tg_id
+                   FROM client_sites cs
+                   JOIN users u ON u.id = cs.manager_id
+                   WHERE cs.deploy_status IN ('active', 'stopped')
+                     AND cs.hosting_expires_at IS NOT NULL
+                     AND cs.hosting_expires_at < NOW() - INTERVAL '60 days'
+                     AND (cs.scheduled_for_deletion_at IS NULL
+                          OR cs.scheduled_for_deletion_at <= NOW())"""
+            )
+            return await cur.fetchall()
+
+
+async def mark_payment_warning_sent(site_id: str):
+    """Mark payment warning as sent."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """UPDATE client_sites
+                   SET payment_warning_sent_at = NOW()
+                   WHERE id = %s""",
+                (site_id,)
+            )
+            await conn.commit()
+
+
+async def mark_site_auto_disabled(site_id: str):
+    """Mark site as auto-disabled."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """UPDATE client_sites
+                   SET deploy_status = 'stopped',
+                       auto_disabled_at = NOW()
+                   WHERE id = %s""",
+                (site_id,)
+            )
+            await conn.commit()
+
+
+async def schedule_site_for_deletion(site_id: str):
+    """Schedule site for deletion."""
+    deletion_date = datetime.now(timezone.utc) + timedelta(days=7)  # Delete in 7 days
+
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """UPDATE client_sites
+                   SET scheduled_for_deletion_at = %s
+                   WHERE id = %s""",
+                (deletion_date, site_id)
+            )
+            await conn.commit()

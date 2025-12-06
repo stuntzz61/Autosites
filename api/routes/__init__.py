@@ -1,2 +1,2 @@
 # Routes package
-from . import auth, requests, admin, profile, services, sites
+from . import auth, requests, admin, profile, services, sites, payments
