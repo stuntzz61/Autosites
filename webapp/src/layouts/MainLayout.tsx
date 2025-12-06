@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Home, FileText, Archive, User, Shield } from 'lucide-react'
+import { Home, FileText, Archive, User, Shield, MessageSquare } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useEffect } from 'react'
@@ -9,7 +9,7 @@ import clsx from 'clsx'
 const navItems = [
   { path: '/', icon: Home, label: 'Главная' },
   { path: '/requests', icon: FileText, label: 'Заявки' },
-  { path: '/archive', icon: Archive, label: 'Архив' },
+  { path: '/feedback', icon: MessageSquare, label: 'Связь' },
   { path: '/profile', icon: User, label: 'Профиль' },
 ]
 

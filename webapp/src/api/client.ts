@@ -112,3 +112,58 @@ export const profileApi = {
   update: (data: { contact?: string }) => api.patch('/profile', data),
   stats: () => api.get('/profile/stats'),
 }
+
+// Additional Services API
+export const servicesApi = {
+  // List all available additional services
+  list: () => api.get('/additional-services'),
+
+  // Get services for a specific request
+  getForRequest: (requestId: string) => api.get(`/requests/${requestId}/services`),
+
+  // Add service to request
+  add: (requestId: string, data: { service_id: string; notes?: string; price?: string }) =>
+    api.post(`/requests/${requestId}/services`, data),
+
+  // Update service on request
+  update: (requestId: string, serviceId: string, data: { status?: string; notes?: string; price?: string }) =>
+    api.patch(`/requests/${requestId}/services/${serviceId}`, data),
+
+  // Remove service from request
+  remove: (requestId: string, serviceId: string) =>
+    api.delete(`/requests/${requestId}/services/${serviceId}`),
+}
+
+// Manager Feedback API
+export const feedbackApi = {
+  // Create new feedback
+  create: (data: {
+    subject: string
+    message: string
+    category?: string
+    priority?: string
+    request_id?: string
+  }) => api.post('/feedback', data),
+
+  // List own feedback
+  list: (params?: { status?: string; page?: number; limit?: number }) =>
+    api.get('/feedback', { params }),
+
+  // Get feedback details
+  get: (id: string) => api.get(`/feedback/${id}`),
+
+  // Admin: list all feedback
+  adminList: (params?: { status?: string; page?: number; limit?: number }) =>
+    api.get('/admin/feedback', { params }),
+
+  // Admin: respond to feedback
+  adminRespond: (id: string, data: { response: string; status?: string }) =>
+    api.post(`/admin/feedback/${id}/respond`, data),
+
+  // Admin: update status
+  adminUpdateStatus: (id: string, status: string) =>
+    api.patch(`/admin/feedback/${id}/status`, { status }),
+
+  // Admin: get new count
+  adminCount: () => api.get('/admin/feedback/count'),
+}

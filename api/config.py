@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # n8n webhook
     N8N_WEBHOOK_URL: str = ""
 
+    # Bot webhook (for notifications)
+    BOT_WEBHOOK_URL: str = ""
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
 

@@ -5,12 +5,12 @@ import {
   Building2, User, Phone, Mail, MapPin, Briefcase,
   Image, Archive, Send, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronDown, X, ExternalLink,
-  Palette, Upload, Camera, Edit3, Trash2
+  Palette, Upload, Camera, Edit3, Trash2, Plus, Sparkles
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useAuthStore } from '@/stores/authStore'
-import { requestsApi } from '@/api/client'
+import { requestsApi, servicesApi } from '@/api/client'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -44,6 +44,7 @@ export default function RequestDetailPage() {
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showServicesModal, setShowServicesModal] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState('gallery')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -55,6 +56,41 @@ export default function RequestDetailPage() {
     queryKey: ['request', id],
     queryFn: () => requestsApi.get(id!).then(res => res.data),
     enabled: !!id,
+  })
+
+  // Available additional services
+  const { data: availableServices = [] } = useQuery({
+    queryKey: ['additional-services'],
+    queryFn: () => servicesApi.list().then(res => res.data),
+  })
+
+  // Services attached to this request
+  const { data: requestServices = [] } = useQuery({
+    queryKey: ['request-services', id],
+    queryFn: () => servicesApi.getForRequest(id!).then(res => res.data),
+    enabled: !!id,
+  })
+
+  const addServiceMutation = useMutation({
+    mutationFn: (serviceId: string) => servicesApi.add(id!, { service_id: serviceId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request-services', id] })
+      toast.success('Услуга добавлена')
+      haptic?.notificationOccurred('success')
+    },
+    onError: () => {
+      toast.error('Ошибка добавления')
+      haptic?.notificationOccurred('error')
+    },
+  })
+
+  const removeServiceMutation = useMutation({
+    mutationFn: (serviceId: string) => servicesApi.remove(id!, serviceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request-services', id] })
+      toast.success('Услуга удалена')
+    },
+    onError: () => toast.error('Ошибка'),
   })
 
   const generateMutation = useMutation({
@@ -397,6 +433,46 @@ export default function RequestDetailPage() {
           </Section>
         )}
 
+        {/* Additional Services Section */}
+        <Section title={`Доп. услуги (${requestServices.length})`}>
+          <div className="p-4 space-y-3">
+            {requestServices.length > 0 ? (
+              requestServices.map((service: any) => (
+                <div key={service.id} className="flex items-center justify-between p-3 bg-tg-secondary-bg rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{service.icon || '✨'}</span>
+                    <div>
+                      <p className="font-medium text-tg-text">{service.name}</p>
+                      <p className="text-xs text-tg-hint">
+                        {service.status === 'pending' && '⏳ Ожидает'}
+                        {service.status === 'in_progress' && '🔄 В работе'}
+                        {service.status === 'completed' && '✅ Выполнено'}
+                        {service.status === 'cancelled' && '❌ Отменено'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeServiceMutation.mutate(service.service_id)}
+                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-tg-hint py-2">Нет доп. услуг</p>
+            )}
+
+            <button
+              onClick={() => setShowServicesModal(true)}
+              className="w-full p-3 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить услугу
+            </button>
+          </div>
+        </Section>
+
         <Section title={`Фото (${images.length})`}>
           <div className="p-4 space-y-4">
             <button
@@ -507,6 +583,77 @@ export default function RequestDetailPage() {
                 }}
                 onCancel={() => setShowEditModal(false)}
               />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Additional Services Modal */}
+      <AnimatePresence>
+        {showServicesModal && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowServicesModal(false)}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[70vh] overflow-y-auto"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+            >
+              <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <p className="text-lg font-semibold">Дополнительные услуги</p>
+              </div>
+
+              <div className="space-y-3">
+                {availableServices.map((service: any) => {
+                  const isAdded = requestServices.some((rs: any) => rs.service_id === service.id)
+                  return (
+                    <button
+                      key={service.id}
+                      onClick={() => {
+                        if (!isAdded) {
+                          addServiceMutation.mutate(service.id)
+                        }
+                      }}
+                      disabled={isAdded || addServiceMutation.isPending}
+                      className={clsx(
+                        'w-full p-4 rounded-xl text-left transition-all',
+                        isAdded
+                          ? 'bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500'
+                          : 'bg-tg-secondary-bg hover:bg-tg-hint/10'
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">{service.icon || '✨'}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-tg-text">{service.name}</p>
+                            {isAdded && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+                          </div>
+                          <p className="text-sm text-tg-hint mt-1">{service.description}</p>
+                          {service.price_info && (
+                            <p className="text-xs text-tg-link mt-2">{service.price_info}</p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                onClick={() => setShowServicesModal(false)}
+                className="btn btn-primary w-full mt-4"
+              >
+                Готово
+              </button>
             </motion.div>
           </>
         )}

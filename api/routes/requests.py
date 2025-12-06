@@ -81,6 +81,31 @@ async def get_request(request_id: str, user: dict = Depends(get_current_user)):
     return {**request, "id": str(request["id"])}
 
 
+async def notify_bot_request_created(tg_id: int, request_id: str, company_name: str):
+    """Notify bot about new request to offer additional services."""
+    from config import settings
+
+    if not settings.BOT_WEBHOOK_URL:
+        log.debug("BOT_WEBHOOK_URL not configured, skipping notification")
+        return
+
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{settings.BOT_WEBHOOK_URL}/webhook",
+                json={
+                    "action": "request_created",
+                    "tg_id": tg_id,
+                    "request_id": request_id,
+                    "company_name": company_name
+                },
+                timeout=5.0
+            )
+            log.info(f"Notified bot about request {request_id}")
+    except Exception as e:
+        log.error(f"Failed to notify bot: {e}")
+
+
 @router.post("")
 async def create_request(data: CreateRequest, user: dict = Depends(get_current_user)):
     """Create a new request."""
@@ -94,6 +119,14 @@ async def create_request(data: CreateRequest, user: dict = Depends(get_current_u
         client_name=data.client_name,
         payload=data.payload or {}
     )
+
+    # Notify bot to offer additional services
+    if user.get('tg_id'):
+        await notify_bot_request_created(
+            tg_id=user['tg_id'],
+            request_id=str(request["id"]),
+            company_name=data.company_name
+        )
 
     return {**request, "id": str(request["id"])}
 

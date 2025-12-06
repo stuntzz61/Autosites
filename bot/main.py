@@ -1,10 +1,12 @@
 """
-Simplified Telegram Bot for AutoSites
-Only handles:
+Telegram Bot for AutoSites
+Handles:
 - Registration flow
 - Opening Mini App
 - Admin login by password
 - Notifications
+- Additional services offer after request creation
+- Manager feedback notifications
 """
 import os
 import logging
@@ -15,6 +17,7 @@ from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiohttp import web
 
 import db
 
@@ -29,11 +32,34 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://your-webapp-url.com")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
+BOT_WEBHOOK_PORT = int(os.getenv("BOT_WEBHOOK_PORT", "8081"))
 
 # Bot setup
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
+
+# Additional services definitions
+ADDITIONAL_SERVICES = [
+    {
+        "code": "logo_design",
+        "name": "Разработка логотипа",
+        "icon": "🎨",
+        "description": "Профессиональный дизайн логотипа"
+    },
+    {
+        "code": "seo_promotion",
+        "name": "SEO продвижение",
+        "icon": "📈",
+        "description": "Комплексное продвижение в поисковиках"
+    },
+    {
+        "code": "business_automation",
+        "name": "Автоматизация бизнеса",
+        "icon": "⚙️",
+        "description": "CRM, чат-боты, интеграции"
+    }
+]
 
 
 # States
@@ -78,6 +104,42 @@ def get_admin_pending_keyboard(user_tg_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{user_tg_id}")
         ]
     ])
+
+
+def get_additional_services_keyboard(request_id: str) -> InlineKeyboardMarkup:
+    """Keyboard for additional services offer."""
+    buttons = []
+    for service in ADDITIONAL_SERVICES:
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"{service['icon']} {service['name']}",
+                callback_data=f"add_service_{request_id}_{service['code']}"
+            )
+        ])
+    buttons.append([
+        InlineKeyboardButton(text="⏭ Пропустить", callback_data=f"skip_services_{request_id}")
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_more_services_keyboard(request_id: str, selected_codes: list) -> InlineKeyboardMarkup:
+    """Keyboard to add more services after selecting one."""
+    buttons = []
+    for service in ADDITIONAL_SERVICES:
+        if service['code'] not in selected_codes:
+            buttons.append([
+                InlineKeyboardButton(
+                    text=f"{service['icon']} {service['name']}",
+                    callback_data=f"add_service_{request_id}_{service['code']}"
+                )
+            ])
+
+    if buttons:
+        buttons.append([
+            InlineKeyboardButton(text="✅ Готово", callback_data=f"finish_services_{request_id}")
+        ])
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
 
 # Handlers
@@ -314,6 +376,122 @@ async def cb_reject(callback: types.CallbackQuery):
     await callback.answer("Пользователь отклонён")
 
 
+# ==================== Additional Services Handlers ====================
+
+# Store selected services in memory (simple approach for demo)
+# In production, consider using FSM or database
+selected_services_cache: dict = {}
+
+
+@dp.callback_query(F.data.startswith("add_service_"))
+async def cb_add_service(callback: types.CallbackQuery):
+    """Handle adding additional service to request."""
+    parts = callback.data.split("_")
+    if len(parts) < 4:
+        await callback.answer("Ошибка", show_alert=True)
+        return
+
+    request_id = parts[2]
+    service_code = "_".join(parts[3:])  # Handle codes with underscores
+
+    # Find service info
+    service = next((s for s in ADDITIONAL_SERVICES if s['code'] == service_code), None)
+    if not service:
+        await callback.answer("Услуга не найдена", show_alert=True)
+        return
+
+    # Track selected services
+    cache_key = f"{callback.from_user.id}_{request_id}"
+    if cache_key not in selected_services_cache:
+        selected_services_cache[cache_key] = []
+
+    if service_code not in selected_services_cache[cache_key]:
+        selected_services_cache[cache_key].append(service_code)
+
+    selected = selected_services_cache[cache_key]
+
+    # Get names of selected services
+    selected_names = [
+        f"{s['icon']} {s['name']}"
+        for s in ADDITIONAL_SERVICES
+        if s['code'] in selected
+    ]
+
+    # Check if there are more services to offer
+    more_keyboard = get_more_services_keyboard(request_id, selected)
+
+    if more_keyboard:
+        await callback.message.edit_text(
+            f"✅ Добавлено: {service['icon']} {service['name']}\n\n"
+            f"📋 Выбранные услуги:\n" + "\n".join(selected_names) + "\n\n"
+            "Выберите ещё услугу или нажмите «Готово»:",
+            reply_markup=more_keyboard
+        )
+    else:
+        # All services selected
+        await callback.message.edit_text(
+            f"✅ Все дополнительные услуги выбраны!\n\n"
+            f"📋 Ваши услуги:\n" + "\n".join(selected_names) + "\n\n"
+            "Менеджер свяжется с вами для уточнения деталей."
+        )
+        # Clear cache
+        selected_services_cache.pop(cache_key, None)
+
+    await callback.answer(f"✅ {service['name']} добавлена")
+
+
+@dp.callback_query(F.data.startswith("skip_services_"))
+async def cb_skip_services(callback: types.CallbackQuery):
+    """Handle skipping additional services."""
+    request_id = callback.data.replace("skip_services_", "")
+
+    await callback.message.edit_text(
+        "👍 Хорошо! Вы можете добавить дополнительные услуги позже в приложении.\n\n"
+        "Откройте приложение для просмотра и редактирования заявки.",
+        reply_markup=get_main_keyboard(is_approved=True)
+    )
+
+    # Clear any cached selections
+    cache_key = f"{callback.from_user.id}_{request_id}"
+    selected_services_cache.pop(cache_key, None)
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("finish_services_"))
+async def cb_finish_services(callback: types.CallbackQuery):
+    """Handle finishing service selection."""
+    request_id = callback.data.replace("finish_services_", "")
+    cache_key = f"{callback.from_user.id}_{request_id}"
+
+    selected = selected_services_cache.get(cache_key, [])
+
+    if selected:
+        selected_names = [
+            f"{s['icon']} {s['name']}"
+            for s in ADDITIONAL_SERVICES
+            if s['code'] in selected
+        ]
+
+        await callback.message.edit_text(
+            f"✅ Отлично! Выбранные услуги:\n\n" +
+            "\n".join(selected_names) + "\n\n"
+            "Менеджер свяжется с вами для уточнения деталей.\n"
+            "Откройте приложение для просмотра заявки.",
+            reply_markup=get_main_keyboard(is_approved=True)
+        )
+    else:
+        await callback.message.edit_text(
+            "👍 Готово! Откройте приложение для просмотра заявки.",
+            reply_markup=get_main_keyboard(is_approved=True)
+        )
+
+    # Clear cache
+    selected_services_cache.pop(cache_key, None)
+
+    await callback.answer("✅ Сохранено")
+
+
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
     """Handle /help command."""
@@ -349,6 +527,142 @@ async def send_file(tg_id: int, file_path: str, caption: str = None):
         return False
 
 
+async def send_additional_services_offer(tg_id: int, request_id: str, company_name: str = ""):
+    """Send additional services offer to user after request creation."""
+    try:
+        company_text = f" для «{company_name}»" if company_name else ""
+        await bot.send_message(
+            tg_id,
+            f"🎉 Заявка{company_text} успешно создана!\n\n"
+            "💼 Хотите добавить дополнительные услуги?\n\n"
+            "🎨 <b>Разработка логотипа</b> — профессиональный дизайн\n"
+            "📈 <b>SEO продвижение</b> — раскрутка в поисковиках\n"
+            "⚙️ <b>Автоматизация</b> — CRM, боты, интеграции\n\n"
+            "Выберите нужные услуги или пропустите:",
+            parse_mode="HTML",
+            reply_markup=get_additional_services_keyboard(request_id)
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send services offer to {tg_id}: {e}")
+        return False
+
+
+async def send_feedback_response_notification(tg_id: int, subject: str, response: str):
+    """Notify manager about admin response to their feedback."""
+    try:
+        await bot.send_message(
+            tg_id,
+            f"📬 <b>Ответ на ваше обращение</b>\n\n"
+            f"<b>Тема:</b> {subject}\n\n"
+            f"<b>Ответ администратора:</b>\n{response}",
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard(is_approved=True)
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send feedback notification to {tg_id}: {e}")
+        return False
+
+
+async def notify_admins_new_feedback(manager_name: str, subject: str, priority: str):
+    """Notify admins about new feedback from manager."""
+    try:
+        admins = await db.get_all_admins()
+        priority_emoji = {
+            'urgent': '🔴',
+            'high': '🟠',
+            'normal': '🟡',
+            'low': '🟢'
+        }.get(priority, '🟡')
+
+        for admin in admins:
+            try:
+                await bot.send_message(
+                    admin["tg_id"],
+                    f"📨 <b>Новое обращение от менеджера</b>\n\n"
+                    f"👤 {manager_name}\n"
+                    f"📋 <b>Тема:</b> {subject}\n"
+                    f"{priority_emoji} <b>Приоритет:</b> {priority}\n\n"
+                    f"Откройте админ-панель для просмотра.",
+                    parse_mode="HTML",
+                    reply_markup=get_main_keyboard(is_admin=True)
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify admin {admin['tg_id']}: {e}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to notify admins: {e}")
+        return False
+
+
+# ==================== Webhook Server for API notifications ====================
+
+async def handle_webhook(request):
+    """Handle webhook requests from API."""
+    try:
+        data = await request.json()
+        action = data.get("action")
+
+        if action == "request_created":
+            # Send additional services offer
+            tg_id = data.get("tg_id")
+            request_id = data.get("request_id")
+            company_name = data.get("company_name", "")
+
+            if tg_id and request_id:
+                await send_additional_services_offer(tg_id, request_id, company_name)
+                return web.json_response({"success": True})
+
+        elif action == "feedback_response":
+            # Notify manager about feedback response
+            tg_id = data.get("tg_id")
+            subject = data.get("subject", "")
+            response = data.get("response", "")
+
+            if tg_id and response:
+                await send_feedback_response_notification(tg_id, subject, response)
+                return web.json_response({"success": True})
+
+        elif action == "new_feedback":
+            # Notify admins about new feedback
+            manager_name = data.get("manager_name", "")
+            subject = data.get("subject", "")
+            priority = data.get("priority", "normal")
+
+            await notify_admins_new_feedback(manager_name, subject, priority)
+            return web.json_response({"success": True})
+
+        elif action == "send_message":
+            # Generic message sending
+            tg_id = data.get("tg_id")
+            text = data.get("text")
+
+            if tg_id and text:
+                await send_notification(tg_id, text)
+                return web.json_response({"success": True})
+
+        return web.json_response({"success": False, "error": "Unknown action"})
+
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
+async def start_webhook_server():
+    """Start webhook server for API notifications."""
+    app = web.Application()
+    app.router.add_post("/webhook", handle_webhook)
+    app.router.add_get("/health", lambda r: web.json_response({"status": "ok"}))
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", BOT_WEBHOOK_PORT)
+    await site.start()
+    logger.info(f"Webhook server started on port {BOT_WEBHOOK_PORT}")
+    return runner
+
+
 async def main():
     """Main function."""
     logger.info("Initializing database...")
@@ -356,16 +670,22 @@ async def main():
 
     logger.info(f"Bot starting... WebApp URL: {WEBAPP_URL}")
 
+    webhook_runner = None
     try:
         # Get bot info
         me = await bot.get_me()
         logger.info(f"Bot: {me.full_name} [@{me.username}]")
+
+        # Start webhook server for API notifications
+        webhook_runner = await start_webhook_server()
 
         # Start polling
         await dp.start_polling(bot, skip_updates=True)
     finally:
         await db.close_pool()
         await bot.session.close()
+        if webhook_runner:
+            await webhook_runner.cleanup()
 
 
 if __name__ == "__main__":

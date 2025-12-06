@@ -22,8 +22,12 @@ import AdminManagers from './pages/admin/AdminManagers'
 import AdminRequests from './pages/admin/AdminRequests'
 import AdminStats from './pages/admin/AdminStats'
 import AdminBroadcast from './pages/admin/AdminBroadcast'
+import AdminFeedback from './pages/admin/AdminFeedback'
 import AdminLoginPage from './pages/AdminLoginPage'
 import DevLoginPage from './pages/DevLoginPage'
+
+// Manager Pages
+import FeedbackPage from './pages/FeedbackPage'
 
 // Loading
 import LoadingScreen from './components/LoadingScreen'
@@ -144,6 +148,7 @@ function App() {
           <Route path="/requests/:id" element={<RequestDetailPage />} />
           <Route path="/archive" element={<ArchivePage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
         </Route>
 
         {/* Dev & Admin Login Routes */}
@@ -158,6 +163,7 @@ function App() {
             <Route path="requests" element={<AdminRequests />} />
             <Route path="stats" element={<AdminStats />} />
             <Route path="broadcast" element={<AdminBroadcast />} />
+            <Route path="feedback" element={<AdminFeedback />} />
           </Route>
         ) : (
           <Route path="/admin/*" element={<Navigate to="/admin-login" replace />} />

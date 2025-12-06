@@ -566,3 +566,241 @@ async def get_overview_stats() -> Dict:
             )
             return await cur.fetchone()
 
+
+# ==================== Additional Services ====================
+
+async def list_additional_services(active_only: bool = True) -> List[Dict]:
+    """List all additional services."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            query = """SELECT id, code, name, description, price_info, icon, is_active, sort_order
+                       FROM additional_services"""
+            if active_only:
+                query += " WHERE is_active = TRUE"
+            query += " ORDER BY sort_order, name"
+            await cur.execute(query)
+            return await cur.fetchall()
+
+
+async def get_request_additional_services(request_id: str) -> List[Dict]:
+    """Get additional services for a request."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT ras.id, ras.request_id, ras.service_id, ras.status,
+                          ras.notes, ras.price, ras.created_at,
+                          s.code, s.name, s.description, s.icon
+                   FROM request_additional_services ras
+                   JOIN additional_services s ON s.id = ras.service_id
+                   WHERE ras.request_id = %s
+                   ORDER BY s.sort_order""",
+                (request_id,)
+            )
+            return await cur.fetchall()
+
+
+async def add_request_additional_service(
+    request_id: str,
+    service_id: str,
+    added_by: str,
+    notes: str = None,
+    price: str = None
+) -> Dict:
+    """Add additional service to a request."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO request_additional_services
+                   (request_id, service_id, added_by, notes, price)
+                   VALUES (%s, %s, %s, %s, %s)
+                   ON CONFLICT (request_id, service_id)
+                   DO UPDATE SET notes = EXCLUDED.notes, price = EXCLUDED.price, updated_at = NOW()
+                   RETURNING id, request_id, service_id, status, notes, price, created_at""",
+                (request_id, service_id, added_by, notes, price)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def update_request_additional_service(
+    request_id: str,
+    service_id: str,
+    status: str = None,
+    notes: str = None,
+    price: str = None
+) -> Optional[Dict]:
+    """Update additional service for a request."""
+    updates = []
+    params = []
+
+    if status:
+        updates.append("status = %s")
+        params.append(status)
+    if notes is not None:
+        updates.append("notes = %s")
+        params.append(notes)
+    if price is not None:
+        updates.append("price = %s")
+        params.append(price)
+
+    if not updates:
+        return None
+
+    params.extend([request_id, service_id])
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE request_additional_services
+                    SET {", ".join(updates)}
+                    WHERE request_id = %s AND service_id = %s
+                    RETURNING id, request_id, service_id, status, notes, price""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def remove_request_additional_service(request_id: str, service_id: str):
+    """Remove additional service from a request."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "DELETE FROM request_additional_services WHERE request_id = %s AND service_id = %s",
+                (request_id, service_id)
+            )
+            await conn.commit()
+
+
+# ==================== Manager Feedback ====================
+
+async def create_feedback(
+    manager_id: str,
+    subject: str,
+    message: str,
+    category: str = "general",
+    priority: str = "normal",
+    request_id: str = None
+) -> Dict:
+    """Create a new feedback from manager."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO manager_feedback
+                   (manager_id, subject, message, category, priority, request_id)
+                   VALUES (%s, %s, %s, %s, %s, %s)
+                   RETURNING id, manager_id, subject, message, category, priority,
+                             status, request_id, created_at""",
+                (manager_id, subject, message, category, priority, request_id)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def list_feedback(
+    status: str = None,
+    manager_id: str = None,
+    limit: int = 50,
+    offset: int = 0
+) -> List[Dict]:
+    """List feedback messages."""
+    conditions = []
+    params = []
+
+    if status:
+        conditions.append("f.status = %s")
+        params.append(status)
+    if manager_id:
+        conditions.append("f.manager_id = %s")
+        params.append(manager_id)
+
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    params.extend([limit, offset])
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""SELECT f.id, f.subject, f.message, f.category, f.priority,
+                           f.status, f.request_id, f.admin_response, f.responded_at,
+                           f.created_at, f.updated_at,
+                           u.id as manager_id, u.first_name as manager_first_name,
+                           u.last_name as manager_last_name, u.username as manager_username,
+                           u.tg_id as manager_tg_id
+                    FROM manager_feedback f
+                    JOIN users u ON u.id = f.manager_id
+                    WHERE {where_clause}
+                    ORDER BY
+                        CASE f.status WHEN 'new' THEN 0 ELSE 1 END,
+                        CASE f.priority
+                            WHEN 'urgent' THEN 0
+                            WHEN 'high' THEN 1
+                            WHEN 'normal' THEN 2
+                            ELSE 3
+                        END,
+                        f.created_at DESC
+                    LIMIT %s OFFSET %s""",
+                params
+            )
+            return await cur.fetchall()
+
+
+async def get_feedback(feedback_id: str) -> Optional[Dict]:
+    """Get feedback by ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT f.id, f.subject, f.message, f.category, f.priority,
+                          f.status, f.request_id, f.admin_response, f.responded_at,
+                          f.created_at, f.updated_at,
+                          u.id as manager_id, u.first_name as manager_first_name,
+                          u.last_name as manager_last_name, u.username as manager_username,
+                          u.tg_id as manager_tg_id
+                   FROM manager_feedback f
+                   JOIN users u ON u.id = f.manager_id
+                   WHERE f.id = %s""",
+                (feedback_id,)
+            )
+            return await cur.fetchone()
+
+
+async def respond_to_feedback(
+    feedback_id: str,
+    admin_id: str,
+    response: str,
+    new_status: str = "answered"
+) -> Optional[Dict]:
+    """Respond to a feedback."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """UPDATE manager_feedback
+                   SET admin_response = %s, responded_by = %s,
+                       responded_at = NOW(), status = %s
+                   WHERE id = %s
+                   RETURNING id, subject, message, admin_response, status""",
+                (response, admin_id, new_status, feedback_id)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def update_feedback_status(feedback_id: str, status: str):
+    """Update feedback status."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "UPDATE manager_feedback SET status = %s WHERE id = %s",
+                (status, feedback_id)
+            )
+            await conn.commit()
+
+
+async def count_new_feedback() -> int:
+    """Count new/unread feedback."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT COUNT(*) FROM manager_feedback WHERE status = 'new'"
+            )
+            result = await cur.fetchone()
+            return result[0] if result else 0
