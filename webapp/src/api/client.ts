@@ -177,6 +177,9 @@ export const sitesApi = {
   // Get site details
   get: (id: string) => api.get(`/sites/${id}`),
 
+  // Get site by request ID
+  getByRequest: (requestId: string) => api.get(`/sites/by-request/${requestId}`),
+
   // Get deployment history
   getHistory: (id: string, limit?: number) =>
     api.get(`/sites/${id}/history`, { params: { limit } }),

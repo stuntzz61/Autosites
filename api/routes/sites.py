@@ -54,6 +54,8 @@ class DeployCallbackRequest(BaseModel):
     """Webhook callback from deploy-node"""
     deploy_id: str
     status: str  # pending, running, completed, failed
+    request_id: Optional[str] = None  # ID заявки для связи
+    client_site_id: Optional[str] = None  # ID сайта клиента для связи
     preview_slug: Optional[str] = None
     preview_url: Optional[str] = None
     server_id: Optional[str] = None
@@ -91,6 +93,8 @@ async def trigger_deploy(site: dict, archive_path: str, user_id: str = None):
             data = {
                 'auto_select': 'true',
                 'enable_ssl': 'false',  # Will enable after domain assignment
+                'request_id': site.get('request_id'),  # Pass request_id for callback
+                'client_site_id': str(site['id']),  # Pass client_site_id for callback
             }
 
             # Add domain if set
@@ -248,6 +252,26 @@ async def list_hosting_plans():
     """List available hosting plans."""
     plans = await db.list_hosting_plans()
     return {"items": plans}
+
+
+@router.get("/by-request/{request_id}")
+async def get_site_by_request(request_id: str, user: dict = Depends(get_current_user)):
+    """Get client site by request ID."""
+    # Verify request belongs to user
+    request = await db.get_request(request_id)
+
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    site = await db.get_client_site_by_request(request_id)
+
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found for this request")
+
+    return {**site, "id": str(site["id"])}
 
 
 @router.get("/{site_id}")
@@ -490,11 +514,18 @@ async def deploy_callback(data: DeployCallbackRequest):
     """
     log.info(f"Deploy callback received: {data.deploy_id} -> {data.status}")
 
-    # Find site by deploy_id
-    site = await db.get_client_site_by_deploy_id(data.deploy_id)
+    # Find site by deploy_id, client_site_id, or request_id
+    site = None
+    if data.client_site_id:
+        site = await db.get_client_site(data.client_site_id)
+    elif data.request_id:
+        site = await db.get_client_site_by_request(data.request_id)
 
     if not site:
-        log.warning(f"Site not found for deploy_id: {data.deploy_id}")
+        site = await db.get_client_site_by_deploy_id(data.deploy_id)
+
+    if not site:
+        log.warning(f"Site not found for deploy_id: {data.deploy_id}, request_id: {data.request_id}, client_site_id: {data.client_site_id}")
         raise HTTPException(status_code=404, detail="Site not found")
 
     # Map deploy-node status to our status

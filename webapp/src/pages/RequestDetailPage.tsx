@@ -6,12 +6,13 @@ import {
   Image, Archive, Send, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronDown, X, ExternalLink,
   Palette, Upload, Camera, Edit3, Trash2, Plus, Sparkles,
-  ChevronLeft, ChevronRight, ZoomIn, ImageIcon
+  ChevronLeft, ChevronRight, ZoomIn, ImageIcon, Globe,
+  CreditCard, Power, RotateCcw
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useAuthStore } from '@/stores/authStore'
-import { requestsApi, servicesApi } from '@/api/client'
+import { requestsApi, servicesApi, sitesApi } from '@/api/client'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -71,6 +72,14 @@ export default function RequestDetailPage() {
     queryKey: ['request-services', id],
     queryFn: () => servicesApi.getForRequest(id!).then(res => res.data),
     enabled: !!id,
+  })
+
+  // Get client site for this request
+  const { data: clientSite, isLoading: isLoadingSite } = useQuery({
+    queryKey: ['client-site', id],
+    queryFn: () => sitesApi.getByRequest(id!).then(res => res.data),
+    enabled: !!id,
+    retry: false, // Don't retry if site doesn't exist yet
   })
 
   const addServiceMutation = useMutation({
@@ -550,6 +559,85 @@ export default function RequestDetailPage() {
             )}
           </div>
         </Section>
+
+        {/* Client Site Info & Payment Section */}
+        {clientSite && (
+          <Section title="Хостинг сайта">
+            <div className="p-4 space-y-3">
+              {/* Site Status */}
+              <div className="flex items-center justify-between p-3 bg-tg-secondary-bg rounded-xl">
+                <div className="flex items-center gap-3">
+                  <Globe className="w-5 h-5 text-blue-500" />
+                  <div>
+                    <p className="font-medium text-tg-text">Статус деплоя</p>
+                    <p className="text-sm text-tg-hint">
+                      {clientSite.deploy_status === 'active' && '✅ Активен'}
+                      {clientSite.deploy_status === 'deploying' && '🔄 Деплоится...'}
+                      {clientSite.deploy_status === 'pending' && '⏳ Ожидает деплоя'}
+                      {clientSite.deploy_status === 'failed' && '❌ Ошибка'}
+                      {clientSite.deploy_status === 'stopped' && '⏸ Остановлен'}
+                      {!clientSite.deploy_status || clientSite.deploy_status === 'none' && '⏸ Не задеплоен'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview URL */}
+              {clientSite.preview_url && (
+                <a
+                  href={clientSite.preview_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 bg-tg-secondary-bg rounded-xl hover:bg-tg-hint/5 transition-colors"
+                >
+                  <ExternalLink className="w-5 h-5 text-blue-500" />
+                  <div className="flex-1">
+                    <p className="font-medium text-tg-text">Preview URL</p>
+                    <p className="text-sm text-tg-link truncate">{clientSite.preview_url}</p>
+                  </div>
+                </a>
+              )}
+
+              {/* Domain */}
+              {clientSite.domain && (
+                <div className="flex items-center gap-3 p-3 bg-tg-secondary-bg rounded-xl">
+                  <Globe className="w-5 h-5 text-purple-500" />
+                  <div className="flex-1">
+                    <p className="font-medium text-tg-text">Домен</p>
+                    <p className="text-sm text-tg-hint">{clientSite.domain}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Hosting Info */}
+              <div className="p-3 bg-tg-secondary-bg rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-tg-hint">Тариф:</span>
+                  <span className="font-medium text-tg-text capitalize">
+                    {clientSite.hosting_plan || 'trial'}
+                  </span>
+                </div>
+                {clientSite.hosting_expires_at && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-tg-hint">Истекает:</span>
+                    <span className="font-medium text-tg-text">
+                      {new Date(clientSite.hosting_expires_at).toLocaleDateString('ru-RU')}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Button */}
+              <button
+                onClick={() => navigate(`/sites/${clientSite.id}/payment`)}
+                className="w-full p-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl text-white font-medium flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                Продлить хостинг
+              </button>
+            </div>
+          </Section>
+        )}
 
         {/* Photo Viewer Modal */}
         <AnimatePresence>
