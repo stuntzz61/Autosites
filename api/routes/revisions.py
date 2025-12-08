@@ -198,6 +198,18 @@ async def start_site_preview(site: dict) -> bool:
         return False
 
 
+async def try_n8n_connection(url: str) -> bool:
+    """Try to connect to n8n to verify it's accessible."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            # Try to access n8n health or root endpoint
+            health_url = url.split('/webhook')[0] + '/healthz'  # n8n health endpoint
+            response = await client.get(health_url)
+            return response.status_code < 500
+    except:
+        return False
+
+
 async def send_revision_to_n8n(revision: dict, changes: list, site: dict) -> dict:
     """Send revision to n8n for processing."""
     webhook_url = settings.N8N_REVISIONS_WEBHOOK_URL or settings.N8N_WEBHOOK_URL
@@ -206,6 +218,11 @@ async def send_revision_to_n8n(revision: dict, changes: list, site: dict) -> dic
         raise HTTPException(status_code=500, detail="N8N webhook URL not configured")
 
     log.info(f"Sending revision {revision['id']} to n8n webhook: {webhook_url}")
+
+    # Try alternative hostnames if connection fails
+    # Based on docker-compose, n8n service is likely named 'n8n-main'
+    alternative_hosts = ['n8n-main', 'n8n-tg-bot', 'n8n', 'n8n-tg']
+    original_url = webhook_url
 
     # Get archive download URL if available
     archive_url = None
@@ -256,26 +273,60 @@ async def send_revision_to_n8n(revision: dict, changes: list, site: dict) -> dic
         }
     }
 
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                webhook_url,
-                json=payload,
-                timeout=60.0
-            )
-            response.raise_for_status()
-            result = response.json()
+    last_error = None
+    tried_urls = []
 
-            log.info(f"Sent revision {revision['id']} to n8n, response: {result}")
-            return result
+    # Try original URL first
+    urls_to_try = [webhook_url]
 
-    except httpx.ConnectError as e:
-        log.error(f"Failed to connect to n8n at {webhook_url}: {e}")
-        log.error(f"Check that N8N_REVISIONS_WEBHOOK_URL is correct and n8n container is accessible")
-        raise HTTPException(
-            status_code=502,
-            detail=f"Cannot connect to n8n. Check N8N_REVISIONS_WEBHOOK_URL in .env. Error: {str(e)}"
-        )
+    # If original URL uses 'n8n' hostname, try alternatives
+    if '://n8n:' in webhook_url or '://n8n/' in webhook_url:
+        for alt_host in alternative_hosts:
+            alt_url = webhook_url.replace('://n8n:', f'://{alt_host}:').replace('://n8n/', f'://{alt_host}/')
+            if alt_url != webhook_url:
+                urls_to_try.append(alt_url)
+
+    for url in urls_to_try:
+        tried_urls.append(url)
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    url,
+                    json=payload,
+                    timeout=60.0
+                )
+                response.raise_for_status()
+                result = response.json()
+
+                log.info(f"Sent revision {revision['id']} to n8n at {url}, response: {result}")
+                # If we used alternative URL, log it for user to update config
+                if url != original_url:
+                    log.warning(f"Successfully connected using alternative hostname. Consider updating N8N_REVISIONS_WEBHOOK_URL to: {url}")
+                return result
+        except httpx.ConnectError as e:
+            last_error = e
+            log.warning(f"Failed to connect to {url}: {e}")
+            continue
+        except httpx.HTTPStatusError as e:
+            # If we got HTTP response, connection works but endpoint might be wrong
+            log.error(f"n8n at {url} returned error: {e.response.status_code} - {e.response.text}")
+            raise HTTPException(status_code=502, detail=f"n8n error: {e.response.text}")
+
+    # All URLs failed
+    log.error(f"Failed to connect to n8n. Tried URLs: {tried_urls}")
+    log.error(f"Last error: {last_error}")
+    log.error(f"Possible solutions:")
+    log.error(f"  1. Check docker-compose.yml - what is the n8n container name?")
+    log.error(f"  2. Check if n8n container is running: docker ps | grep n8n")
+    log.error(f"  3. Check if containers are in same network: docker network inspect <network_name>")
+    log.error(f"  4. Update N8N_REVISIONS_WEBHOOK_URL in .env with correct hostname")
+
+    raise HTTPException(
+        status_code=502,
+        detail=f"Cannot connect to n8n. Tried: {', '.join(tried_urls)}. "
+               f"Check N8N_REVISIONS_WEBHOOK_URL in .env and ensure n8n container is running and accessible. "
+               f"Error: {str(last_error)}"
+    )
     except httpx.HTTPStatusError as e:
         log.error(f"n8n returned error: {e.response.status_code} - {e.response.text}")
         raise HTTPException(status_code=502, detail=f"n8n error: {e.response.text}")
