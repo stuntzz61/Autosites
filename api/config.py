@@ -29,8 +29,9 @@ class Settings(BaseSettings):
     # Admin password
     ADMIN_PASSWORD: str = "admin123"
 
-    # n8n webhook
-    N8N_WEBHOOK_URL: str = ""
+    # n8n webhooks
+    N8N_WEBHOOK_URL: str = ""  # Main webhook for site generation
+    N8N_REVISIONS_WEBHOOK_URL: str = ""  # Webhook for revision processing
 
     # Bot webhook (for notifications)
     BOT_WEBHOOK_URL: str = ""
@@ -38,6 +39,9 @@ class Settings(BaseSettings):
     # Deploy Node
     DEPLOY_NODE_URL: str = ""  # e.g. https://deploy.autosites.ru
     AUTO_DEPLOY_ENABLED: bool = False  # Auto-deploy after generation
+
+    # Callback secret for secure webhooks
+    DEPLOY_CALLBACK_SECRET: str = ""
 
     # Payment Settings
     PAYMENT_BASE_URL: str = ""  # URL for payment system (e.g. https://pay.example.com)

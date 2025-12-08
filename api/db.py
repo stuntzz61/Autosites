@@ -1481,3 +1481,392 @@ async def schedule_site_for_deletion(site_id: str):
                 (deletion_date, site_id)
             )
             await conn.commit()
+
+
+# ==================== Revisions (Правки) ====================
+
+async def create_revision(
+    site_id: str,
+    manager_id: str,
+    s3_folder: str = None,
+    archive_s3_key: str = None,
+    source: str = 'telegram_bot',
+    client_id: str = None,
+    request_id: str = None
+) -> Dict:
+    """Create a new revision (iteration of changes) for a site."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            # Get next iteration number
+            await cur.execute(
+                "SELECT COALESCE(MAX(iteration), 0) + 1 as next_iter FROM revisions WHERE site_id = %s",
+                (site_id,)
+            )
+            result = await cur.fetchone()
+            iteration = result['next_iter']
+
+            # Generate s3_folder if not provided
+            if not s3_folder:
+                s3_folder = f"sites/{site_id}/revisions/{iteration}/"
+
+            await cur.execute(
+                """INSERT INTO revisions
+                   (site_id, request_id, iteration, s3_folder, archive_s3_key,
+                    source, client_id, manager_id, status)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pending')
+                   RETURNING *""",
+                (site_id, request_id, iteration, s3_folder, archive_s3_key,
+                 source, client_id, manager_id)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def get_revision(revision_id: str) -> Optional[Dict]:
+    """Get revision by ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT r.*,
+                          cs.company_name, cs.preview_url, cs.domain, cs.deploy_status,
+                          u.first_name as manager_first_name, u.last_name as manager_last_name,
+                          u.tg_id as manager_tg_id
+                   FROM revisions r
+                   JOIN client_sites cs ON cs.id = r.site_id
+                   LEFT JOIN users u ON u.id = r.manager_id
+                   WHERE r.id = %s""",
+                (revision_id,)
+            )
+            return await cur.fetchone()
+
+
+async def get_revision_by_n8n_job(job_id: str) -> Optional[Dict]:
+    """Get revision by n8n job ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT * FROM revisions WHERE n8n_job_id = %s",
+                (job_id,)
+            )
+            return await cur.fetchone()
+
+
+async def get_site_revisions(
+    site_id: str,
+    status: str = None,
+    limit: int = 20,
+    offset: int = 0
+) -> List[Dict]:
+    """List revisions for a site."""
+    conditions = ["site_id = %s"]
+    params = [site_id]
+
+    if status:
+        conditions.append("status = %s")
+        params.append(status)
+
+    where_clause = " AND ".join(conditions)
+    params.extend([limit, offset])
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""SELECT r.*,
+                           (SELECT COUNT(*) FROM revision_changes WHERE revision_id = r.id) as changes_count
+                    FROM revisions r
+                    WHERE {where_clause}
+                    ORDER BY r.iteration DESC
+                    LIMIT %s OFFSET %s""",
+                params
+            )
+            return await cur.fetchall()
+
+
+async def list_active_revisions(
+    manager_id: str = None,
+    limit: int = 50,
+    offset: int = 0
+) -> List[Dict]:
+    """List active revisions (pending, in_progress, processing)."""
+    conditions = ["r.status IN ('pending', 'in_progress', 'processing')"]
+    params = []
+
+    if manager_id:
+        conditions.append("r.manager_id = %s")
+        params.append(manager_id)
+
+    where_clause = " AND ".join(conditions)
+    params.extend([limit, offset])
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""SELECT r.*,
+                           cs.company_name, cs.preview_url, cs.domain, cs.deploy_status,
+                           u.first_name as manager_first_name, u.last_name as manager_last_name,
+                           u.tg_id as manager_tg_id,
+                           (SELECT COUNT(*) FROM revision_changes WHERE revision_id = r.id) as changes_count
+                    FROM revisions r
+                    JOIN client_sites cs ON cs.id = r.site_id
+                    LEFT JOIN users u ON u.id = r.manager_id
+                    WHERE {where_clause}
+                    ORDER BY r.created_at DESC
+                    LIMIT %s OFFSET %s""",
+                params
+            )
+            return await cur.fetchall()
+
+
+async def update_revision(revision_id: str, data: Dict) -> Optional[Dict]:
+    """Update revision."""
+    allowed_fields = [
+        'status', 's3_folder', 'archive_s3_key', 'result_archive_s3_key',
+        'n8n_job_id', 'n8n_webhook_url', 'n8n_sent_at', 'n8n_response_at',
+        'error_message', 'error_details', 'completed_at'
+    ]
+
+    updates = []
+    params = []
+
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f"{field} = %s")
+            value = data[field]
+            if field == 'error_details' and isinstance(value, dict):
+                value = json.dumps(value)
+            params.append(value)
+
+    if not updates:
+        return await get_revision(revision_id)
+
+    params.append(revision_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE revisions
+                    SET {", ".join(updates)}
+                    WHERE id = %s
+                    RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def update_revision_status(
+    revision_id: str,
+    status: str,
+    error_message: str = None,
+    changed_by: str = None,
+    change_source: str = 'system'
+) -> Optional[Dict]:
+    """Update revision status with history logging."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            # Get current status
+            await cur.execute(
+                "SELECT status FROM revisions WHERE id = %s",
+                (revision_id,)
+            )
+            current = await cur.fetchone()
+            if not current:
+                return None
+
+            old_status = current['status']
+
+            # Update status
+            update_data = {'status': status}
+            if error_message:
+                update_data['error_message'] = error_message
+            if status in ('completed', 'failed', 'cancelled'):
+                update_data['completed_at'] = datetime.now(timezone.utc)
+
+            # Build update query
+            set_parts = ["status = %s"]
+            params = [status]
+
+            if error_message:
+                set_parts.append("error_message = %s")
+                params.append(error_message)
+
+            if status in ('completed', 'failed', 'cancelled'):
+                set_parts.append("completed_at = NOW()")
+
+            params.append(revision_id)
+
+            await cur.execute(
+                f"UPDATE revisions SET {', '.join(set_parts)} WHERE id = %s RETURNING *",
+                params
+            )
+            revision = await cur.fetchone()
+
+            # Log status change
+            await cur.execute(
+                """INSERT INTO revision_history
+                   (revision_id, old_status, new_status, changed_by, change_source)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (revision_id, old_status, status, changed_by, change_source)
+            )
+
+            await conn.commit()
+            return revision
+
+
+async def delete_revision(revision_id: str):
+    """Delete a revision."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("DELETE FROM revisions WHERE id = %s", (revision_id,))
+            await conn.commit()
+
+
+# ==================== Revision Changes (Отдельные правки) ====================
+
+async def create_revision_change(
+    revision_id: str,
+    client_description: str,
+    change_type: str = 'text_change',
+    location_area: str = None,
+    location_selector: str = None,
+    location_description: str = None,
+    old_value: str = None,
+    new_value_suggestion: str = None,
+    screenshot_s3_key: str = None,
+    screenshot_comment: str = None,
+    priority: str = 'normal',
+    metadata: Dict = None
+) -> Dict:
+    """Create a revision change."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO revision_changes
+                   (revision_id, change_type, location_area, location_selector,
+                    location_description, client_description, old_value, new_value_suggestion,
+                    screenshot_s3_key, screenshot_comment, priority, metadata)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   RETURNING *""",
+                (revision_id, change_type, location_area, location_selector,
+                 location_description, client_description, old_value, new_value_suggestion,
+                 screenshot_s3_key, screenshot_comment, priority,
+                 json.dumps(metadata) if metadata else '{}')
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def get_revision_changes(revision_id: str) -> List[Dict]:
+    """Get all changes for a revision."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT * FROM revision_changes
+                   WHERE revision_id = %s
+                   ORDER BY created_at ASC""",
+                (revision_id,)
+            )
+            return await cur.fetchall()
+
+
+async def update_revision_change(change_id: str, data: Dict) -> Optional[Dict]:
+    """Update a revision change."""
+    allowed_fields = [
+        'status', 'ai_interpretation', 'ai_confidence', 'metadata'
+    ]
+
+    updates = []
+    params = []
+
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f"{field} = %s")
+            value = data[field]
+            if field == 'metadata' and isinstance(value, dict):
+                value = json.dumps(value)
+            params.append(value)
+
+    if not updates:
+        return None
+
+    params.append(change_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE revision_changes
+                    SET {", ".join(updates)}
+                    WHERE id = %s
+                    RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def delete_revision_change(change_id: str):
+    """Delete a revision change."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("DELETE FROM revision_changes WHERE id = %s", (change_id,))
+            await conn.commit()
+
+
+# ==================== Revision History ====================
+
+async def get_revision_history(revision_id: str) -> List[Dict]:
+    """Get status history for a revision."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT rh.*, u.first_name, u.last_name
+                   FROM revision_history rh
+                   LEFT JOIN users u ON u.id = rh.changed_by
+                   WHERE rh.revision_id = %s
+                   ORDER BY rh.created_at ASC""",
+                (revision_id,)
+            )
+            return await cur.fetchall()
+
+
+# ==================== Revision Stats ====================
+
+async def get_revision_stats() -> Dict:
+    """Get overall revision statistics."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT
+                   COUNT(*) as total_revisions,
+                   COUNT(*) FILTER (WHERE status = 'pending') as pending_count,
+                   COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress_count,
+                   COUNT(*) FILTER (WHERE status = 'processing') as processing_count,
+                   COUNT(*) FILTER (WHERE status = 'completed') as completed_count,
+                   COUNT(*) FILTER (WHERE status = 'failed') as failed_count,
+                   COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as today_count,
+                   AVG(EXTRACT(EPOCH FROM (completed_at - created_at))/3600)
+                       FILTER (WHERE status = 'completed') as avg_completion_hours
+                   FROM revisions"""
+            )
+            return await cur.fetchone()
+
+
+async def get_site_revision_stats(site_id: str) -> Dict:
+    """Get revision statistics for a specific site."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT
+                   COUNT(*) as total_revisions,
+                   MAX(iteration) as last_iteration,
+                   COUNT(*) FILTER (WHERE status = 'completed') as completed_count,
+                   COUNT(*) FILTER (WHERE status = 'failed') as failed_count,
+                   MAX(completed_at) as last_completed_at,
+                   (SELECT COUNT(*) FROM revision_changes rc
+                    JOIN revisions r ON r.id = rc.revision_id
+                    WHERE r.site_id = %s) as total_changes
+                   FROM revisions
+                   WHERE site_id = %s""",
+                (site_id, site_id)
+            )
+            return await cur.fetchone()

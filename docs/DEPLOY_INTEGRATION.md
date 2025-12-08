@@ -1,5 +1,7 @@
 # Интеграция Autosites с Deploy Node
 
+> 📝 **См. также:** [Система правок сайтов (Revisions)](./REVISIONS_INTEGRATION.md) — документация по циклу правок через n8n.
+
 ## Обзор архитектуры
 
 ```
@@ -153,6 +155,32 @@ POST /api/sites/webhook/generation-callback
   "archive_s3_key": "path/to/archive.zip"
 }
 ```
+
+### Revisions (Правки)
+
+```bash
+# Создать правку
+POST /api/revisions
+{
+  "site_id": "uuid",
+  "changes": [
+    { "type": "text_change", "client_description": "Изменить текст" }
+  ]
+}
+
+# Отправить правки в обработку
+POST /api/revisions/{id}/submit
+
+# Callback от n8n после обработки правок
+POST /api/revisions/webhook/n8n-callback
+{
+  "job_id": "uuid",
+  "status": "completed",
+  "result_archive_s3_key": "path/to/new-archive.zip"
+}
+```
+
+См. полную документацию: [REVISIONS_INTEGRATION.md](./REVISIONS_INTEGRATION.md)
 
 ## Обновление n8n Workflow
 
