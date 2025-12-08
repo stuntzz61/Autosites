@@ -445,17 +445,23 @@ async def deploy_site(
     user: dict = Depends(get_current_user)
 ):
     """Trigger deployment for a site."""
+    log.info(f"Deploy request for site {site_id} from user {user['id']}")
     site = await db.get_client_site(site_id)
 
     if not site:
+        log.warning(f"Site {site_id} not found for deploy")
         raise HTTPException(status_code=404, detail="Site not found")
 
     if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+        log.warning(f"Access denied for user {user['id']} to deploy site {site_id}")
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Check if site has archive
     if not site.get('archive_s3_key'):
+        log.error(f"Site {site_id} has no archive_s3_key. Current site data: {site}")
         raise HTTPException(status_code=400, detail="Site has no generated archive")
+
+    log.info(f"Site {site_id} has archive: {site.get('archive_s3_key')}, proceeding with deploy")
 
     # Check if already deploying
     if site.get('deploy_status') == 'deploying':
@@ -789,12 +795,19 @@ async def generation_callback(data: GenerationCallbackRequest):
         archive_s3_key = data.get_archive_s3_key()
         archive_size_bytes = data.get_archive_size_bytes()
 
+        log.info(f"Updating site {site['id']} with archive: {archive_s3_key}, size: {archive_size_bytes}")
+
+        # Update site generation status (this also updates archive_s3_key in client_sites)
         await db.update_site_generation_status(
             site_id=str(site['id']),
             status='completed',
             archive_s3_key=archive_s3_key,
             archive_size_bytes=archive_size_bytes
         )
+
+        # Reload site to get updated archive_s3_key
+        site = await db.get_client_site(str(site['id']))
+        log.info(f"Site {site['id']} generation completed. Archive: {site.get('archive_s3_key')}, Size: {archive_size_bytes} bytes")
 
         # Update request status
         await db.update_request_status(request_id, 'success')
@@ -820,6 +833,8 @@ async def generation_callback(data: GenerationCallbackRequest):
                 log.error(f"Failed to auto-deploy site {site['id']}: {e}", exc_info=True)
                 # Don't fail the callback, just log the error
                 await db.update_site_deploy_status(str(site['id']), 'failed', error=str(e))
+        else:
+            log.info(f"Auto-deploy disabled. Site {site['id']} ready for manual deployment. Archive: {archive_s3_key}")
 
     elif data.status == 'error':
         error_message = data.get_error_message()
