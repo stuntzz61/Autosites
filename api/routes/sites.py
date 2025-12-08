@@ -80,17 +80,62 @@ class GenerationCallbackRequest(BaseModel):
 
 # ==================== Helper Functions ====================
 
-async def trigger_deploy(site: dict, archive_path: str, user_id: str = None):
-    """Trigger deployment to deploy-node."""
+async def trigger_deploy(site: dict, archive_path: str = None, user_id: str = None):
+    """
+    Trigger deployment to deploy-node.
+
+    Args:
+        site: Client site dict
+        archive_path: Optional local path to archive (if None, will download from S3)
+        user_id: Optional user ID who initiated deploy
+    """
     deploy_url = settings.DEPLOY_NODE_URL
     if not deploy_url:
         log.warning("DEPLOY_NODE_URL not configured, skipping deployment")
         return None
 
+    import tempfile
+    import os
+    from io import BytesIO
+
+    temp_file = None
+    archive_file = None
+
     try:
-        async with httpx.AsyncClient() as client:
+        # If archive_path not provided, download from S3
+        if not archive_path and site.get('archive_s3_key'):
+            log.info(f"Downloading archive from S3: {site['archive_s3_key']}")
+            import s3
+            archive_bytes = await s3.download_file_from_s3(site['archive_s3_key'])
+
+            # Create temp file
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+            temp_file.write(archive_bytes)
+            temp_file.close()
+            archive_path = temp_file.name
+            archive_file = open(archive_path, 'rb')
+            log.info(f"Downloaded archive to temp file: {archive_path}")
+        elif archive_path:
+            archive_file = open(archive_path, 'rb')
+        else:
+            raise ValueError("No archive_path or archive_s3_key provided")
+
+        async with httpx.AsyncClient(timeout=300.0) as client:
             # Prepare multipart form data
-            files = {'archive': open(archive_path, 'rb')}
+            # Extract filename from S3 key or use default
+            filename = 'site.zip'
+            if site.get('archive_s3_key'):
+                filename = os.path.basename(site['archive_s3_key']) or 'site.zip'
+            elif archive_path:
+                filename = os.path.basename(archive_path) or 'site.zip'
+
+            # Read file content
+            archive_file.seek(0)
+            archive_content = archive_file.read()
+            archive_file.close()
+
+            # Prepare multipart form
+            files = {'archive': (filename, archive_content, 'application/zip')}
             data = {
                 'auto_select': 'true',
                 'enable_ssl': 'false',  # Will enable after domain assignment
@@ -103,11 +148,12 @@ async def trigger_deploy(site: dict, archive_path: str, user_id: str = None):
                 data['domain'] = site['domain']
                 data['enable_ssl'] = 'true'
 
+            log.info(f"Sending deploy request to {deploy_url}/api/deploy for site {site['id']}")
             response = await client.post(
                 f"{deploy_url}/api/deploy",
                 files=files,
                 data=data,
-                timeout=60.0
+                timeout=300.0
             )
             response.raise_for_status()
             result = response.json()
@@ -148,13 +194,22 @@ async def trigger_deploy(site: dict, archive_path: str, user_id: str = None):
                 return None
 
     except Exception as e:
-        log.error(f"Error triggering deploy for site {site['id']}: {e}")
+        log.error(f"Error triggering deploy for site {site['id']}: {e}", exc_info=True)
         await db.update_site_deploy_status(
             site_id=str(site['id']),
             deploy_status='failed',
             error=str(e)
         )
         return None
+    finally:
+        # Cleanup
+        if archive_file and not archive_file.closed:
+            archive_file.close()
+        if temp_file and os.path.exists(temp_file.name):
+            try:
+                os.unlink(temp_file.name)
+            except:
+                pass
 
 
 async def assign_domain_to_deploy(site: dict, domain: str, enable_ssl: bool = True):
@@ -388,10 +443,22 @@ async def deploy_site(
     # Update status
     await db.update_site_deploy_status(site_id, 'pending')
 
-    # TODO: Download archive from S3 and trigger deploy
-    # For now, return pending status
+    # Trigger deploy (will download from S3 automatically)
+    deployment = await trigger_deploy(site, user_id=str(user['id']))
 
-    return {"success": True, "status": "pending", "message": "Deployment queued"}
+    if deployment:
+        return {
+            "success": True,
+            "status": "deploying",
+            "message": "Deployment started",
+            "deployment": deployment
+        }
+    else:
+        return {
+            "success": False,
+            "status": "failed",
+            "message": "Failed to start deployment"
+        }
 
 
 @router.post("/{site_id}/domain")

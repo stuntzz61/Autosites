@@ -110,3 +110,51 @@ async def delete_file_from_s3(url: str) -> bool:
         log.error(f"Failed to delete file: {e}")
         return False
 
+
+async def download_file_from_s3(s3_key: str) -> bytes:
+    """
+    Download file from S3 by key and return as bytes.
+
+    Args:
+        s3_key: S3 key (path) of the file
+
+    Returns:
+        File content as bytes
+    """
+    client = get_s3_client()
+
+    try:
+        response = client.get_object(Bucket=settings.S3_BUCKET, Key=s3_key)
+        content = response['Body'].read()
+        log.info(f"Downloaded file from S3: {s3_key} ({len(content)} bytes)")
+        return content
+    except ClientError as e:
+        log.error(f"Failed to download from S3: {e}")
+        raise
+
+
+async def get_presigned_download_url(s3_key: str, expires_in: int = 3600) -> str:
+    """
+    Generate presigned URL for downloading file from S3.
+
+    Args:
+        s3_key: S3 key (path) of the file
+        expires_in: URL expiration time in seconds (default: 1 hour)
+
+    Returns:
+        Presigned URL for downloading
+    """
+    client = get_s3_client()
+
+    try:
+        url = client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': settings.S3_BUCKET, 'Key': s3_key},
+            ExpiresIn=expires_in
+        )
+        log.info(f"Generated presigned URL for {s3_key}, expires in {expires_in}s")
+        return url
+    except ClientError as e:
+        log.error(f"Failed to generate presigned URL: {e}")
+        raise
+
