@@ -73,7 +73,7 @@ class AddChangeRequest(BaseModel):
 
 class SubmitRevisionRequest(BaseModel):
     """Запрос на отправку правок в n8n."""
-    stop_preview: bool = True  # Остановить preview сайт перед правками
+    stop_preview: Optional[bool] = True  # Остановить preview сайт перед правками
 
 
 class N8nRevisionCallbackRequest(BaseModel):
@@ -696,20 +696,30 @@ async def upload_screenshot(
 @router.post("/{revision_id}/submit")
 async def submit_revision(
     revision_id: str,
-    data: SubmitRevisionRequest,
-    background_tasks: BackgroundTasks,
+    data: Optional[SubmitRevisionRequest] = None,
+    background_tasks: BackgroundTasks = None,
     user: dict = Depends(get_current_user)
 ):
     """Submit revision for processing by n8n."""
+    # Handle case when no body is sent
+    if data is None:
+        data = SubmitRevisionRequest(stop_preview=True)
+
     revision = await db.get_revision(revision_id)
     if not revision:
         raise HTTPException(status_code=404, detail="Revision not found")
 
     if revision['status'] not in ('pending', 'draft'):
-        raise HTTPException(status_code=400, detail="Revision already submitted or completed")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Revision already submitted or completed. Current status: {revision['status']}"
+        )
 
     # Check access
     site = await db.get_client_site(str(revision['site_id']))
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found for this revision")
+
     if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
@@ -718,8 +728,9 @@ async def submit_revision(
     if not changes:
         raise HTTPException(status_code=400, detail="Revision has no changes")
 
-    # Stop preview if requested
-    if data.stop_preview:
+    # Stop preview if requested (default: True)
+    stop_preview = data.stop_preview if data.stop_preview is not None else True
+    if stop_preview:
         stopped = await stop_site_preview(site)
         if stopped:
             await db.update_site_deploy_status(str(site['id']), 'stopped')
