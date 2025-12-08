@@ -750,6 +750,10 @@ async def generation_callback(data: GenerationCallbackRequest):
     Webhook callback from n8n after site generation.
     Creates client_site record and optionally triggers deploy.
     """
+    # Log raw data for debugging
+    import json
+    log.info(f"Generation callback raw data: {json.dumps(data.dict(), indent=2, default=str)}")
+
     # Get request_id from either field
     request_id = data.get_request_id()
     if not request_id:
@@ -794,6 +798,13 @@ async def generation_callback(data: GenerationCallbackRequest):
     if data.status == 'completed':
         archive_s3_key = data.get_archive_s3_key()
         archive_size_bytes = data.get_archive_size_bytes()
+
+        log.info(f"Parsed archive data - archive_s3_key: {archive_s3_key}, archive_size_bytes: {archive_size_bytes}")
+        log.info(f"Raw fields - archive_s3_key: {data.archive_s3_key}, archiveSize: {data.archiveSize}")
+
+        if not archive_s3_key:
+            log.warning(f"⚠️ WARNING: archive_s3_key is None! Site {site['id']} cannot be deployed without archive.")
+            log.warning(f"Full callback data: {json.dumps(data.dict(), indent=2, default=str)}")
 
         log.info(f"Updating site {site['id']} with archive: {archive_s3_key}, size: {archive_size_bytes}")
 
