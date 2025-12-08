@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # Deploy Node
     DEPLOY_NODE_URL: str = ""  # e.g. https://deploy.autosites.ru
-    AUTO_DEPLOY_ENABLED: bool = False  # Auto-deploy after generation
+    AUTO_DEPLOY_ENABLED: bool = True  # Auto-deploy after generation (default: enabled)
 
     # Callback secret for secure webhooks
     DEPLOY_CALLBACK_SECRET: str = ""

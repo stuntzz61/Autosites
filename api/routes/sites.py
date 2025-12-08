@@ -160,7 +160,7 @@ async def trigger_deploy(site: dict, archive_path: str = None, user_id: str = No
             data = {
                 'auto_select': 'true',
                 'enable_ssl': 'false',  # Will enable after domain assignment
-                'request_id': site.get('request_id'),  # Pass request_id for callback
+                'request_id': str(site.get('request_id')) if site.get('request_id') else '',  # Convert UUID to string
                 'client_site_id': str(site['id']),  # Pass client_site_id for callback
             }
 
@@ -892,12 +892,23 @@ async def notify_manager_deploy_status(site: dict, status: str, data: DeployCall
 async def notify_manager_generation_complete(site: dict, status: str, error: str = None):
     """Notify manager about generation completion via bot."""
     if not settings.BOT_WEBHOOK_URL:
+        log.debug("BOT_WEBHOOK_URL not configured, skipping notification")
+        return
+
+    # Check if manager_tg_id is available
+    if not site.get('manager_tg_id'):
+        log.debug(f"No manager_tg_id for site {site.get('id')}, skipping notification")
         return
 
     try:
         async with httpx.AsyncClient() as client:
+            # Use proper URL format (with or without /webhook)
+            webhook_url = settings.BOT_WEBHOOK_URL
+            if not webhook_url.endswith('/webhook'):
+                webhook_url = f"{webhook_url.rstrip('/')}/webhook"
+
             await client.post(
-                f"{settings.BOT_WEBHOOK_URL}/webhook",
+                webhook_url,
                 json={
                     "action": "generation_complete",
                     "tg_id": site.get('manager_tg_id'),
@@ -908,8 +919,9 @@ async def notify_manager_generation_complete(site: dict, status: str, error: str
                 },
                 timeout=10.0
             )
+            log.debug(f"Successfully notified manager {site.get('manager_tg_id')} about generation")
     except Exception as e:
-        log.error(f"Failed to notify manager about generation: {e}")
+        log.error(f"Failed to notify manager about generation: {e}", exc_info=True)
 
 
 # ==================== Admin Endpoints ====================
