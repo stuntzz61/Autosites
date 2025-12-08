@@ -7,7 +7,7 @@ import {
   Clock, AlertCircle, Loader2, ChevronDown, X, ExternalLink,
   Palette, Upload, Camera, Edit3, Trash2, Plus, Sparkles,
   ChevronLeft, ChevronRight, ZoomIn, ImageIcon, Globe,
-  CreditCard, Power, RotateCcw
+  CreditCard, Power, RotateCcw, Play, Square, Link2, Shield
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -50,6 +50,9 @@ export default function RequestDetailPage() {
   const [selectedCategory, setSelectedCategory] = useState('gallery')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null)
+  const [showDomainModal, setShowDomainModal] = useState(false)
+  const [domainInput, setDomainInput] = useState('')
+  const [enableSsl, setEnableSsl] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Check if user is admin
@@ -147,6 +150,51 @@ export default function RequestDetailPage() {
     },
     onError: () => {
       toast.error('Ошибка удаления')
+      haptic?.notificationOccurred('error')
+    },
+  })
+
+  // Deploy site mutation
+  const deployMutation = useMutation({
+    mutationFn: () => sitesApi.deploy(clientSite!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-site', id] })
+      toast.success('Деплой запущен!')
+      haptic?.notificationOccurred('success')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка запуска деплоя')
+      haptic?.notificationOccurred('error')
+    },
+  })
+
+  // Stop site mutation
+  const stopMutation = useMutation({
+    mutationFn: () => sitesApi.stop(clientSite!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-site', id] })
+      toast.success('Сайт остановлен')
+      haptic?.notificationOccurred('success')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка остановки')
+      haptic?.notificationOccurred('error')
+    },
+  })
+
+  // Assign domain mutation
+  const assignDomainMutation = useMutation({
+    mutationFn: ({ domain, ssl }: { domain: string; ssl: boolean }) =>
+      sitesApi.assignDomain(clientSite!.id, domain, ssl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-site', id] })
+      toast.success('Домен привязан!')
+      haptic?.notificationOccurred('success')
+      setShowDomainModal(false)
+      setDomainInput('')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка привязки домена')
       haptic?.notificationOccurred('error')
     },
   })
@@ -576,11 +624,54 @@ export default function RequestDetailPage() {
                       {clientSite.deploy_status === 'pending' && '⏳ Ожидает деплоя'}
                       {clientSite.deploy_status === 'failed' && '❌ Ошибка'}
                       {clientSite.deploy_status === 'stopped' && '⏸ Остановлен'}
-                      {!clientSite.deploy_status || clientSite.deploy_status === 'none' && '⏸ Не задеплоен'}
+                      {(!clientSite.deploy_status || clientSite.deploy_status === 'none') && '⏸ Не задеплоен'}
                     </p>
                   </div>
                 </div>
+
+                {/* Deploy/Stop Controls */}
+                <div className="flex gap-2">
+                  {(clientSite.deploy_status === 'none' || clientSite.deploy_status === 'stopped' || clientSite.deploy_status === 'failed' || !clientSite.deploy_status) && clientSite.archive_s3_key && (
+                    <button
+                      onClick={() => deployMutation.mutate()}
+                      disabled={deployMutation.isPending}
+                      className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+                      title="Запустить деплой"
+                    >
+                      {deployMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Play className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+
+                  {clientSite.deploy_status === 'active' && (
+                    <button
+                      onClick={() => stopMutation.mutate()}
+                      disabled={stopMutation.isPending}
+                      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                      title="Остановить сайт"
+                    >
+                      {stopMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* Error Message */}
+              {clientSite.last_error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4 inline mr-1" />
+                    {clientSite.last_error}
+                  </p>
+                </div>
+              )}
 
               {/* Preview URL */}
               {clientSite.preview_url && (
@@ -599,30 +690,69 @@ export default function RequestDetailPage() {
               )}
 
               {/* Domain */}
-              {clientSite.domain && (
-                <div className="flex items-center gap-3 p-3 bg-tg-secondary-bg rounded-xl">
-                  <Globe className="w-5 h-5 text-purple-500" />
-                  <div className="flex-1">
-                    <p className="font-medium text-tg-text">Домен</p>
-                    <p className="text-sm text-tg-hint">{clientSite.domain}</p>
-                  </div>
+              <div className="flex items-center gap-3 p-3 bg-tg-secondary-bg rounded-xl">
+                <Link2 className="w-5 h-5 text-purple-500" />
+                <div className="flex-1">
+                  <p className="font-medium text-tg-text">Домен</p>
+                  {clientSite.domain ? (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-tg-hint">{clientSite.domain}</p>
+                      {clientSite.ssl_enabled && (
+                        <Shield className="w-3 h-3 text-green-500" title="SSL включен" />
+                      )}
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        clientSite.domain_status === 'active' ? 'bg-green-100 text-green-700' :
+                        clientSite.domain_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {clientSite.domain_status === 'active' ? 'Активен' :
+                         clientSite.domain_status === 'pending' ? 'Настраивается' : 'Неактивен'}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-tg-hint">Не привязан</p>
+                  )}
                 </div>
-              )}
+                <button
+                  onClick={() => {
+                    setDomainInput(clientSite.domain || '')
+                    setShowDomainModal(true)
+                  }}
+                  className="p-2 bg-purple-500/10 text-purple-500 rounded-lg hover:bg-purple-500/20 transition-colors"
+                  title="Настроить домен"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+              </div>
 
               {/* Hosting Info */}
               <div className="p-3 bg-tg-secondary-bg rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-tg-hint">Тариф:</span>
                   <span className="font-medium text-tg-text capitalize">
-                    {clientSite.hosting_plan || 'trial'}
+                    {clientSite.hosting_plan === 'trial' ? '🆓 Пробный' :
+                     clientSite.hosting_plan === 'basic' ? '📦 Базовый' :
+                     clientSite.hosting_plan === 'pro' ? '⭐ Профессиональный' :
+                     clientSite.hosting_plan === 'enterprise' ? '🏢 Корпоративный' :
+                     clientSite.hosting_plan || 'trial'}
                   </span>
                 </div>
                 {clientSite.hosting_expires_at && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-tg-hint">Истекает:</span>
-                    <span className="font-medium text-tg-text">
+                    <span className={`font-medium ${
+                      new Date(clientSite.hosting_expires_at) < new Date() ? 'text-red-500' :
+                      new Date(clientSite.hosting_expires_at) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) ? 'text-orange-500' :
+                      'text-tg-text'
+                    }`}>
                       {new Date(clientSite.hosting_expires_at).toLocaleDateString('ru-RU')}
                     </span>
+                  </div>
+                )}
+                {clientSite.server_name && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-tg-hint">Сервер:</span>
+                    <span className="font-medium text-tg-text">{clientSite.server_name}</span>
                   </div>
                 )}
               </div>
@@ -638,6 +768,94 @@ export default function RequestDetailPage() {
             </div>
           </Section>
         )}
+
+        {/* Domain Assignment Modal */}
+        <AnimatePresence>
+          {showDomainModal && clientSite && (
+            <>
+              <motion.div
+                className="fixed inset-0 bg-black/50 z-40"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowDomainModal(false)}
+              />
+              <motion.div
+                className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom"
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+              >
+                <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
+                <div className="flex items-center gap-2 mb-4">
+                  <Link2 className="w-5 h-5 text-purple-500" />
+                  <p className="text-lg font-semibold">Настройка домена</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-tg-hint mb-1 block">Домен</label>
+                    <input
+                      type="text"
+                      value={domainInput}
+                      onChange={(e) => setDomainInput(e.target.value.toLowerCase().trim())}
+                      placeholder="example.com"
+                      className="input"
+                    />
+                    <p className="text-xs text-tg-hint mt-1">
+                      Укажите домен без http:// и www
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-3 p-3 bg-tg-secondary-bg rounded-xl cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableSsl}
+                      onChange={(e) => setEnableSsl(e.target.checked)}
+                      className="w-5 h-5 rounded border-tg-separator"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium text-tg-text flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-green-500" />
+                        Включить SSL (HTTPS)
+                      </p>
+                      <p className="text-xs text-tg-hint">Бесплатный сертификат Let's Encrypt</p>
+                    </div>
+                  </label>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      <strong>Инструкция:</strong>
+                      <br />1. Добавьте A-запись для домена, указав IP: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">{clientSite.server_host || 'см. сервер'}</code>
+                      <br />2. Дождитесь обновления DNS (5-60 минут)
+                      <br />3. Нажмите "Привязать домен"
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDomainModal(false)}
+                      className="btn btn-secondary flex-1"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={() => assignDomainMutation.mutate({ domain: domainInput, ssl: enableSsl })}
+                      disabled={!domainInput || assignDomainMutation.isPending}
+                      className="btn btn-primary flex-1"
+                    >
+                      {assignDomainMutation.isPending ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        'Привязать домен'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* Photo Viewer Modal */}
         <AnimatePresence>

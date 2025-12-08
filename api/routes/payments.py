@@ -20,6 +20,15 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Try to import qrcode, fallback to simple implementation if not available
+try:
+    import qrcode
+    from qrcode.image.pil import PilImage
+    HAS_QRCODE = True
+except ImportError:
+    HAS_QRCODE = False
+    log.warning("qrcode library not installed, using fallback QR generation")
+
 
 # ==================== DTOs ====================
 
@@ -42,62 +51,103 @@ class PaymentResponse(BaseModel):
 
 # ==================== QR Code Generation ====================
 
-def generate_qr_code_placeholder(data: str) -> tuple[str, bytes]:
+def generate_qr_code(data: str) -> tuple[str, bytes]:
     """
-    Генерирует заглушку QR кода.
-    В продакшене здесь должна быть интеграция с реальным QR генератором (qrcode, pyqrcode)
-    или с платежной системой (ЮKassa, CloudPayments).
+    Генерирует QR код с использованием библиотеки qrcode.
+    Возвращает (data_url, png_bytes).
     """
-    # Заглушка: возвращаем base64 PNG изображение
-    # В реальности здесь будет: qr = qrcode.QRCode(); img = qr.make_image()
+    if HAS_QRCODE:
+        # Создаём QR код
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
 
-    # Создаем простую SVG заглушку
-    qr_svg = f'''
-    <svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
-        <rect width="256" height="256" fill="white"/>
-        <text x="128" y="128" font-family="Arial" font-size="12" text-anchor="middle" fill="black">
-            QR Placeholder
-        </text>
-        <text x="128" y="150" font-family="Arial" font-size="8" text-anchor="middle" fill="gray">
-            {data[:30]}...
-        </text>
-    </svg>
-    '''
+        # Создаём изображение
+        img = qr.make_image(fill_color="black", back_color="white")
 
-    # Конвертируем SVG в base64
-    qr_base64 = base64.b64encode(qr_svg.encode()).decode()
-    qr_url = f"data:image/svg+xml;base64,{qr_base64}"
+        # Конвертируем в PNG bytes
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        png_bytes = buffer.getvalue()
 
-    return qr_url, qr_svg.encode()
+        # Создаём data URL
+        qr_base64 = base64.b64encode(png_bytes).decode()
+        qr_url = f"data:image/png;base64,{qr_base64}"
+
+        return qr_url, png_bytes
+    else:
+        # Fallback: создаём простой SVG QR код (placeholder)
+        qr_svg = f'''<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+            <rect width="256" height="256" fill="white"/>
+            <rect x="20" y="20" width="50" height="50" fill="black"/>
+            <rect x="186" y="20" width="50" height="50" fill="black"/>
+            <rect x="20" y="186" width="50" height="50" fill="black"/>
+            <rect x="30" y="30" width="30" height="30" fill="white"/>
+            <rect x="196" y="30" width="30" height="30" fill="white"/>
+            <rect x="30" y="196" width="30" height="30" fill="white"/>
+            <rect x="38" y="38" width="14" height="14" fill="black"/>
+            <rect x="204" y="38" width="14" height="14" fill="black"/>
+            <rect x="38" y="204" width="14" height="14" fill="black"/>
+            <text x="128" y="128" font-family="Arial" font-size="10" text-anchor="middle" fill="black">
+                QR CODE
+            </text>
+        </svg>'''
+
+        qr_base64 = base64.b64encode(qr_svg.encode()).decode()
+        qr_url = f"data:image/svg+xml;base64,{qr_base64}"
+
+        return qr_url, qr_svg.encode()
+
+
+def generate_sbp_qr_data(bank_account: str, amount: float, description: str, payment_id: str) -> str:
+    """
+    Генерирует данные для QR кода СБП (Система Быстрых Платежей).
+    Формат: https://qr.nspk.ru/... (для реальной интеграции нужен банковский API)
+    """
+    # Для тестирования используем простой формат
+    # В продакшене здесь будет формат НСПК или API банка
+    payment_data = {
+        "type": "sbp_payment",
+        "id": payment_id,
+        "amount": amount,
+        "description": description,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    return json.dumps(payment_data, ensure_ascii=False)
 
 
 async def generate_payment_qr(payment_id: str, amount: float, description: str) -> dict:
     """
     Генерирует QR код для оплаты.
-    TODO: Интеграция с реальной платежной системой (ЮKassa, CloudPayments, и т.д.)
+    Может быть расширено для интеграции с ЮKassa, CloudPayments, СБП.
     """
-    # Данные для QR кода
-    payment_data = {
-        "payment_id": payment_id,
-        "amount": amount,
-        "description": description,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
+    # Формируем данные для QR кода
+    qr_data = generate_sbp_qr_data(
+        bank_account=settings.PAYMENT_BANK_ACCOUNT if hasattr(settings, 'PAYMENT_BANK_ACCOUNT') else "",
+        amount=amount,
+        description=description,
+        payment_id=payment_id
+    )
 
-    # Генерируем QR код (заглушка)
-    qr_url, qr_image = generate_qr_code_placeholder(json.dumps(payment_data))
+    # Генерируем QR код
+    qr_url, qr_image = generate_qr_code(qr_data)
 
-    # В продакшене здесь будет:
-    # 1. Создание платежа в платежной системе (ЮKassa)
-    # 2. Получение реального QR кода
-    # 3. Сохранение payment_url для прямого перехода
+    # URL для оплаты (для интеграции с платёжной системой)
+    payment_url = None
+    if hasattr(settings, 'PAYMENT_BASE_URL') and settings.PAYMENT_BASE_URL:
+        payment_url = f"{settings.PAYMENT_BASE_URL}/pay/{payment_id}"
 
     expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
 
     return {
         "qr_code_url": qr_url,
         "qr_image_data": base64.b64encode(qr_image).decode(),
-        "payment_url": f"https://pay.example.com/{payment_id}",  # Заглушка
+        "payment_url": payment_url,
         "expires_at": expires_at.isoformat()
     }
 

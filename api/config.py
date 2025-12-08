@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     DEPLOY_NODE_URL: str = ""  # e.g. https://deploy.autosites.ru
     AUTO_DEPLOY_ENABLED: bool = False  # Auto-deploy after generation
 
+    # Payment Settings
+    PAYMENT_BASE_URL: str = ""  # URL for payment system (e.g. https://pay.example.com)
+    PAYMENT_BANK_ACCOUNT: str = ""  # Bank account for SBP payments
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
 

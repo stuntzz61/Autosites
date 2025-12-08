@@ -209,12 +209,74 @@ psql $DATABASE_URL < migrations/009_client_sites.sql
 3. **n8n генерирует сайт** → ZIP архив
 4. **n8n вызывает callback** → `/api/sites/webhook/generation-callback`
 5. **API создает client_site** → `generation_status = 'completed'`
-6. **Если AUTO_DEPLOY_ENABLED**:
+6. **Бот уведомляет менеджера** о завершении генерации
+7. **Если AUTO_DEPLOY_ENABLED** или **менеджер нажимает "Деплой"**:
    - API запускает деплой → deploy-node
    - Deploy-node деплоит на сервер
    - Deploy-node вызывает callback → `/api/sites/webhook/deploy-callback`
    - API обновляет `deploy_status = 'active'`
-7. **Бот уведомляет менеджера** с preview URL
+   - API обновляет статус заявки → `success`
+8. **Бот уведомляет менеджера** с preview URL
+
+## Уведомления бота
+
+Бот отправляет уведомления через webhook `/webhook`:
+
+```json
+// Статус деплоя
+{
+  "action": "deploy_status",
+  "tg_id": 123456789,
+  "site_id": "uuid",
+  "company_name": "Company",
+  "status": "active|deploying|failed|stopped",
+  "preview_url": "https://abc12345.autosites.ru",
+  "domain": "example.com",
+  "error": "error message if failed"
+}
+
+// Завершение генерации
+{
+  "action": "generation_complete",
+  "tg_id": 123456789,
+  "request_id": "uuid",
+  "company_name": "Company",
+  "status": "completed|error",
+  "error": "error message if failed"
+}
+
+// Предупреждение об истечении хостинга
+{
+  "action": "hosting_warning",
+  "tg_id": 123456789,
+  "site_id": "uuid",
+  "company_name": "Company",
+  "days_remaining": 7
+}
+```
+
+## Управление через WebApp
+
+В приложении доступны следующие действия:
+
+### Управление деплоем
+- **Запустить деплой** - POST `/api/sites/{id}/deploy`
+- **Остановить сайт** - POST `/api/sites/{id}/stop`
+- **Принудительный редеплой** (admin) - POST `/api/sites/admin/{id}/force-deploy`
+
+### Управление доменом
+- **Привязать домен** - POST `/api/sites/{id}/domain`
+  ```json
+  { "domain": "example.com", "enable_ssl": true }
+  ```
+
+### Оплата хостинга
+- **Создать платёж** - POST `/api/payments`
+  ```json
+  { "site_id": "uuid", "plan": "basic", "months": 1 }
+  ```
+- **Получить QR код** - GET `/api/payments/{id}/qr`
+- **Проверить оплату** - POST `/api/payments/{id}/verify`
 
 ## Мониторинг
 
@@ -222,11 +284,17 @@ psql $DATABASE_URL < migrations/009_client_sites.sql
 -- Активные сайты
 SELECT * FROM client_sites WHERE deploy_status = 'active';
 
--- Истекающий хостинг
+-- Истекающий хостинг (в течение 14 дней)
 SELECT * FROM expiring_sites;
 
--- Статистика
+-- Статистика сайтов
 SELECT * FROM sites_stats;
+
+-- Сайты с ошибками
+SELECT company_name, last_error, last_error_at
+FROM client_sites
+WHERE last_error IS NOT NULL
+ORDER BY last_error_at DESC;
 ```
 
 ## Troubleshooting
@@ -235,14 +303,26 @@ SELECT * FROM sites_stats;
 1. Проверьте `CALLBACK_URL` в deploy-node
 2. Проверьте логи: `docker logs deploy-node`
 3. Проверьте доступность API из контейнера
+4. Проверьте что endpoint `/api/sites/webhook/deploy-callback` отвечает
 
 ### Деплой не запускается
 1. Проверьте `DEPLOY_NODE_URL` в Autosites API
-2. Проверьте наличие архива в S3
-3. Проверьте статус `generation_status`
+2. Проверьте наличие архива в S3 (`archive_s3_key` в `client_sites`)
+3. Проверьте статус `generation_status = 'completed'`
 
-### Статус не обновляется
+### Статус не обновляется в приложении
 1. Проверьте webhook endpoint доступен
-2. Проверьте формат payload
+2. Проверьте формат payload (JSON)
 3. Смотрите логи API и deploy-node
+4. Проверьте что `request_id` или `client_site_id` передаются в деплой
+
+### Бот не отправляет уведомления
+1. Проверьте `BOT_WEBHOOK_URL` в API конфигурации
+2. Проверьте что бот запущен: `docker logs bot`
+3. Проверьте webhook порт `BOT_WEBHOOK_PORT`
+
+### QR код не отображается
+1. Проверьте что библиотека qrcode установлена: `pip install qrcode[pil] pillow`
+2. Проверьте логи API при создании платежа
+3. QR генерируется как base64 data URL в поле `qr_code_url`
 

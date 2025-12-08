@@ -598,6 +598,127 @@ async def notify_admins_new_feedback(manager_name: str, subject: str, priority: 
 
 # ==================== Webhook Server for API notifications ====================
 
+async def send_deploy_status_notification(tg_id: int, site_id: str, company_name: str, status: str, preview_url: str = None, domain: str = None, error: str = None):
+    """Notify manager about deployment status change."""
+    try:
+        if status == 'active':
+            # Успешный деплой
+            urls = []
+            if preview_url:
+                urls.append(f"🔗 Preview: {preview_url}")
+            if domain:
+                urls.append(f"🌐 Домен: https://{domain}")
+
+            message = f"✅ <b>Сайт «{company_name}» успешно задеплоен!</b>\n\n"
+            if urls:
+                message += "\n".join(urls) + "\n\n"
+            message += "Сайт доступен для просмотра."
+
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(
+                    text="🚀 Открыть приложение",
+                    web_app=WebAppInfo(url=WEBAPP_URL)
+                )]
+            ])
+
+            if preview_url:
+                keyboard.inline_keyboard.insert(0, [
+                    InlineKeyboardButton(text="🌐 Открыть сайт", url=preview_url)
+                ])
+
+            await bot.send_message(tg_id, message, parse_mode="HTML", reply_markup=keyboard)
+
+        elif status == 'deploying':
+            # Деплой в процессе
+            await bot.send_message(
+                tg_id,
+                f"🔄 <b>Деплой сайта «{company_name}» начат</b>\n\n"
+                f"Обычно это занимает 1-3 минуты. Мы уведомим вас о результате.",
+                parse_mode="HTML"
+            )
+
+        elif status == 'failed':
+            # Ошибка деплоя
+            error_text = f"\n\n<b>Ошибка:</b> {error}" if error else ""
+            await bot.send_message(
+                tg_id,
+                f"❌ <b>Ошибка деплоя сайта «{company_name}»</b>{error_text}\n\n"
+                f"Попробуйте запустить деплой повторно или обратитесь к администратору.",
+                parse_mode="HTML",
+                reply_markup=get_main_keyboard(is_approved=True)
+            )
+
+        elif status == 'stopped':
+            # Сайт остановлен
+            await bot.send_message(
+                tg_id,
+                f"⏸ <b>Сайт «{company_name}» остановлен</b>\n\n"
+                f"Вы можете запустить его снова в приложении.",
+                parse_mode="HTML",
+                reply_markup=get_main_keyboard(is_approved=True)
+            )
+
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send deploy status notification to {tg_id}: {e}")
+        return False
+
+
+async def send_generation_complete_notification(tg_id: int, request_id: str, company_name: str, status: str, error: str = None):
+    """Notify manager about generation completion."""
+    try:
+        if status == 'completed':
+            await bot.send_message(
+                tg_id,
+                f"🎉 <b>Генерация сайта «{company_name}» завершена!</b>\n\n"
+                f"Теперь вы можете запустить деплой сайта в приложении.",
+                parse_mode="HTML",
+                reply_markup=get_main_keyboard(is_approved=True)
+            )
+        elif status == 'error':
+            error_text = f"\n\n<b>Ошибка:</b> {error}" if error else ""
+            await bot.send_message(
+                tg_id,
+                f"❌ <b>Ошибка генерации сайта «{company_name}»</b>{error_text}\n\n"
+                f"Попробуйте снова или обратитесь к администратору.",
+                parse_mode="HTML",
+                reply_markup=get_main_keyboard(is_approved=True)
+            )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send generation notification to {tg_id}: {e}")
+        return False
+
+
+async def send_hosting_warning_notification(tg_id: int, site_id: str, company_name: str, days_remaining: int):
+    """Notify manager about expiring hosting."""
+    try:
+        days_text = f"{days_remaining} " + (
+            "день" if days_remaining == 1 else
+            "дня" if 2 <= days_remaining <= 4 else
+            "дней"
+        )
+
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="💳 Продлить хостинг",
+                web_app=WebAppInfo(url=f"{WEBAPP_URL}/sites/{site_id}/payment")
+            )]
+        ])
+
+        await bot.send_message(
+            tg_id,
+            f"⚠️ <b>Внимание! Хостинг сайта «{company_name}» истекает через {days_text}</b>\n\n"
+            f"Продлите хостинг, чтобы сайт продолжал работать.",
+            parse_mode="HTML",
+            reply_markup=keyboard
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send hosting warning to {tg_id}: {e}")
+        return False
+
+
 async def handle_webhook(request):
     """Handle webhook requests from API."""
     try:
@@ -612,6 +733,62 @@ async def handle_webhook(request):
 
             if tg_id and request_id:
                 await send_additional_services_offer(tg_id, request_id, company_name)
+                return web.json_response({"success": True})
+
+        elif action == "deploy_status":
+            # Notify about deployment status change
+            tg_id = data.get("tg_id")
+            site_id = data.get("site_id")
+            company_name = data.get("company_name", "")
+            status = data.get("status")
+            preview_url = data.get("preview_url")
+            domain = data.get("domain")
+            error = data.get("error")
+
+            if tg_id and status:
+                await send_deploy_status_notification(
+                    tg_id=tg_id,
+                    site_id=site_id,
+                    company_name=company_name,
+                    status=status,
+                    preview_url=preview_url,
+                    domain=domain,
+                    error=error
+                )
+                return web.json_response({"success": True})
+
+        elif action == "generation_complete":
+            # Notify about generation completion
+            tg_id = data.get("tg_id")
+            request_id = data.get("request_id")
+            company_name = data.get("company_name", "")
+            status = data.get("status")
+            error = data.get("error")
+
+            if tg_id and status:
+                await send_generation_complete_notification(
+                    tg_id=tg_id,
+                    request_id=request_id,
+                    company_name=company_name,
+                    status=status,
+                    error=error
+                )
+                return web.json_response({"success": True})
+
+        elif action == "hosting_warning":
+            # Notify about expiring hosting
+            tg_id = data.get("tg_id")
+            site_id = data.get("site_id")
+            company_name = data.get("company_name", "")
+            days_remaining = data.get("days_remaining", 7)
+
+            if tg_id and site_id:
+                await send_hosting_warning_notification(
+                    tg_id=tg_id,
+                    site_id=site_id,
+                    company_name=company_name,
+                    days_remaining=days_remaining
+                )
                 return web.json_response({"success": True})
 
         elif action == "feedback_response":

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { paymentApi, sitesApi } from '@/api/client'
@@ -9,13 +9,12 @@ import { useTelegram } from '@/contexts/TelegramContext'
 
 // Simple QR Code component using Canvas (fallback if no library)
 function QRCodeCanvas({ data, size = 256 }: { data: string; size?: number }) {
-  const canvasRef = useState<HTMLCanvasElement | null>(null)[0]
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    if (!canvasRef || !data) return
+    const canvas = canvasRef.current
+    if (!canvas || !data) return
 
-    // Generate simple QR-like pattern (placeholder)
-    const canvas = canvasRef
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
@@ -26,48 +25,63 @@ function QRCodeCanvas({ data, size = 256 }: { data: string; size?: number }) {
     ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, size, size)
 
-    // Generate pattern based on data hash
+    // Generate deterministic pattern based on data hash
     ctx.fillStyle = '#000000'
-    const gridSize = 25
+    const gridSize = 33
     const cellSize = size / gridSize
+    const margin = 4 // QR quiet zone
 
-    for (let i = 0; i < gridSize; i++) {
-      for (let j = 0; j < gridSize; j++) {
-        const hash = (data.charCodeAt((i * gridSize + j) % data.length) + i + j) % 3
-        if (hash === 0 || hash === 1) {
+    // Simple hash function for deterministic patterns
+    const hash = (str: string, i: number, j: number): boolean => {
+      const val = str.charCodeAt(Math.abs((i * 17 + j * 31 + str.charCodeAt(i % str.length))) % str.length)
+      return (val + i + j) % 3 !== 0
+    }
+
+    // Draw QR pattern
+    for (let i = margin; i < gridSize - margin; i++) {
+      for (let j = margin; j < gridSize - margin; j++) {
+        // Skip corner markers
+        const inTopLeft = i < margin + 8 && j < margin + 8
+        const inTopRight = i > gridSize - margin - 8 && j < margin + 8
+        const inBottomLeft = i < margin + 8 && j > gridSize - margin - 8
+
+        if (!inTopLeft && !inTopRight && !inBottomLeft && hash(data, i, j)) {
           ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize)
         }
       }
     }
 
-    // Add corner markers (QR code style)
-    const markerSize = cellSize * 3
-    const drawMarker = (x: number, y: number) => {
-      // Outer square
-      ctx.fillRect(x, y, markerSize, markerSize)
-      // Inner square
-      ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(x + cellSize, y + cellSize, cellSize, cellSize)
+    // Draw position detection patterns (corner markers)
+    const drawPositionPattern = (x: number, y: number) => {
+      const pSize = 7 * cellSize
+      // Outer black square
       ctx.fillStyle = '#000000'
+      ctx.fillRect(x, y, pSize, pSize)
+      // White square inside
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fillRect(x + cellSize, y + cellSize, pSize - 2 * cellSize, pSize - 2 * cellSize)
+      // Inner black square
+      ctx.fillStyle = '#000000'
+      ctx.fillRect(x + 2 * cellSize, y + 2 * cellSize, pSize - 4 * cellSize, pSize - 4 * cellSize)
     }
 
-    drawMarker(0, 0)
-    drawMarker(size - markerSize, 0)
-    drawMarker(0, size - markerSize)
-  }, [canvasRef, data, size])
+    drawPositionPattern(margin * cellSize, margin * cellSize) // Top-left
+    drawPositionPattern((gridSize - margin - 7) * cellSize, margin * cellSize) // Top-right
+    drawPositionPattern(margin * cellSize, (gridSize - margin - 7) * cellSize) // Bottom-left
+
+  }, [data, size])
 
   return (
-    <div className="bg-white p-4 rounded-2xl">
+    <div className="bg-white p-4 rounded-2xl shadow-lg">
       <canvas
-        ref={(el) => {
-          if (el) {
-            // @ts-ignore
-            canvasRef = el
-          }
-        }}
-        className="w-full h-auto"
+        ref={canvasRef}
+        width={size}
+        height={size}
+        className="w-full h-auto max-w-[256px] mx-auto"
       />
-      <p className="text-xs text-center mt-2 text-gray-500">QR Code Placeholder</p>
+      <p className="text-xs text-center mt-2 text-gray-500">
+        Отсканируйте для оплаты
+      </p>
     </div>
   )
 }

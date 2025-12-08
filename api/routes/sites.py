@@ -537,7 +537,28 @@ async def deploy_callback(data: DeployCallbackRequest):
     }
     deploy_status = status_map.get(data.status, data.status)
 
-    # Update site
+    # Update site with server_host for domain configuration instructions
+    update_data = {
+        'deploy_status': deploy_status,
+    }
+    if data.preview_slug:
+        update_data['preview_slug'] = data.preview_slug
+    if data.preview_url:
+        update_data['preview_url'] = data.preview_url
+    if data.server_id:
+        update_data['server_id'] = data.server_id
+    if data.server_name:
+        update_data['server_name'] = data.server_name
+    if data.server_host:
+        update_data['server_host'] = data.server_host
+    if data.port:
+        update_data['container_port'] = data.port
+    if data.error_message:
+        update_data['last_error'] = data.error_message
+
+    await db.update_client_site(str(site['id']), update_data)
+
+    # Also update deploy status explicitly
     await db.update_site_deploy_status(
         site_id=str(site['id']),
         deploy_status=deploy_status,
@@ -556,6 +577,13 @@ async def deploy_callback(data: DeployCallbackRequest):
             'ssl_enabled': data.ssl_enabled or False
         })
 
+    # Update request status based on deploy result
+    if site.get('request_id'):
+        if deploy_status == 'active':
+            # Site is live - update request to success if not already
+            await db.update_request_status(str(site['request_id']), 'success')
+            log.info(f"Updated request {site['request_id']} status to success after successful deploy")
+
     # Update deploy history if exists
     history = await db.get_deploy_history(str(site['id']), limit=1)
     if history and history[0].get('deploy_id') == data.deploy_id:
@@ -566,8 +594,14 @@ async def deploy_callback(data: DeployCallbackRequest):
             error_message=data.error_message
         )
 
+    # Get manager info for notifications
+    if not site.get('manager_tg_id'):
+        full_site = await db.get_client_site(str(site['id']))
+        if full_site:
+            site = full_site
+
     # Notify manager via bot if configured
-    if site.get('manager_tg_id') and deploy_status in ('active', 'failed'):
+    if site.get('manager_tg_id') and deploy_status in ('active', 'failed', 'deploying'):
         await notify_manager_deploy_status(site, deploy_status, data)
 
     return {"success": True}
@@ -586,6 +620,9 @@ async def generation_callback(data: GenerationCallbackRequest):
     if not request:
         log.warning(f"Request not found: {data.request_id}")
         raise HTTPException(status_code=404, detail="Request not found")
+
+    # Get user info for notifications
+    user = await db.get_user_by_id(str(request['user_id']))
 
     # Get or create client site
     site = await db.get_client_site_by_request(data.request_id)
@@ -606,6 +643,10 @@ async def generation_callback(data: GenerationCallbackRequest):
         )
         log.info(f"Created client site {site['id']} from generation callback")
 
+    # Add manager_tg_id to site for notifications
+    if user:
+        site['manager_tg_id'] = user.get('tg_id')
+
     # Update generation status
     if data.status == 'completed':
         await db.update_site_generation_status(
@@ -617,6 +658,9 @@ async def generation_callback(data: GenerationCallbackRequest):
 
         # Update request status
         await db.update_request_status(data.request_id, 'success')
+
+        # Notify manager about generation complete
+        await notify_manager_generation_complete(site, 'completed')
 
         # Auto-deploy if configured
         if settings.AUTO_DEPLOY_ENABLED:
@@ -632,41 +676,60 @@ async def generation_callback(data: GenerationCallbackRequest):
         )
         await db.update_request_status(data.request_id, 'error')
 
+        # Notify manager about generation error
+        await notify_manager_generation_complete(site, 'error', data.error_message)
+
     return {"success": True, "site_id": str(site['id'])}
 
 
 async def notify_manager_deploy_status(site: dict, status: str, data: DeployCallbackRequest):
     """Notify manager about deployment status via bot."""
     if not settings.BOT_WEBHOOK_URL:
+        log.warning("BOT_WEBHOOK_URL not configured, skipping notification")
         return
 
     try:
-        message = ""
-        if status == 'active':
-            urls = []
-            if data.preview_url:
-                urls.append(f"Preview: {data.preview_url}")
-            if data.domain:
-                urls.append(f"Domain: https://{data.domain}")
-
-            message = f"✅ Сайт «{site['company_name']}» успешно задеплоен!\n\n" + "\n".join(urls)
-        else:
-            message = f"❌ Ошибка деплоя сайта «{site['company_name']}»\n\nОшибка: {data.error_message or 'Unknown error'}"
-
         async with httpx.AsyncClient() as client:
             await client.post(
                 f"{settings.BOT_WEBHOOK_URL}/webhook",
                 json={
                     "action": "deploy_status",
-                    "tg_id": site['manager_tg_id'],
-                    "message": message,
+                    "tg_id": site.get('manager_tg_id'),
                     "site_id": str(site['id']),
-                    "status": status
+                    "company_name": site.get('company_name', 'Сайт'),
+                    "status": status,
+                    "preview_url": data.preview_url,
+                    "domain": data.domain,
+                    "error": data.error_message
                 },
-                timeout=5.0
+                timeout=10.0
+            )
+            log.info(f"Sent deploy status notification to bot for site {site['id']}")
+    except Exception as e:
+        log.error(f"Failed to notify manager via bot: {e}")
+
+
+async def notify_manager_generation_complete(site: dict, status: str, error: str = None):
+    """Notify manager about generation completion via bot."""
+    if not settings.BOT_WEBHOOK_URL:
+        return
+
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{settings.BOT_WEBHOOK_URL}/webhook",
+                json={
+                    "action": "generation_complete",
+                    "tg_id": site.get('manager_tg_id'),
+                    "request_id": str(site.get('request_id')),
+                    "company_name": site.get('company_name', 'Сайт'),
+                    "status": status,
+                    "error": error
+                },
+                timeout=10.0
             )
     except Exception as e:
-        log.error(f"Failed to notify manager: {e}")
+        log.error(f"Failed to notify manager about generation: {e}")
 
 
 # ==================== Admin Endpoints ====================
