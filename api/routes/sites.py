@@ -907,6 +907,8 @@ async def notify_manager_generation_complete(site: dict, status: str, error: str
             if not webhook_url.endswith('/webhook'):
                 webhook_url = f"{webhook_url.rstrip('/')}/webhook"
 
+            log.debug(f"Sending notification to {webhook_url} for manager {site.get('manager_tg_id')}")
+
             await client.post(
                 webhook_url,
                 json={
@@ -919,7 +921,9 @@ async def notify_manager_generation_complete(site: dict, status: str, error: str
                 },
                 timeout=10.0
             )
-            log.debug(f"Successfully notified manager {site.get('manager_tg_id')} about generation")
+            log.info(f"Successfully notified manager {site.get('manager_tg_id')} about generation")
+    except httpx.ConnectError as e:
+        log.warning(f"Failed to connect to bot webhook at {webhook_url}: {e}. Check BOT_WEBHOOK_URL in .env")
     except Exception as e:
         log.error(f"Failed to notify manager about generation: {e}", exc_info=True)
 
