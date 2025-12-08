@@ -327,15 +327,6 @@ async def send_revision_to_n8n(revision: dict, changes: list, site: dict) -> dic
                f"Check N8N_REVISIONS_WEBHOOK_URL in .env and ensure n8n container is running and accessible. "
                f"Error: {str(last_error)}"
     )
-    except httpx.HTTPStatusError as e:
-        log.error(f"n8n returned error: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(status_code=502, detail=f"n8n error: {e.response.text}")
-    except Exception as e:
-        log.error(f"Failed to send to n8n at {webhook_url}: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to send to n8n: {str(e)}. Check N8N_REVISIONS_WEBHOOK_URL configuration."
-        )
 
 
 async def trigger_redeploy(site: dict, archive_s3_key: str, user_id: str = None) -> dict:
