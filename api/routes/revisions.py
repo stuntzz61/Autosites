@@ -74,6 +74,7 @@ class AddChangeRequest(BaseModel):
 class SubmitRevisionRequest(BaseModel):
     """Запрос на отправку правок в n8n."""
     stop_preview: Optional[bool] = True  # Остановить preview сайт перед правками
+    force: Optional[bool] = False  # Принудительная повторная отправка (если уже отправлялось)
 
 
 class N8nRevisionCallbackRequest(BaseModel):
@@ -709,10 +710,21 @@ async def submit_revision(
     if not revision:
         raise HTTPException(status_code=404, detail="Revision not found")
 
-    if revision['status'] not in ('pending', 'draft'):
+    # Allow resubmission if:
+    # 1. Force flag is set
+    # 2. Status is failed or error
+    # 3. Status is in_progress/processing but there's an error (n8n failed)
+    can_resubmit = (
+        (data.force if data else False) or
+        revision['status'] in ('failed', 'error') or
+        (revision['status'] in ('in_progress', 'processing') and revision.get('error_message'))
+    )
+
+    if revision['status'] not in ('pending', 'draft') and not can_resubmit:
         raise HTTPException(
             status_code=400,
-            detail=f"Revision already submitted or completed. Current status: {revision['status']}"
+            detail=f"Revision already submitted or completed. Current status: {revision['status']}. "
+                   f"Use force=true to resubmit, or wait for completion."
         )
 
     # Check access
@@ -754,12 +766,13 @@ async def submit_revision(
     try:
         result = await send_revision_to_n8n(revision, changes, site)
 
-        # Update status to processing
+        # Update status to processing (clear any previous errors)
         await db.update_revision_status(
             revision_id,
             'processing',
             changed_by=str(user['id']),
-            change_source='n8n'
+            change_source='n8n',
+            error_message=None  # Clear previous errors
         )
 
         # Notify manager
@@ -778,18 +791,29 @@ async def submit_revision(
             "n8n_response": result
         }
 
-    except HTTPException:
+    except HTTPException as e:
+        # If n8n connection failed, mark as failed so user can retry
+        if e.status_code in (502, 500):  # Connection errors
+            await db.update_revision_status(
+                revision_id,
+                'failed',
+                error_message=e.detail,
+                changed_by=str(user['id']),
+                change_source='system'
+            )
         raise
     except Exception as e:
-        # Revert status
+        # Revert status to failed so user can retry
+        error_msg = str(e)
         await db.update_revision_status(
             revision_id,
             'failed',
-            error_message=str(e),
+            error_message=error_msg,
             changed_by=str(user['id']),
             change_source='system'
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        log.error(f"Failed to submit revision {revision_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.post("/{revision_id}/cancel")
