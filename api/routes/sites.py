@@ -159,7 +159,7 @@ async def trigger_deploy(site: dict, archive_path: str = None, user_id: str = No
             files = {'archive': (filename, archive_content, 'application/zip')}
             data = {
                 'auto_select': 'true',
-                'enable_ssl': 'false',  # Will enable after domain assignment
+                'enable_ssl': 'true',  # SSL включён по умолчанию для preview доменов (*.autosites.ru)
                 'request_id': str(site.get('request_id')) if site.get('request_id') else '',  # Convert UUID to string
                 'client_site_id': str(site['id']),  # Pass client_site_id for callback
             }
@@ -167,7 +167,6 @@ async def trigger_deploy(site: dict, archive_path: str = None, user_id: str = No
             # Add domain if set
             if site.get('domain'):
                 data['domain'] = site['domain']
-                data['enable_ssl'] = 'true'
 
             log.info(f"Sending deploy request to {deploy_url}/api/deploy for site {site['id']}")
             response = await client.post(
