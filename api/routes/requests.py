@@ -261,6 +261,15 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
                 )
                 response.raise_for_status()
                 log.info(f"Successfully sent to n8n webhook: {webhook_url}")
+        except httpx.ConnectError as e:
+            log.error(f"Failed to connect to n8n at {webhook_url}: {e}")
+            log.error(f"Check that N8N_WEBHOOK_URL is correct and n8n container is accessible")
+            log.error(f"Common issues:")
+            log.error(f"  1. Wrong hostname (should be 'n8n' or 'n8n-tg-bot' if in docker-compose)")
+            log.error(f"  2. Wrong port (default is 5678)")
+            log.error(f"  3. n8n container not running or not in same network")
+            # Don't fail the request - webhook can be configured later
+            log.warning("Request status updated to 'in_queue' but webhook call failed")
         except httpx.HTTPStatusError as e:
             error_detail = ""
             try:
@@ -278,7 +287,7 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
             # Status is already updated to 'in_queue'
             log.warning("Request status updated to 'in_queue' but webhook call failed")
         except Exception as e:
-            log.error(f"Error sending to n8n: {e}")
+            log.error(f"Error sending to n8n at {webhook_url}: {e}", exc_info=True)
             # Don't fail the request - webhook can be configured later
             log.warning("Request status updated to 'in_queue' but webhook call failed")
 

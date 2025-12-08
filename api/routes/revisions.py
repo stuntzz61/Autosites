@@ -202,7 +202,10 @@ async def send_revision_to_n8n(revision: dict, changes: list, site: dict) -> dic
     """Send revision to n8n for processing."""
     webhook_url = settings.N8N_REVISIONS_WEBHOOK_URL or settings.N8N_WEBHOOK_URL
     if not webhook_url:
+        log.error("N8N_REVISIONS_WEBHOOK_URL and N8N_WEBHOOK_URL are not configured")
         raise HTTPException(status_code=500, detail="N8N webhook URL not configured")
+
+    log.info(f"Sending revision {revision['id']} to n8n webhook: {webhook_url}")
 
     # Get archive download URL if available
     archive_url = None
@@ -266,12 +269,22 @@ async def send_revision_to_n8n(revision: dict, changes: list, site: dict) -> dic
             log.info(f"Sent revision {revision['id']} to n8n, response: {result}")
             return result
 
+    except httpx.ConnectError as e:
+        log.error(f"Failed to connect to n8n at {webhook_url}: {e}")
+        log.error(f"Check that N8N_REVISIONS_WEBHOOK_URL is correct and n8n container is accessible")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Cannot connect to n8n. Check N8N_REVISIONS_WEBHOOK_URL in .env. Error: {str(e)}"
+        )
     except httpx.HTTPStatusError as e:
         log.error(f"n8n returned error: {e.response.status_code} - {e.response.text}")
         raise HTTPException(status_code=502, detail=f"n8n error: {e.response.text}")
     except Exception as e:
-        log.error(f"Failed to send to n8n: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        log.error(f"Failed to send to n8n at {webhook_url}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send to n8n: {str(e)}. Check N8N_REVISIONS_WEBHOOK_URL configuration."
+        )
 
 
 async def trigger_redeploy(site: dict, archive_s3_key: str, user_id: str = None) -> dict:
