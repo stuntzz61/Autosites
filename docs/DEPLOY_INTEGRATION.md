@@ -1,6 +1,8 @@
 # Интеграция Autosites с Deploy Node
 
-> 📝 **См. также:** [Система правок сайтов (Revisions)](./REVISIONS_INTEGRATION.md) — документация по циклу правок через n8n.
+> 📝 **См. также:**
+> - [Система правок сайтов (Revisions)](./REVISIONS_INTEGRATION.md) — документация по циклу правок через n8n
+> - [Синхронизация баз данных](./DB_SYNC.md) — как синхронизируются статусы между двумя БД
 
 ## Обзор архитектуры
 
@@ -325,7 +327,34 @@ WHERE last_error IS NOT NULL
 ORDER BY last_error_at DESC;
 ```
 
+## Синхронизация статусов
+
+Система использует **две отдельные БД**:
+- **Autosites DB** (`autosites`) - хранит `client_sites`
+- **Deploy Node DB** (`deploy_node`) - хранит `deployments`
+
+Для синхронизации статусов реализовано:
+
+1. **Callback механизм** - deploy-node отправляет webhook при изменении статуса
+2. **Периодическая синхронизация** - каждые 5 минут (cron job)
+3. **Ручная синхронизация** - кнопка "🔄" в веб-интерфейсе или API endpoint
+
+**См. подробности:** [DB_SYNC.md](./DB_SYNC.md)
+
 ## Troubleshooting
+
+### Статусы не обновляются
+
+1. **Используйте кнопку синхронизации** (🔄) в веб-интерфейсе
+2. **Проверьте DEPLOY_NODE_URL** в настройках
+3. **Проверьте логи синхронизации:**
+   ```bash
+   docker logs autosites-api | grep "Deploy status sync"
+   ```
+4. **Ручная синхронизация через API:**
+   ```bash
+   POST /api/sites/{site_id}/sync-status
+   ```
 
 ### Callback не работает
 1. Проверьте `CALLBACK_URL` в deploy-node

@@ -7,6 +7,7 @@ import json
 import httpx
 import logging
 import os
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, BackgroundTasks
 from pydantic import BaseModel
@@ -785,3 +786,145 @@ async def admin_force_deploy(
 
     return {"success": True, "message": "Force deploy initiated"}
 
+
+@router.post("/{site_id}/sync-status")
+async def sync_site_status(
+    site_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Manually sync deployment status from deploy-node."""
+    site = await db.get_client_site(site_id)
+
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+
+    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if not site.get('deploy_id'):
+        raise HTTPException(status_code=400, detail="Site has no deploy_id")
+
+    if not settings.DEPLOY_NODE_URL:
+        raise HTTPException(status_code=500, detail="DEPLOY_NODE_URL not configured")
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Get deployment status from deploy-node
+            response = await client.get(
+                f"{settings.DEPLOY_NODE_URL}/api/deploy/{site['deploy_id']}",
+                timeout=10.0
+            )
+
+            if response.status_code == 404:
+                await db.update_site_deploy_status(
+                    site_id=site_id,
+                    deploy_status='failed',
+                    error="Deployment not found in deploy-node"
+                )
+                return {"success": True, "message": "Deployment not found, marked as failed"}
+
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed to get deployment status: {response.status_code}"
+                )
+
+            result = response.json()
+            if not result.get('success'):
+                raise HTTPException(
+                    status_code=502,
+                    detail=result.get('error', 'Unknown error from deploy-node')
+                )
+
+            deployment = result.get('data', {})
+            deploy_status_raw = deployment.get('status', '')
+
+            # Map deploy-node status to Autosites status
+            status_map = {
+                'pending': 'pending',
+                'uploading': 'deploying',
+                'building': 'deploying',
+                'deploying': 'deploying',
+                'completed': 'active',
+                'failed': 'failed',
+                'rollback': 'failed',
+            }
+            deploy_status = status_map.get(deploy_status_raw, deploy_status_raw)
+
+            # Update site with all available data
+            update_data = {
+                'deploy_status': deploy_status,
+            }
+
+            if deployment.get('preview_slug'):
+                update_data['preview_slug'] = deployment.get('preview_slug')
+                # Try to get preview_url from deployment, or construct it
+                preview_url = deployment.get('preview_url')
+                if not preview_url:
+                    preview_slug = deployment.get('preview_slug', '')
+                    if preview_slug:
+                        preview_url = f"https://{preview_slug}.autosites.ru"
+                if preview_url:
+                    update_data['preview_url'] = preview_url
+
+            if deployment.get('server_id'):
+                update_data['server_id'] = deployment.get('server_id')
+            if deployment.get('server_name'):
+                update_data['server_name'] = deployment.get('server_name')
+            if deployment.get('server_host'):
+                update_data['server_host'] = deployment.get('server_host')
+            if deployment.get('port'):
+                update_data['container_port'] = deployment.get('port')
+
+            if deploy_status == 'failed' and deployment.get('error_message'):
+                update_data['last_error'] = deployment.get('error_message')
+                update_data['last_error_at'] = datetime.now(timezone.utc)
+
+            if deployment.get('domain') and deployment.get('domain') != site.get('domain'):
+                update_data['domain'] = deployment.get('domain')
+                update_data['domain_status'] = 'active' if deploy_status == 'active' else 'pending'
+
+            await db.update_client_site(site_id, update_data)
+
+            # Update request status if site is now active
+            if deploy_status == 'active' and site.get('request_id'):
+                await db.update_request_status(str(site['request_id']), 'success')
+
+            log.info(f"Synced status for site {site_id}: {deploy_status}")
+
+            return {
+                "success": True,
+                "message": "Status synced",
+                "status": deploy_status,
+                "deployment": deployment
+            }
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout connecting to deploy-node")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Failed to connect to deploy-node: {str(e)}")
+    except Exception as e:
+        log.error(f"Error syncing site status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/sync-all-statuses")
+async def admin_sync_all_statuses(
+    user: dict = Depends(get_current_user),
+    background_tasks: BackgroundTasks = None
+):
+    """Sync all deployment statuses from deploy-node (admin only)."""
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not settings.DEPLOY_NODE_URL:
+        raise HTTPException(status_code=500, detail="DEPLOY_NODE_URL not configured")
+
+    # Run sync in background
+    from cron_jobs import sync_deploy_statuses
+    background_tasks.add_task(sync_deploy_statuses)
+
+    return {
+        "success": True,
+        "message": "Status sync started in background"
+    }

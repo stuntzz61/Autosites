@@ -215,6 +215,12 @@ export const sitesApi = {
   // Admin: force redeploy
   adminForceDeploy: (id: string) => api.post(`/sites/admin/${id}/force-deploy`),
 
+  // Sync deployment status from deploy-node
+  syncStatus: (id: string) => api.post(`/sites/${id}/sync-status`),
+
+  // Admin: sync all statuses
+  adminSyncAllStatuses: () => api.post('/sites/admin/sync-all-statuses'),
+
   // Get hosting plans
   getPlans: () => api.get('/sites/plans'),
 }
@@ -236,4 +242,57 @@ export const paymentApi = {
 
   // List payments for site
   listBySite: (siteId: string) => api.get('/payments', { params: { site_id: siteId } }),
+}
+
+// Revisions API (правки сайтов)
+export const revisionsApi = {
+  // List revisions for site
+  listBySite: (siteId: string, params?: { status?: string; page?: number; limit?: number }) =>
+    api.get(`/revisions/site/${siteId}`, { params }),
+
+  // Get revision details
+  get: (id: string) => api.get(`/revisions/${id}`),
+
+  // Create new revision
+  create: (data: {
+    site_id: string
+    changes: Array<{
+      type: string
+      location?: { area?: string; selector?: string; description?: string }
+      client_description: string
+      old_value?: string
+      new_value_suggestion?: string
+      screenshot?: { file_key?: string; url?: string; comment?: string }
+      priority?: string
+    }>
+    source?: string
+    auto_submit?: boolean
+  }) => api.post('/revisions', data),
+
+  // Add change to revision
+  addChange: (revisionId: string, data: {
+    type: string
+    location?: { area?: string; description?: string }
+    client_description: string
+    priority?: string
+  }) => api.post(`/revisions/${revisionId}/changes`, data),
+
+  // Upload screenshot
+  uploadScreenshot: (revisionId: string, formData: FormData) =>
+    api.post(`/revisions/${revisionId}/upload-screenshot`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  // Submit revision for processing
+  submit: (revisionId: string, stopPreview: boolean = true) =>
+    api.post(`/revisions/${revisionId}/submit`, { stop_preview: stopPreview }),
+
+  // Cancel revision
+  cancel: (revisionId: string) => api.post(`/revisions/${revisionId}/cancel`),
+
+  // Delete revision
+  delete: (revisionId: string) => api.delete(`/revisions/${revisionId}`),
+
+  // Get site revision stats
+  getStats: (siteId: string) => api.get(`/revisions/site/${siteId}/stats`),
 }

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -7,12 +7,13 @@ import {
   Clock, AlertCircle, Loader2, ChevronDown, X, ExternalLink,
   Palette, Upload, Camera, Edit3, Trash2, Plus, Sparkles,
   ChevronLeft, ChevronRight, ZoomIn, ImageIcon, Globe,
-  CreditCard, Power, RotateCcw, Play, Square, Link2, Shield
+  CreditCard, Power, RotateCcw, Play, Square, Link2, Shield,
+  MessageSquare, FileEdit, History, SendHorizonal, RefreshCw
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useAuthStore } from '@/stores/authStore'
-import { requestsApi, servicesApi, sitesApi } from '@/api/client'
+import { requestsApi, servicesApi, sitesApi, revisionsApi } from '@/api/client'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -53,7 +54,15 @@ export default function RequestDetailPage() {
   const [showDomainModal, setShowDomainModal] = useState(false)
   const [domainInput, setDomainInput] = useState('')
   const [enableSsl, setEnableSsl] = useState(true)
+  const [showRevisionsModal, setShowRevisionsModal] = useState(false)
+  const [showNewRevisionModal, setShowNewRevisionModal] = useState(false)
+  const [newRevisionChanges, setNewRevisionChanges] = useState<Array<{
+    type: string
+    description: string
+    area: string
+  }>>([{ type: 'text_change', description: '', area: '' }])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const revisionScreenshotRef = useRef<HTMLInputElement>(null)
 
   // Check if user is admin
   const isAdmin = user?.role === 'admin'
@@ -83,7 +92,41 @@ export default function RequestDetailPage() {
     queryFn: () => sitesApi.getByRequest(id!).then(res => res.data),
     enabled: !!id,
     retry: false, // Don't retry if site doesn't exist yet
+    refetchInterval: (query) => {
+      // Auto-refetch every 30 seconds if site has deploy_id and status is not final
+      const site = query.state.data
+      if (site?.deploy_id && site.deploy_status &&
+          !['active', 'failed', 'stopped'].includes(site.deploy_status)) {
+        return 30000 // 30 seconds
+      }
+      return false
+    },
   })
+
+  // Get revisions for this site
+  const { data: revisionsData } = useQuery({
+    queryKey: ['revisions', clientSite?.id],
+    queryFn: () => revisionsApi.listBySite(clientSite!.id).then(res => res.data),
+    enabled: !!clientSite?.id,
+  })
+
+  // Auto-sync status when page loads if site has deploy_id
+  useEffect(() => {
+    if (clientSite?.deploy_id) {
+      // Sync once on mount if status is not final
+      const nonFinalStatuses = ['pending', 'deploying', 'none']
+      if (!clientSite.deploy_status || nonFinalStatuses.includes(clientSite.deploy_status)) {
+        // Small delay to avoid race condition
+        const timer = setTimeout(() => {
+          if (!syncStatusMutation.isPending) {
+            syncStatusMutation.mutate()
+          }
+        }, 2000)
+        return () => clearTimeout(timer)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientSite?.deploy_id]) // Only sync once when deploy_id is available
 
   const addServiceMutation = useMutation({
     mutationFn: (serviceId: string) => servicesApi.add(id!, { service_id: serviceId }),
@@ -182,6 +225,20 @@ export default function RequestDetailPage() {
     },
   })
 
+  // Sync status mutation
+  const syncStatusMutation = useMutation({
+    mutationFn: () => sitesApi.syncStatus(clientSite!.id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['client-site', id] })
+      toast.success(`Статус синхронизирован: ${data.data?.status || 'обновлено'}`)
+      haptic?.notificationOccurred('success')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка синхронизации')
+      haptic?.notificationOccurred('error')
+    },
+  })
+
   // Assign domain mutation
   const assignDomainMutation = useMutation({
     mutationFn: ({ domain, ssl }: { domain: string; ssl: boolean }) =>
@@ -196,6 +253,57 @@ export default function RequestDetailPage() {
     onError: (error: any) => {
       toast.error(error.response?.data?.detail || 'Ошибка привязки домена')
       haptic?.notificationOccurred('error')
+    },
+  })
+
+  // Create revision mutation
+  const createRevisionMutation = useMutation({
+    mutationFn: (changes: Array<{ type: string; client_description: string; location?: { area: string } }>) =>
+      revisionsApi.create({
+        site_id: clientSite!.id,
+        changes,
+        source: 'webapp',
+        auto_submit: false,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['revisions', clientSite?.id] })
+      toast.success('Правки созданы!')
+      haptic?.notificationOccurred('success')
+      setShowNewRevisionModal(false)
+      setNewRevisionChanges([{ type: 'text_change', description: '', area: '' }])
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка создания правок')
+      haptic?.notificationOccurred('error')
+    },
+  })
+
+  // Submit revision mutation
+  const submitRevisionMutation = useMutation({
+    mutationFn: (revisionId: string) => revisionsApi.submit(revisionId, true),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['revisions', clientSite?.id] })
+      queryClient.invalidateQueries({ queryKey: ['client-site', id] })
+      toast.success('Правки отправлены в обработку!')
+      haptic?.notificationOccurred('success')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка отправки правок')
+      haptic?.notificationOccurred('error')
+    },
+  })
+
+  // Cancel revision mutation
+  const cancelRevisionMutation = useMutation({
+    mutationFn: (revisionId: string) => revisionsApi.cancel(revisionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['revisions', clientSite?.id] })
+      queryClient.invalidateQueries({ queryKey: ['client-site', id] })
+      toast.success('Правки отменены')
+      haptic?.notificationOccurred('success')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка отмены правок')
     },
   })
 
@@ -626,11 +734,32 @@ export default function RequestDetailPage() {
                       {clientSite.deploy_status === 'stopped' && '⏸ Остановлен'}
                       {(!clientSite.deploy_status || clientSite.deploy_status === 'none') && '⏸ Не задеплоен'}
                     </p>
+                    {clientSite.deploy_id && (
+                      <p className="text-xs text-tg-hint/70 mt-0.5">
+                        Deploy ID: {clientSite.deploy_id.slice(0, 8)}...
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Deploy/Stop Controls */}
+                {/* Deploy/Stop/Sync Controls */}
                 <div className="flex gap-2">
+                  {/* Sync button - always visible if deploy_id exists */}
+                  {clientSite.deploy_id && (
+                    <button
+                      onClick={() => syncStatusMutation.mutate()}
+                      disabled={syncStatusMutation.isPending}
+                      className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                      title="Синхронизировать статус с deploy-node"
+                    >
+                      {syncStatusMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+
                   {(clientSite.deploy_status === 'none' || clientSite.deploy_status === 'stopped' || clientSite.deploy_status === 'failed' || !clientSite.deploy_status) && clientSite.archive_s3_key && (
                     <button
                       onClick={() => deployMutation.mutate()}
@@ -757,13 +886,158 @@ export default function RequestDetailPage() {
                 )}
               </div>
 
+              {/* Hosting expiration warning */}
+              {clientSite.hosting_expires_at && new Date(clientSite.hosting_expires_at) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) && (
+                <div className={`p-4 rounded-xl ${
+                  new Date(clientSite.hosting_expires_at) < new Date()
+                    ? 'bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700'
+                    : 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-300 dark:border-orange-700'
+                }`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <AlertCircle className={`w-6 h-6 ${
+                      new Date(clientSite.hosting_expires_at) < new Date() ? 'text-red-500' : 'text-orange-500'
+                    }`} />
+                    <div>
+                      <p className="font-semibold text-tg-text">
+                        {new Date(clientSite.hosting_expires_at) < new Date()
+                          ? '⚠️ Хостинг истёк!'
+                          : '⏰ Хостинг скоро истекает'}
+                      </p>
+                      <p className="text-sm text-tg-hint">
+                        {new Date(clientSite.hosting_expires_at) < new Date()
+                          ? 'Продлите хостинг, чтобы сайт продолжал работать'
+                          : `Истекает ${new Date(clientSite.hosting_expires_at).toLocaleDateString('ru-RU')}`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Payment Button */}
               <button
                 onClick={() => navigate(`/sites/${clientSite.id}/payment`)}
-                className="w-full p-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl text-white font-medium flex items-center justify-center gap-2"
+                className="w-full p-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
               >
                 <CreditCard className="w-5 h-5" />
-                Продлить хостинг
+                Оплатить хостинг (QR / СБП)
+              </button>
+            </div>
+          </Section>
+        )}
+
+        {/* Revisions Section */}
+        {clientSite && clientSite.deploy_status === 'active' && (
+          <Section title="Правки сайта">
+            <div className="p-4 space-y-3">
+              {/* Active revision status */}
+              {clientSite.revision_status && clientSite.revision_status !== 'completed' && (
+                <div className={`p-3 rounded-xl ${
+                  clientSite.revision_status === 'processing' ? 'bg-blue-50 dark:bg-blue-900/20' :
+                  clientSite.revision_status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
+                  clientSite.revision_status === 'failed' ? 'bg-red-50 dark:bg-red-900/20' :
+                  'bg-gray-50 dark:bg-gray-900/20'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {clientSite.revision_status === 'processing' && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+                    {clientSite.revision_status === 'pending' && <Clock className="w-4 h-4 text-yellow-500" />}
+                    {clientSite.revision_status === 'in_progress' && <Loader2 className="w-4 h-4 animate-spin text-orange-500" />}
+                    {clientSite.revision_status === 'failed' && <AlertCircle className="w-4 h-4 text-red-500" />}
+                    <span className="text-sm font-medium">
+                      {clientSite.revision_status === 'processing' && 'Правки обрабатываются...'}
+                      {clientSite.revision_status === 'pending' && 'Есть неотправленные правки'}
+                      {clientSite.revision_status === 'in_progress' && 'Правки в работе'}
+                      {clientSite.revision_status === 'failed' && 'Ошибка при обработке правок'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Revision History */}
+              {revisionsData?.items && revisionsData.items.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-tg-hint">История правок</span>
+                    <span className="text-xs text-tg-hint">
+                      Итераций: {revisionsData.items.length}
+                    </span>
+                  </div>
+                  {revisionsData.items.slice(0, 3).map((revision: any) => (
+                    <div
+                      key={revision.id}
+                      className="flex items-center justify-between p-3 bg-tg-secondary-bg rounded-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          revision.status === 'completed' ? 'bg-green-100 text-green-600' :
+                          revision.status === 'processing' ? 'bg-blue-100 text-blue-600' :
+                          revision.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
+                          revision.status === 'failed' ? 'bg-red-100 text-red-600' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {revision.status === 'completed' && <CheckCircle2 className="w-4 h-4" />}
+                          {revision.status === 'processing' && <Loader2 className="w-4 h-4 animate-spin" />}
+                          {revision.status === 'pending' && <Clock className="w-4 h-4" />}
+                          {revision.status === 'in_progress' && <Loader2 className="w-4 h-4 animate-spin" />}
+                          {revision.status === 'failed' && <AlertCircle className="w-4 h-4" />}
+                          {revision.status === 'cancelled' && <X className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-tg-text">
+                            Итерация #{revision.iteration}
+                          </p>
+                          <p className="text-xs text-tg-hint">
+                            {revision.changes_count || 0} правок • {new Date(revision.created_at).toLocaleDateString('ru-RU')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {revision.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => submitRevisionMutation.mutate(revision.id)}
+                              disabled={submitRevisionMutation.isPending}
+                              className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+                              title="Отправить на обработку"
+                            >
+                              {submitRevisionMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <SendHorizonal className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => cancelRevisionMutation.mutate(revision.id)}
+                              disabled={cancelRevisionMutation.isPending}
+                              className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                              title="Отменить"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {(revision.status === 'processing' || revision.status === 'in_progress') && (
+                          <button
+                            onClick={() => cancelRevisionMutation.mutate(revision.id)}
+                            disabled={cancelRevisionMutation.isPending}
+                            className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                            title="Отменить"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Create New Revision Button */}
+              <button
+                onClick={() => setShowNewRevisionModal(true)}
+                className="w-full p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center gap-2"
+              >
+                <FileEdit className="w-5 h-5" />
+                Запросить правки
               </button>
             </div>
           </Section>
@@ -848,6 +1122,164 @@ export default function RequestDetailPage() {
                         <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
                         'Привязать домен'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* New Revision Modal */}
+        <AnimatePresence>
+          {showNewRevisionModal && clientSite && (
+            <>
+              <motion.div
+                className="fixed inset-0 bg-black/50 z-40"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowNewRevisionModal(false)}
+              />
+              <motion.div
+                className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[80vh] overflow-y-auto"
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+              >
+                <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
+                <div className="flex items-center gap-2 mb-4">
+                  <FileEdit className="w-5 h-5 text-blue-500" />
+                  <p className="text-lg font-semibold">Запросить правки</p>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-sm text-tg-hint">
+                    Опишите, что нужно изменить на сайте. Вы можете добавить несколько правок.
+                  </p>
+
+                  {/* Changes List */}
+                  {newRevisionChanges.map((change, index) => (
+                    <div key={index} className="bg-tg-secondary-bg rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-tg-text">Правка {index + 1}</span>
+                        {newRevisionChanges.length > 1 && (
+                          <button
+                            onClick={() => setNewRevisionChanges(prev => prev.filter((_, i) => i !== index))}
+                            className="text-red-500 text-sm"
+                          >
+                            Удалить
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Change Type */}
+                      <div>
+                        <label className="text-xs text-tg-hint mb-1 block">Тип изменения</label>
+                        <select
+                          value={change.type}
+                          onChange={(e) => setNewRevisionChanges(prev =>
+                            prev.map((c, i) => i === index ? { ...c, type: e.target.value } : c)
+                          )}
+                          className="input"
+                        >
+                          <option value="text_change">Изменение текста</option>
+                          <option value="visual_change">Визуальное изменение</option>
+                          <option value="layout_change">Изменение расположения</option>
+                          <option value="content_add">Добавить контент</option>
+                          <option value="content_remove">Удалить контент</option>
+                          <option value="style_change">Изменить стиль</option>
+                        </select>
+                      </div>
+
+                      {/* Area */}
+                      <div>
+                        <label className="text-xs text-tg-hint mb-1 block">Область сайта</label>
+                        <select
+                          value={change.area}
+                          onChange={(e) => setNewRevisionChanges(prev =>
+                            prev.map((c, i) => i === index ? { ...c, area: e.target.value } : c)
+                          )}
+                          className="input"
+                        >
+                          <option value="">Выберите область</option>
+                          <option value="hero">Шапка/Hero</option>
+                          <option value="header">Навигация</option>
+                          <option value="footer">Подвал</option>
+                          <option value="about">О компании</option>
+                          <option value="services">Услуги</option>
+                          <option value="portfolio">Портфолио</option>
+                          <option value="contacts">Контакты</option>
+                          <option value="other">Другое</option>
+                        </select>
+                      </div>
+
+                      {/* Description */}
+                      <div>
+                        <label className="text-xs text-tg-hint mb-1 block">Описание правки *</label>
+                        <textarea
+                          value={change.description}
+                          onChange={(e) => setNewRevisionChanges(prev =>
+                            prev.map((c, i) => i === index ? { ...c, description: e.target.value } : c)
+                          )}
+                          placeholder="Опишите, что нужно изменить..."
+                          className="input min-h-[80px] resize-none"
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add Another Change */}
+                  <button
+                    onClick={() => setNewRevisionChanges(prev => [
+                      ...prev,
+                      { type: 'text_change', description: '', area: '' }
+                    ])}
+                    className="w-full p-3 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint"
+                  >
+                    + Добавить ещё правку
+                  </button>
+
+                  {/* Info */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      💡 После создания правок вы сможете добавить скриншоты и отправить их на обработку.
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowNewRevisionModal(false)}
+                      className="btn btn-secondary flex-1"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={() => {
+                        const validChanges = newRevisionChanges
+                          .filter(c => c.description.trim())
+                          .map(c => ({
+                            type: c.type,
+                            client_description: c.description,
+                            location: c.area ? { area: c.area } : undefined,
+                          }))
+
+                        if (validChanges.length === 0) {
+                          toast.error('Добавьте хотя бы одну правку с описанием')
+                          return
+                        }
+
+                        createRevisionMutation.mutate(validChanges)
+                      }}
+                      disabled={createRevisionMutation.isPending}
+                      className="btn btn-primary flex-1"
+                    >
+                      {createRevisionMutation.isPending ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        'Создать правки'
                       )}
                     </button>
                   </div>

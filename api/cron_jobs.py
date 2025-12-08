@@ -133,16 +133,189 @@ async def run_cron_jobs():
         log.error(f"Error running cron jobs: {e}")
 
 
-async def start_cron_scheduler():
-    """Start cron scheduler (runs every hour)."""
+async def sync_deploy_statuses():
+    """Sync deployment statuses from deploy-node to Autosites DB."""
+    if not settings.DEPLOY_NODE_URL:
+        log.debug("DEPLOY_NODE_URL not configured, skipping deploy status sync")
+        return
+
+    log.info("Syncing deployment statuses from deploy-node...")
+
+    try:
+        # Get all sites with deploy_id
+        sites = await db.list_client_sites(deploy_status=None, limit=1000, offset=0)
+        sites_with_deploy = [s for s in sites if s.get('deploy_id')]
+
+        if not sites_with_deploy:
+            log.debug("No sites with deploy_id found")
+            return
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            synced_count = 0
+            error_count = 0
+
+            for site in sites_with_deploy:
+                deploy_id = site['deploy_id']
+                try:
+                    # Get deployment status from deploy-node
+                    response = await client.get(
+                        f"{settings.DEPLOY_NODE_URL}/api/deploy/{deploy_id}",
+                        timeout=10.0
+                    )
+
+                    if response.status_code == 404:
+                        log.warning(f"Deployment {deploy_id} not found in deploy-node, marking as failed")
+                        await db.update_site_deploy_status(
+                            site_id=str(site['id']),
+                            deploy_status='failed',
+                            error="Deployment not found in deploy-node"
+                        )
+                        error_count += 1
+                        continue
+
+                    if response.status_code != 200:
+                        log.warning(f"Failed to get deployment {deploy_id}: {response.status_code}")
+                        error_count += 1
+                        continue
+
+                    result = response.json()
+                    if not result.get('success'):
+                        log.warning(f"Deployment {deploy_id} returned error: {result.get('error')}")
+                        error_count += 1
+                        continue
+
+                    deployment = result.get('data', {})
+                    deploy_status_raw = deployment.get('status', '')
+
+                    # Map deploy-node status to Autosites status
+                    status_map = {
+                        'pending': 'pending',
+                        'uploading': 'deploying',
+                        'building': 'deploying',
+                        'deploying': 'deploying',
+                        'completed': 'active',
+                        'failed': 'failed',
+                        'rollback': 'failed',
+                    }
+                    deploy_status = status_map.get(deploy_status_raw, deploy_status_raw)
+
+                    # Check if status changed
+                    current_status = site.get('deploy_status')
+                    if current_status != deploy_status:
+                        log.info(
+                            f"Status changed for site {site['id']} (deploy {deploy_id}): "
+                            f"{current_status} -> {deploy_status}"
+                        )
+
+                        # Update site status
+                        update_data = {
+                            'deploy_status': deploy_status,
+                        }
+
+                        # Update preview info if available
+                        if deployment.get('preview_slug'):
+                            update_data['preview_slug'] = deployment.get('preview_slug')
+                            # Construct preview URL
+                            preview_slug = deployment.get('preview_slug', '')
+                            if preview_slug:
+                                # Try to get preview_url from deployment, or construct it
+                                preview_url = deployment.get('preview_url')
+                                if not preview_url:
+                                    # Construct from preview_slug
+                                    preview_url = f"https://{preview_slug}.autosites.ru"
+                                update_data['preview_url'] = preview_url
+
+                        # Update server info
+                        if deployment.get('server_id'):
+                            update_data['server_id'] = deployment.get('server_id')
+                        if deployment.get('server_name'):
+                            update_data['server_name'] = deployment.get('server_name')
+                        if deployment.get('server_host'):
+                            update_data['server_host'] = deployment.get('server_host')
+                        if deployment.get('port'):
+                            update_data['container_port'] = deployment.get('port')
+
+                        # Update error if failed
+                        if deploy_status == 'failed' and deployment.get('error_message'):
+                            update_data['last_error'] = deployment.get('error_message')
+                            update_data['last_error_at'] = datetime.now(timezone.utc)
+
+                        # Update domain if set
+                        if deployment.get('domain') and deployment.get('domain') != site.get('domain'):
+                            update_data['domain'] = deployment.get('domain')
+                            update_data['domain_status'] = 'active' if deploy_status == 'active' else 'pending'
+
+                        await db.update_client_site(str(site['id']), update_data)
+
+                        # Update request status if site is now active
+                        if deploy_status == 'active' and site.get('request_id'):
+                            await db.update_request_status(str(site['request_id']), 'success')
+
+                        synced_count += 1
+
+                except httpx.TimeoutException:
+                    log.warning(f"Timeout getting deployment {deploy_id}")
+                    error_count += 1
+                except Exception as e:
+                    log.error(f"Error syncing deployment {deploy_id}: {e}")
+                    error_count += 1
+
+            log.info(
+                f"Deploy status sync completed: {synced_count} synced, "
+                f"{error_count} errors, {len(sites_with_deploy)} total"
+            )
+
+    except Exception as e:
+        log.error(f"Error in deploy status sync: {e}")
+
+
+async def run_cron_jobs():
+    """Run all cron jobs."""
+    try:
+        await check_payment_warnings()
+        await auto_disable_expired_sites()
+        await auto_delete_expired_sites()
+        await sync_deploy_statuses()  # Sync deploy statuses
+        log.info("Cron jobs completed successfully")
+    except Exception as e:
+        log.error(f"Error running cron jobs: {e}")
+
+
+async def deploy_sync_loop():
+    """Background loop for deploy status sync (every 5 minutes)."""
+    # Wait a bit before first sync
+    await asyncio.sleep(30)
+
     while True:
         try:
-            await run_cron_jobs()
+            await sync_deploy_statuses()
+        except Exception as e:
+            log.error(f"Deploy sync error: {e}")
+        await asyncio.sleep(300)  # 5 minutes
+
+
+async def main_cron_loop():
+    """Background loop for other cron jobs (every hour)."""
+    # Wait a bit before first run
+    await asyncio.sleep(60)
+
+    while True:
+        try:
+            await check_payment_warnings()
+            await auto_disable_expired_sites()
+            await auto_delete_expired_sites()
         except Exception as e:
             log.error(f"Cron scheduler error: {e}")
+        await asyncio.sleep(3600)  # 1 hour
 
-        # Wait 1 hour before next run
-        await asyncio.sleep(3600)
+
+async def start_cron_scheduler():
+    """Start cron scheduler (runs every hour, deploy sync every 5 minutes)."""
+    # Start both loops as background tasks
+    asyncio.create_task(deploy_sync_loop())
+    asyncio.create_task(main_cron_loop())
+
+    log.info("Cron scheduler started (deploy sync every 5 min, other jobs every hour)")
 
 
 if __name__ == "__main__":

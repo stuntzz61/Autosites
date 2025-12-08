@@ -229,22 +229,50 @@ export default function PaymentPage() {
             </div>
 
             {/* QR Code */}
-            {qrData?.qr_url ? (
-              <div className="flex justify-center">
-                <img
-                  src={qrData.qr_url}
-                  alt="QR Code"
-                  className="w-64 h-64 bg-white p-4 rounded-2xl"
-                />
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <QRCodeCanvas
-                  data={activePayment.id + activePayment.amount}
-                  size={256}
-                />
-              </div>
-            )}
+            <div className="flex justify-center">
+              {qrData?.qr_url ? (
+                <div className="bg-white p-4 rounded-2xl shadow-lg">
+                  <img
+                    src={qrData.qr_url}
+                    alt="QR код для оплаты"
+                    className="w-56 h-56 object-contain"
+                    onError={(e) => {
+                      // Fallback to canvas QR if image fails to load
+                      console.log('QR image failed to load, using fallback')
+                      e.currentTarget.style.display = 'none'
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                    }}
+                  />
+                  <div className="hidden">
+                    <QRCodeCanvas
+                      data={JSON.stringify({
+                        id: activePayment.id,
+                        amount: activePayment.amount,
+                        currency: activePayment.currency || 'RUB'
+                      })}
+                      size={224}
+                    />
+                  </div>
+                  <p className="text-xs text-center mt-2 text-gray-500">
+                    Отсканируйте для оплаты
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white p-4 rounded-2xl shadow-lg">
+                  <QRCodeCanvas
+                    data={JSON.stringify({
+                      id: activePayment.id,
+                      amount: activePayment.amount,
+                      currency: activePayment.currency || 'RUB'
+                    })}
+                    size={224}
+                  />
+                  <p className="text-xs text-center mt-2 text-gray-500">
+                    Отсканируйте для оплаты
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Payment Details */}
             <div className="bg-tg-bg rounded-xl p-3 space-y-2 text-sm">
