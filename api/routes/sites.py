@@ -512,6 +512,7 @@ async def deploy_callback(data: DeployCallbackRequest):
     """
     Webhook callback from deploy-node.
     Called when deployment status changes.
+    Creates client_site if not exists.
     """
     log.info(f"Deploy callback received: {data.deploy_id} -> {data.status}")
 
@@ -519,15 +520,56 @@ async def deploy_callback(data: DeployCallbackRequest):
     site = None
     if data.client_site_id:
         site = await db.get_client_site(data.client_site_id)
-    elif data.request_id:
+
+    if not site and data.request_id:
         site = await db.get_client_site_by_request(data.request_id)
 
     if not site:
         site = await db.get_client_site_by_deploy_id(data.deploy_id)
 
+    # If site not found - CREATE IT automatically
     if not site:
-        log.warning(f"Site not found for deploy_id: {data.deploy_id}, request_id: {data.request_id}, client_site_id: {data.client_site_id}")
-        raise HTTPException(status_code=404, detail="Site not found")
+        log.info(f"Site not found for deploy_id: {data.deploy_id}, creating new client_site...")
+
+        # Try to get request info if request_id provided
+        request = None
+        manager_id = None
+        company_name = data.preview_slug or data.domain or f"Site-{data.deploy_id[:8]}"
+
+        if data.request_id:
+            request = await db.get_request(data.request_id)
+            if request:
+                manager_id = str(request.get('user_id'))
+                payload = request.get('payload', {})
+                site_data = payload.get('site', {})
+                client_data = payload.get('client', {})
+                company_name = site_data.get('company', client_data.get('company', request.get('company_name', company_name)))
+
+        # If no manager_id, try to get from first admin
+        if not manager_id:
+            admins = await db.list_admins()
+            if admins:
+                manager_id = str(admins[0]['id'])
+            else:
+                log.error("No admin users found, cannot create site")
+                raise HTTPException(status_code=500, detail="No admin users available")
+
+        # Create the client_site
+        site = await db.create_client_site(
+            request_id=data.request_id,
+            manager_id=manager_id,
+            company_name=company_name,
+            client_name=request.get('client_name') if request else None,
+            client_contact=request.get('client_contact') if request else None,
+            hosting_plan='trial'
+        )
+
+        # Update with deploy_id
+        await db.update_client_site(str(site['id']), {
+            'deploy_id': data.deploy_id
+        })
+
+        log.info(f"Created client_site {site['id']} for deploy {data.deploy_id}")
 
     # Map deploy-node status to our status
     status_map = {
@@ -785,6 +827,182 @@ async def admin_force_deploy(
     # TODO: Download archive and trigger deploy
 
     return {"success": True, "message": "Force deploy initiated"}
+
+
+class CreateSiteForRequestRequest(BaseModel):
+    """Create client_site for existing request"""
+    deploy_id: Optional[str] = None  # Optional: link to existing deploy
+
+
+@router.post("/create-for-request/{request_id}")
+async def create_site_for_request(
+    request_id: str,
+    data: CreateSiteForRequestRequest = None,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Create client_site record for a request.
+    Use this when client_site wasn't created automatically.
+    """
+    # Check if request exists
+    request = await db.get_request(request_id)
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    # Check access
+    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Check if site already exists
+    existing = await db.get_client_site_by_request(request_id)
+    if existing:
+        return {
+            "success": True,
+            "message": "Site already exists",
+            "site": existing
+        }
+
+    # Extract data from request payload
+    payload = request.get('payload', {})
+    site_data = payload.get('site', {})
+    client_data = payload.get('client', {})
+
+    # Create client site
+    site = await db.create_client_site(
+        request_id=request_id,
+        manager_id=str(request['user_id']),
+        company_name=site_data.get('company', client_data.get('company', request.get('company_name', 'Unknown'))),
+        client_name=client_data.get('name', request.get('client_name')),
+        client_contact=client_data.get('contact', request.get('client_contact')),
+        hosting_plan='trial'
+    )
+
+    # If deploy_id provided, link to existing deploy
+    if data and data.deploy_id:
+        await db.update_client_site(str(site['id']), {
+            'deploy_id': data.deploy_id,
+            'deploy_status': 'pending'  # Will be synced
+        })
+
+    log.info(f"Created client site {site['id']} for request {request_id}")
+
+    return {
+        "success": True,
+        "message": "Site created",
+        "site": site
+    }
+
+
+@router.post("/admin/import-from-deploy-node")
+async def admin_import_from_deploy_node(
+    user: dict = Depends(get_current_user)
+):
+    """
+    Import existing deployments from deploy-node and create client_sites.
+    Admin only.
+    """
+    if user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not settings.DEPLOY_NODE_URL:
+        raise HTTPException(status_code=500, detail="DEPLOY_NODE_URL not configured")
+
+    imported = []
+    errors = []
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Get all deployments from deploy-node
+            response = await client.get(
+                f"{settings.DEPLOY_NODE_URL}/api/deploy",
+                timeout=10.0
+            )
+
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed to get deployments: {response.status_code}"
+                )
+
+            result = response.json()
+            deployments = result.get('data', []) if isinstance(result, dict) else result
+
+            for deploy in deployments:
+                deploy_id = deploy.get('id')
+                if not deploy_id:
+                    continue
+
+                # Check if already linked
+                existing = await db.get_client_site_by_deploy_id(deploy_id)
+                if existing:
+                    continue  # Already imported
+
+                # Try to find request by preview_slug or other identifier
+                # For now, create orphan client_site that can be linked later
+                preview_slug = deploy.get('preview_slug', '')
+                domain = deploy.get('domain', '')
+
+                # Create minimal client_site
+                try:
+                    site = await db.create_client_site(
+                        request_id=None,  # No request linked
+                        manager_id=str(user['id']),  # Current admin as owner
+                        company_name=domain or preview_slug or f"Import-{deploy_id[:8]}",
+                        client_name=None,
+                        client_contact=None,
+                        hosting_plan='trial'
+                    )
+
+                    # Update with deploy info
+                    status_map = {
+                        'pending': 'pending',
+                        'uploading': 'deploying',
+                        'building': 'deploying',
+                        'deploying': 'deploying',
+                        'completed': 'active',
+                        'failed': 'failed',
+                    }
+
+                    await db.update_client_site(str(site['id']), {
+                        'deploy_id': deploy_id,
+                        'deploy_status': status_map.get(deploy.get('status', ''), deploy.get('status', 'none')),
+                        'preview_slug': preview_slug,
+                        'preview_url': f"https://{preview_slug}.autosites.ru" if preview_slug else None,
+                        'domain': domain if domain and '.autosites.ru' not in domain else None,
+                        'server_id': deploy.get('server_id'),
+                        'server_name': deploy.get('server_name'),
+                        'server_host': deploy.get('server_host'),
+                        'container_port': deploy.get('port'),
+                    })
+
+                    imported.append({
+                        'deploy_id': deploy_id,
+                        'site_id': str(site['id']),
+                        'preview_slug': preview_slug
+                    })
+                    log.info(f"Imported deploy {deploy_id} as site {site['id']}")
+
+                except Exception as e:
+                    errors.append({
+                        'deploy_id': deploy_id,
+                        'error': str(e)
+                    })
+                    log.error(f"Failed to import deploy {deploy_id}: {e}")
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout connecting to deploy-node")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Failed to connect to deploy-node: {str(e)}")
+
+    return {
+        "success": True,
+        "imported": len(imported),
+        "errors": len(errors),
+        "details": {
+            "imported": imported,
+            "errors": errors
+        }
+    }
 
 
 @router.post("/{site_id}/sync-status")

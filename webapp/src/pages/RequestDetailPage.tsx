@@ -239,6 +239,20 @@ export default function RequestDetailPage() {
     },
   })
 
+  // Create site for request mutation
+  const createSiteMutation = useMutation({
+    mutationFn: () => sitesApi.createForRequest(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-site', id] })
+      toast.success('Сайт создан!')
+      haptic?.notificationOccurred('success')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка создания сайта')
+      haptic?.notificationOccurred('error')
+    },
+  })
+
   // Assign domain mutation
   const assignDomainMutation = useMutation({
     mutationFn: ({ domain, ssl }: { domain: string; ssl: boolean }) =>
@@ -715,6 +729,33 @@ export default function RequestDetailPage() {
             )}
           </div>
         </Section>
+
+        {/* Create Site Button - if site doesn't exist */}
+        {!clientSite && !isLoadingSite && (
+          <Section title="Сайт">
+            <div className="p-4">
+              <div className="text-center py-6">
+                <Globe className="w-12 h-12 text-tg-hint/50 mx-auto mb-3" />
+                <p className="text-tg-hint mb-4">Сайт ещё не создан для этой заявки</p>
+                <button
+                  onClick={() => createSiteMutation.mutate()}
+                  disabled={createSiteMutation.isPending}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-tg-button text-tg-button-text rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {createSiteMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  Создать сайт
+                </button>
+                <p className="text-xs text-tg-hint/70 mt-3">
+                  После создания вы сможете управлять хостингом, деплоем и правками
+                </p>
+              </div>
+            </div>
+          </Section>
+        )}
 
         {/* Client Site Info & Payment Section */}
         {clientSite && (

@@ -221,6 +221,13 @@ export const sitesApi = {
   // Admin: sync all statuses
   adminSyncAllStatuses: () => api.post('/sites/admin/sync-all-statuses'),
 
+  // Create site for request (if not created automatically)
+  createForRequest: (requestId: string, deployId?: string) => 
+    api.post(`/sites/create-for-request/${requestId}`, { deploy_id: deployId }),
+
+  // Admin: import deployments from deploy-node
+  adminImportFromDeployNode: () => api.post('/sites/admin/import-from-deploy-node'),
+
   // Get hosting plans
   getPlans: () => api.get('/sites/plans'),
 }

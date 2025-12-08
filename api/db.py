@@ -88,6 +88,19 @@ async def list_managers() -> List[Dict]:
             return await cur.fetchall()
 
 
+async def list_admins() -> List[Dict]:
+    """Get all admin users."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT id, tg_id, username, first_name, last_name, contact, role, created_at
+                   FROM users
+                   WHERE role = 'admin'
+                   ORDER BY created_at ASC"""
+            )
+            return await cur.fetchall()
+
+
 async def list_pending_registrations() -> List[Dict]:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
@@ -809,7 +822,7 @@ async def count_new_feedback() -> int:
 # ==================== Client Sites ====================
 
 async def create_client_site(
-    request_id: str,
+    request_id: Optional[str],  # Can be None for imported sites
     manager_id: str,
     company_name: str,
     client_name: str = None,
