@@ -71,11 +71,32 @@ class DeployCallbackRequest(BaseModel):
 
 class GenerationCallbackRequest(BaseModel):
     """Webhook callback from n8n after generation"""
-    request_id: str
+    request_id: Optional[str] = None  # Может приходить как request_id или requestId
+    requestId: Optional[str] = None  # Альтернативное поле (camelCase)
     status: str  # completed, error
     archive_s3_key: Optional[str] = None
+    archiveSize: Optional[str] = None  # Альтернативное поле (camelCase)
     archive_size_bytes: Optional[int] = None
+    archiveSizeBytes: Optional[int] = None  # Альтернативное поле (camelCase)
     error_message: Optional[str] = None
+    error: Optional[str] = None  # Альтернативное поле
+    errorMessage: Optional[str] = None  # Альтернативное поле (camelCase)
+
+    def get_request_id(self) -> Optional[str]:
+        """Get request_id from either field"""
+        return self.request_id or self.requestId
+
+    def get_archive_s3_key(self) -> Optional[str]:
+        """Get archive_s3_key from either field"""
+        return self.archive_s3_key or self.archiveSize
+
+    def get_archive_size_bytes(self) -> Optional[int]:
+        """Get archive_size_bytes from either field"""
+        return self.archive_size_bytes or self.archiveSizeBytes
+
+    def get_error_message(self) -> Optional[str]:
+        """Get error message from either field"""
+        return self.error_message or self.error or self.errorMessage
 
 
 # ==================== Helper Functions ====================
@@ -723,19 +744,25 @@ async def generation_callback(data: GenerationCallbackRequest):
     Webhook callback from n8n after site generation.
     Creates client_site record and optionally triggers deploy.
     """
-    log.info(f"Generation callback received: {data.request_id} -> {data.status}")
+    # Get request_id from either field
+    request_id = data.get_request_id()
+    if not request_id:
+        log.error("Generation callback missing request_id")
+        raise HTTPException(status_code=422, detail="request_id is required")
+
+    log.info(f"Generation callback received: {request_id} -> {data.status}")
 
     # Get the request
-    request = await db.get_request(data.request_id)
+    request = await db.get_request(request_id)
     if not request:
-        log.warning(f"Request not found: {data.request_id}")
+        log.warning(f"Request not found: {request_id}")
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Get user info for notifications
     user = await db.get_user_by_id(str(request['user_id']))
 
     # Get or create client site
-    site = await db.get_client_site_by_request(data.request_id)
+    site = await db.get_client_site_by_request(request_id)
 
     if not site:
         # Create new client site
@@ -744,7 +771,7 @@ async def generation_callback(data: GenerationCallbackRequest):
         client_data = payload.get('client', {})
 
         site = await db.create_client_site(
-            request_id=data.request_id,
+            request_id=request_id,
             manager_id=str(request['user_id']),
             company_name=site_data.get('company', client_data.get('company', 'Unknown')),
             client_name=client_data.get('name'),
@@ -759,15 +786,18 @@ async def generation_callback(data: GenerationCallbackRequest):
 
     # Update generation status
     if data.status == 'completed':
+        archive_s3_key = data.get_archive_s3_key()
+        archive_size_bytes = data.get_archive_size_bytes()
+
         await db.update_site_generation_status(
             site_id=str(site['id']),
             status='completed',
-            archive_s3_key=data.archive_s3_key,
-            archive_size_bytes=data.archive_size_bytes
+            archive_s3_key=archive_s3_key,
+            archive_size_bytes=archive_size_bytes
         )
 
         # Update request status
-        await db.update_request_status(data.request_id, 'success')
+        await db.update_request_status(request_id, 'success')
 
         # Notify manager about generation complete
         await notify_manager_generation_complete(site, 'completed')
@@ -775,19 +805,33 @@ async def generation_callback(data: GenerationCallbackRequest):
         # Auto-deploy if configured
         if settings.AUTO_DEPLOY_ENABLED:
             log.info(f"Auto-deploy enabled, triggering deploy for site {site['id']}")
-            # TODO: Download archive and trigger deploy
-            await db.update_site_deploy_status(str(site['id']), 'pending')
+            try:
+                # Update site with archive key if not set
+                if archive_s3_key and not site.get('archive_s3_key'):
+                    await db.update_client_site(str(site['id']), {
+                        'archive_s3_key': archive_s3_key
+                    })
+                    site['archive_s3_key'] = archive_s3_key
+
+                # Trigger deploy
+                await trigger_deploy(site, user_id=str(request['user_id']))
+                log.info(f"Auto-deploy triggered successfully for site {site['id']}")
+            except Exception as e:
+                log.error(f"Failed to auto-deploy site {site['id']}: {e}", exc_info=True)
+                # Don't fail the callback, just log the error
+                await db.update_site_deploy_status(str(site['id']), 'failed', error=str(e))
 
     elif data.status == 'error':
+        error_message = data.get_error_message()
         await db.update_site_generation_status(
             site_id=str(site['id']),
             status='error',
-            error=data.error_message
+            error=error_message
         )
-        await db.update_request_status(data.request_id, 'error')
+        await db.update_request_status(request_id, 'error')
 
         # Notify manager about generation error
-        await notify_manager_generation_complete(site, 'error', data.error_message)
+        await notify_manager_generation_complete(site, 'error', error_message)
 
     return {"success": True, "site_id": str(site['id'])}
 
