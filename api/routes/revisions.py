@@ -280,10 +280,6 @@ async def trigger_redeploy(site: dict, archive_s3_key: str, user_id: str = None)
         log.warning("DEPLOY_NODE_URL not configured")
         return None
 
-    # Download archive from S3 to temp location
-    # For now, we'll pass the S3 key and let deploy-node handle it
-    # TODO: Implement proper archive download and upload to deploy-node
-
     try:
         # Get presigned URL for archive
         archive_url = await get_archive_download_url(archive_s3_key)
@@ -291,24 +287,24 @@ async def trigger_redeploy(site: dict, archive_s3_key: str, user_id: str = None)
             log.error("Failed to get archive download URL")
             return None
 
-        async with httpx.AsyncClient() as client:
-            # First, download archive
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            # First, download archive from S3
             archive_response = await client.get(archive_url, timeout=120.0)
             archive_response.raise_for_status()
             archive_content = archive_response.content
 
-            # Then, deploy it
+            # Then, deploy it to deploy-node
             files = {'archive': ('site.zip', archive_content, 'application/zip')}
             data = {
                 'auto_select': 'true',
-                'enable_ssl': 'false',
+                'enable_ssl': 'true',  # SSL enabled by default for preview domains
                 'client_site_id': str(site['id']),
                 'request_id': str(site.get('request_id')) if site.get('request_id') else '',
             }
 
+            # Use custom domain if set
             if site.get('domain'):
                 data['domain'] = site['domain']
-                data['enable_ssl'] = 'true'
 
             response = await client.post(
                 f"{settings.DEPLOY_NODE_URL}/api/deploy",

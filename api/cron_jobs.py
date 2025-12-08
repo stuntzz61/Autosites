@@ -69,9 +69,16 @@ async def auto_disable_expired_sites():
         # Stop site in deploy-node if deployed
         if site.get('deploy_id') and settings.DEPLOY_NODE_URL:
             try:
-                async with httpx.AsyncClient() as client:
-                    # TODO: Call deploy-node API to stop the site
-                    log.info(f"Would stop site {site['deploy_id']} in deploy-node")
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(
+                        f"{settings.DEPLOY_NODE_URL}/api/sites/by-id/{site['deploy_id']}/stop"
+                    )
+                    if response.status_code == 200:
+                        log.info(f"Stopped site {site['deploy_id']} in deploy-node")
+                    elif response.status_code == 404:
+                        log.warning(f"Site {site['deploy_id']} not found in deploy-node")
+                    else:
+                        log.warning(f"Failed to stop site {site['deploy_id']}: {response.status_code}")
             except Exception as e:
                 log.error(f"Failed to stop site in deploy-node: {e}")
 
@@ -98,12 +105,19 @@ async def auto_delete_expired_sites():
     sites = await db.get_sites_to_delete()
 
     for site in sites:
-        # Delete from deploy-node if deployed
+        # Delete from deploy-node if deployed (stops container, removes files)
         if site.get('deploy_id') and settings.DEPLOY_NODE_URL:
             try:
-                async with httpx.AsyncClient() as client:
-                    # TODO: Call deploy-node API to delete the site
-                    log.info(f"Would delete site {site['deploy_id']} from deploy-node")
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.delete(
+                        f"{settings.DEPLOY_NODE_URL}/api/sites/by-id/{site['deploy_id']}"
+                    )
+                    if response.status_code == 200:
+                        log.info(f"Deleted site {site['deploy_id']} from deploy-node")
+                    elif response.status_code == 404:
+                        log.warning(f"Site {site['deploy_id']} not found in deploy-node (already deleted)")
+                    else:
+                        log.warning(f"Failed to delete site {site['deploy_id']}: {response.status_code}")
             except Exception as e:
                 log.error(f"Failed to delete site from deploy-node: {e}")
 

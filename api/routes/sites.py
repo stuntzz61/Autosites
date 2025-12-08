@@ -2,12 +2,13 @@
 Client Sites Router - CRUD операции для сайтов клиентов
 Связывает заявки с деплоями и управляет хостингом
 """
-from typing import Optional, List
+from typing import Optional, List, Any
 import json
 import httpx
 import logging
 import os
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, BackgroundTasks
 from pydantic import BaseModel
@@ -19,6 +20,21 @@ import db
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def serialize_site(site: dict) -> dict:
+    """Convert UUID fields to strings for JSON serialization."""
+    if not site:
+        return site
+    result = {}
+    for key, value in site.items():
+        if isinstance(value, UUID):
+            result[key] = str(value)
+        elif isinstance(value, datetime):
+            result[key] = value.isoformat()
+        else:
+            result[key] = value
+    return result
 
 
 # ==================== DTOs ====================
@@ -294,7 +310,7 @@ async def list_sites(
     )
 
     return {
-        "items": [{**s, "id": str(s["id"])} for s in sites],
+        "items": [serialize_site(s) for s in sites],
         "page": page,
         "limit": limit
     }
@@ -320,7 +336,7 @@ async def get_expiring_sites(
         raise HTTPException(status_code=403, detail="Admin access required")
 
     sites = await db.get_expiring_sites(days)
-    return {"items": sites}
+    return {"items": [serialize_site(s) for s in sites]}
 
 
 @router.get("/plans")
@@ -347,7 +363,7 @@ async def get_site_by_request(request_id: str, user: dict = Depends(get_current_
     if not site:
         raise HTTPException(status_code=404, detail="Site not found for this request")
 
-    return {**site, "id": str(site["id"])}
+    return serialize_site(site)
 
 
 @router.get("/{site_id}")
@@ -362,7 +378,7 @@ async def get_site(site_id: str, user: dict = Depends(get_current_user)):
     if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    return {**site, "id": str(site["id"])}
+    return serialize_site(site)
 
 
 @router.get("/{site_id}/history")
@@ -399,7 +415,7 @@ async def create_site(data: CreateSiteRequest, user: dict = Depends(get_current_
     # Check if site already exists for this request
     existing = await db.get_client_site_by_request(data.request_id)
     if existing:
-        return {**existing, "id": str(existing["id"]), "already_exists": True}
+        return {**serialize_site(existing), "already_exists": True}
 
     # Create site
     site = await db.create_client_site(
@@ -413,7 +429,7 @@ async def create_site(data: CreateSiteRequest, user: dict = Depends(get_current_
     )
 
     log.info(f"Created client site {site['id']} for request {data.request_id}")
-    return {**site, "id": str(site["id"])}
+    return serialize_site(site)
 
 
 @router.patch("/{site_id}")
@@ -434,7 +450,7 @@ async def update_site(
     update_data = data.model_dump(exclude_none=True)
     updated = await db.update_client_site(site_id, update_data)
 
-    return {**updated, "id": str(updated["id"])}
+    return serialize_site(updated)
 
 
 @router.post("/{site_id}/deploy")
@@ -572,7 +588,18 @@ async def stop_site(site_id: str, user: dict = Depends(get_current_user)):
     if site.get('deploy_status') != 'active':
         raise HTTPException(status_code=400, detail="Site is not active")
 
-    # TODO: Call deploy-node to stop the site
+    # Call deploy-node to stop the container
+    if settings.DEPLOY_NODE_URL and site.get('deploy_id'):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{settings.DEPLOY_NODE_URL}/api/sites/by-id/{site['deploy_id']}/stop"
+                )
+                if response.status_code not in (200, 404):
+                    log.warning(f"Failed to stop site on deploy-node: {response.status_code}")
+        except Exception as e:
+            log.error(f"Error stopping site on deploy-node: {e}")
+            # Continue to update local status anyway
 
     await db.update_site_deploy_status(site_id, 'stopped')
 
@@ -591,9 +618,24 @@ async def delete_site(site_id: str, user: dict = Depends(get_current_user)):
     if user['role'] != 'admin':
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    # TODO: Stop and cleanup in deploy-node if active
+    # Stop and cleanup in deploy-node if deployed
+    if settings.DEPLOY_NODE_URL and site.get('deploy_id'):
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                # Delete site (stops container, removes nginx config, cleans up files)
+                response = await client.delete(
+                    f"{settings.DEPLOY_NODE_URL}/api/sites/by-id/{site['deploy_id']}"
+                )
+                if response.status_code not in (200, 404):
+                    log.warning(f"Failed to delete site on deploy-node: {response.status_code}")
+                else:
+                    log.info(f"Site {site_id} deleted from deploy-node")
+        except Exception as e:
+            log.error(f"Error deleting site on deploy-node: {e}")
+            # Continue to delete from our DB anyway
 
     await db.delete_client_site(site_id)
+    log.info(f"Site {site_id} deleted from database")
 
     return {"success": True}
 
@@ -822,9 +864,6 @@ async def generation_callback(data: GenerationCallbackRequest):
         # Update request status
         await db.update_request_status(request_id, 'success')
 
-        # Notify manager about generation complete
-        await notify_manager_generation_complete(site, 'completed')
-
         # Auto-deploy if configured
         if settings.AUTO_DEPLOY_ENABLED:
             log.info(f"Auto-deploy enabled, triggering deploy for site {site['id']}")
@@ -844,6 +883,9 @@ async def generation_callback(data: GenerationCallbackRequest):
                 # Don't fail the callback, just log the error
                 await db.update_site_deploy_status(str(site['id']), 'failed', error=str(e))
         else:
+            # Notify manager about generation complete only when auto-deploy is disabled
+            # (when auto-deploy is enabled, deploy status notifications will be sent instead)
+            await notify_manager_generation_complete(site, 'completed')
             log.info(f"Auto-deploy disabled. Site {site['id']} ready for manual deployment. Archive: {archive_s3_key}")
 
     elif data.status == 'error':
@@ -951,7 +993,7 @@ async def admin_list_all_sites(
     )
 
     return {
-        "items": [{**s, "id": str(s["id"])} for s in sites],
+        "items": [serialize_site(s) for s in sites],
         "page": page,
         "limit": limit
     }
@@ -960,6 +1002,7 @@ async def admin_list_all_sites(
 @router.post("/admin/{site_id}/force-deploy")
 async def admin_force_deploy(
     site_id: str,
+    background_tasks: BackgroundTasks,
     user: dict = Depends(get_current_user)
 ):
     """Force re-deploy a site (admin only)."""
@@ -973,12 +1016,27 @@ async def admin_force_deploy(
     if not site.get('archive_s3_key'):
         raise HTTPException(status_code=400, detail="Site has no archive")
 
+    # Check if already deploying
+    if site.get('deploy_status') == 'deploying':
+        raise HTTPException(status_code=400, detail="Deployment already in progress")
+
     # Reset status and trigger deploy
     await db.update_site_deploy_status(site_id, 'pending')
 
-    # TODO: Download archive and trigger deploy
+    # Trigger deploy (downloads from S3 automatically)
+    deployment = await trigger_deploy(site, user_id=str(user['id']))
 
-    return {"success": True, "message": "Force deploy initiated"}
+    if deployment:
+        return {
+            "success": True,
+            "message": "Force deploy initiated",
+            "deployment": deployment
+        }
+    else:
+        return {
+            "success": False,
+            "message": "Failed to start deployment"
+        }
 
 
 class CreateSiteForRequestRequest(BaseModel):
@@ -1041,7 +1099,7 @@ async def create_site_for_request(
     return {
         "success": True,
         "message": "Site created",
-        "site": site
+        "site": serialize_site(site)
     }
 
 
