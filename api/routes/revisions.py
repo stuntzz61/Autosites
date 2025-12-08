@@ -219,7 +219,7 @@ async def send_revision_to_n8n(revision: dict, changes: list, site: dict) -> dic
         "s3_folder": revision['s3_folder'],
         "archive_url": archive_url,
         "archive_s3_key": site.get('archive_s3_key'),
-        "callback_url": f"{settings.DEPLOY_NODE_URL}/api/revisions/webhook/n8n-callback" if settings.DEPLOY_NODE_URL else None,
+        "callback_url": f"{settings.API_PUBLIC_URL}/api/revisions/webhook/n8n-callback" if settings.API_PUBLIC_URL else None,
         "site_info": {
             "company_name": site.get('company_name'),
             "domain": site.get('domain'),

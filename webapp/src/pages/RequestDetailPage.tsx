@@ -60,7 +60,10 @@ export default function RequestDetailPage() {
     type: string
     description: string
     area: string
+    screenshot?: File
+    screenshotPreview?: string
   }>>([{ type: 'text_change', description: '', area: '' }])
+  const [isCreatingRevision, setIsCreatingRevision] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const revisionScreenshotRef = useRef<HTMLInputElement>(null)
 
@@ -757,8 +760,8 @@ export default function RequestDetailPage() {
           </Section>
         )}
 
-        {/* Client Site Info & Payment Section */}
-        {clientSite && (
+        {/* Client Site Info & Payment Section - only show when there's actual site content or deploy */}
+        {clientSite && (clientSite.archive_s3_key || clientSite.deploy_id || clientSite.deploy_status && clientSite.deploy_status !== 'none') && (
           <Section title="Хостинг сайта">
             <div className="p-4 space-y-3">
               {/* Site Status */}
@@ -966,8 +969,8 @@ export default function RequestDetailPage() {
           </Section>
         )}
 
-        {/* Revisions Section */}
-        {clientSite && clientSite.deploy_status === 'active' && (
+        {/* Revisions Section - show when site has archive (even if not deployed) */}
+        {clientSite && clientSite.archive_s3_key && (
           <Section title="Правки сайта">
             <div className="p-4 space-y-3">
               {/* Active revision status */}
@@ -1268,6 +1271,59 @@ export default function RequestDetailPage() {
                           className="input min-h-[80px] resize-none"
                         />
                       </div>
+
+                      {/* Screenshot Upload */}
+                      <div>
+                        <label className="text-xs text-tg-hint mb-1 block">Скриншот (обведите элемент)</label>
+                        {change.screenshotPreview ? (
+                          <div className="relative">
+                            <img
+                              src={change.screenshotPreview}
+                              alt="Скриншот"
+                              className="w-full h-32 object-cover rounded-xl"
+                            />
+                            <button
+                              onClick={() => {
+                                setNewRevisionChanges(prev =>
+                                  prev.map((c, i) => i === index ? { ...c, screenshot: undefined, screenshotPreview: undefined } : c)
+                                )
+                              }}
+                              className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-tg-separator rounded-xl cursor-pointer hover:border-blue-500 hover:text-blue-500 transition-colors">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  const reader = new FileReader()
+                                  reader.onloadend = () => {
+                                    setNewRevisionChanges(prev =>
+                                      prev.map((c, i) => i === index ? {
+                                        ...c,
+                                        screenshot: file,
+                                        screenshotPreview: reader.result as string
+                                      } : c)
+                                    )
+                                  }
+                                  reader.readAsDataURL(file)
+                                }
+                              }}
+                            />
+                            <Camera className="w-5 h-5" />
+                            <span className="text-sm">Добавить скриншот</span>
+                          </label>
+                        )}
+                        <p className="text-xs text-tg-hint/70 mt-1">
+                          Сделайте скриншот и обведите место, которое нужно изменить
+                        </p>
+                      </div>
                     </div>
                   ))}
 
@@ -1285,7 +1341,7 @@ export default function RequestDetailPage() {
                   {/* Info */}
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
                     <p className="text-sm text-blue-600 dark:text-blue-400">
-                      💡 После создания правок вы сможете добавить скриншоты и отправить их на обработку.
+                      💡 <strong>Совет:</strong> Приложите скриншот и обведите элемент, который нужно изменить — так правки будут обработаны точнее!
                     </p>
                   </div>
 
@@ -1298,26 +1354,62 @@ export default function RequestDetailPage() {
                       Отмена
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const validChanges = newRevisionChanges
                           .filter(c => c.description.trim())
-                          .map(c => ({
-                            type: c.type,
-                            client_description: c.description,
-                            location: c.area ? { area: c.area } : undefined,
-                          }))
 
                         if (validChanges.length === 0) {
                           toast.error('Добавьте хотя бы одну правку с описанием')
                           return
                         }
 
-                        createRevisionMutation.mutate(validChanges)
+                        setIsCreatingRevision(true)
+
+                        // Prepare changes for API
+                        const changesForApi = validChanges.map(c => ({
+                          type: c.type,
+                          client_description: c.description,
+                          location: c.area ? { area: c.area } : undefined,
+                        }))
+
+                        try {
+                          // First create the revision
+                          const result = await revisionsApi.create({
+                            site_id: clientSite!.id,
+                            changes: changesForApi,
+                            source: 'webapp',
+                            auto_submit: false,
+                          })
+
+                          const revisionId = result.data.id
+
+                          // Then upload screenshots for changes that have them
+                          const screenshotChanges = validChanges.filter(c => c.screenshot)
+                          for (const change of screenshotChanges) {
+                            if (change.screenshot) {
+                              const formData = new FormData()
+                              formData.append('file', change.screenshot)
+                              formData.append('comment', change.description.substring(0, 100))
+                              await revisionsApi.uploadScreenshot(revisionId, formData)
+                            }
+                          }
+
+                          queryClient.invalidateQueries({ queryKey: ['revisions', clientSite?.id] })
+                          toast.success('Правки созданы!')
+                          haptic?.notificationOccurred('success')
+                          setShowNewRevisionModal(false)
+                          setNewRevisionChanges([{ type: 'text_change', description: '', area: '' }])
+                        } catch (error: any) {
+                          toast.error(error.response?.data?.detail || 'Ошибка создания правок')
+                          haptic?.notificationOccurred('error')
+                        } finally {
+                          setIsCreatingRevision(false)
+                        }
                       }}
-                      disabled={createRevisionMutation.isPending}
+                      disabled={isCreatingRevision}
                       className="btn btn-primary flex-1"
                     >
-                      {createRevisionMutation.isPending ? (
+                      {isCreatingRevision ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
                         'Создать правки'

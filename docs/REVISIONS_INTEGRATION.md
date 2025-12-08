@@ -283,11 +283,19 @@ autosites-bucket/
 
 ## ⚙️ Конфигурация
 
-Переменные окружения:
+### Переменные окружения Autosites API
 
 ```bash
-# n8n webhook для правок
-N8N_REVISIONS_WEBHOOK_URL=http://n8n:5678/webhook/site-revisions
+# ===== n8n webhook для правок =====
+# Webhook path в workflow: /webhook/tg-site-revision
+# Test URL: http://n8n:5678/webhook-test/tg-site-revision
+# Production URL: http://n8n:5678/webhook/tg-site-revision
+N8N_REVISIONS_WEBHOOK_URL=http://n8n:5678/webhook/tg-site-revision
+
+# ===== API Public URL =====
+# Публичный URL этого API для callback от n8n
+# n8n будет отправлять результаты на: {API_PUBLIC_URL}/api/revisions/webhook/n8n-callback
+API_PUBLIC_URL=http://api:8000
 
 # Deploy Node URL
 DEPLOY_NODE_URL=http://deploy-node:8080
@@ -298,6 +306,29 @@ DEPLOY_CALLBACK_SECRET=your_secret
 # URL бота для уведомлений
 BOT_WEBHOOK_URL=http://bot:8081
 ```
+
+### Переменные окружения n8n
+
+Добавьте в переменные окружения n8n:
+
+```bash
+# OpenRouter API ключ для Claude/GPT
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+
+# S3 credentials (настраиваются в n8n Credentials)
+# - Создайте S3 credential с именем "S3 account"
+# - Укажите: endpoint, access key, secret key, bucket
+```
+
+### Настройка S3 Credentials в n8n
+
+1. Перейдите в **Settings → Credentials**
+2. Создайте новый **S3** credential с именем `S3 account`
+3. Укажите:
+   - **Endpoint**: `https://storage.yandexcloud.net` (или ваш S3)
+   - **Region**: `ru-central1`
+   - **Access Key**: ваш ключ
+   - **Secret Key**: ваш секрет
 
 ## 📊 Статусы правок
 
@@ -323,18 +354,39 @@ BOT_WEBHOOK_URL=http://bot:8081
 
 ## 🚀 Быстрый старт
 
-1. Примените миграцию:
+### 1. Примените миграцию
+
 ```bash
 psql $DATABASE_URL -f migrations/012_revisions.sql
 ```
 
-2. Настройте переменные окружения
+### 2. Настройте переменные окружения
 
-3. Создайте workflow в n8n
-
-4. Протестируйте через API:
+В `.env` файле API:
 ```bash
-# Создать ревизию
+N8N_REVISIONS_WEBHOOK_URL=http://n8n:5678/webhook/tg-site-revision
+API_PUBLIC_URL=http://api:8000
+```
+
+### 3. Импортируйте workflow в n8n
+
+1. Скопируйте файл `site revisions v1.5.json` в доступное место
+2. В n8n перейдите в **Workflows → Import from File**
+3. Выберите файл `site revisions v1.5.json`
+4. Настройте S3 Credentials (см. выше)
+5. Добавьте `OPENROUTER_API_KEY` в Environment Variables n8n
+6. **Активируйте workflow!** (переключатель Active)
+
+### 4. Проверьте webhook URL
+
+После импорта проверьте webhook URL:
+- **Test URL**: `http://n8n:5678/webhook-test/tg-site-revision`
+- **Production URL**: `http://n8n:5678/webhook/tg-site-revision`
+
+### 5. Протестируйте интеграцию
+
+```bash
+# Создать ревизию через API
 curl -X POST https://api.example.com/api/revisions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -345,5 +397,26 @@ curl -X POST https://api.example.com/api/revisions \
       "client_description": "Тестовая правка"
     }]
   }'
+
+# Отправить правки на обработку
+curl -X POST https://api.example.com/api/revisions/{revision_id}/submit \
+  -H "Authorization: Bearer $TOKEN"
 ```
+
+## 🔧 Troubleshooting
+
+### Правки не отправляются в n8n
+1. Проверьте `N8N_REVISIONS_WEBHOOK_URL` в .env
+2. Убедитесь что workflow активирован в n8n
+3. Проверьте логи API: `docker logs autosites-api`
+
+### Callback не приходит в API
+1. Проверьте `API_PUBLIC_URL` в .env (должен быть доступен из n8n)
+2. Проверьте логи n8n workflow execution
+3. Убедитесь что S3 credentials настроены правильно
+
+### Ошибки AI в workflow
+1. Проверьте `OPENROUTER_API_KEY` в переменных n8n
+2. Проверьте баланс на OpenRouter
+3. Посмотрите response от HTTP Request нод в execution history
 

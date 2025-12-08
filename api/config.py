@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # Callback secret for secure webhooks
     DEPLOY_CALLBACK_SECRET: str = ""
 
+    # API Public URL (for callbacks from n8n)
+    API_PUBLIC_URL: str = ""  # e.g. https://api.autosites.ru
+
     # Payment Settings
     PAYMENT_BASE_URL: str = ""  # URL for payment system (e.g. https://pay.example.com)
     PAYMENT_BANK_ACCOUNT: str = ""  # Bank account for SBP payments
