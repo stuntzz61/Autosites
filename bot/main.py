@@ -154,8 +154,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     if not user:
         # New user - show registration
         await message.answer(
-            "👋 Добро пожаловать в AutoSites!\n\n"
-            "Это сервис для автоматической генерации сайтов.\n\n"
+            "👋 Добро пожаловать в Wenlyx!\n\n"
             "Чтобы начать работу, необходимо зарегистрироваться.",
             reply_markup=get_registration_keyboard()
         )

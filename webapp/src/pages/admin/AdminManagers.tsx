@@ -251,146 +251,154 @@ export default function AdminManagers() {
               onClick={() => setSelectedManager(null)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[80vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
             >
-              <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
-
-              {/* Header */}
-              <div className="flex items-center gap-4 mb-6">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                  selectedManager.is_blocked ? 'bg-red-500/20' :
-                  selectedManager.role === 'admin' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
-                }`}>
-                  {selectedManager.role === 'admin' ? (
-                    <Shield className="w-8 h-8 text-purple-500" />
-                  ) : (
-                    <User className={`w-8 h-8 ${
-                      selectedManager.is_blocked ? 'text-red-500' : 'text-tg-accent'
-                    }`} />
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-tg-text">
-                    {selectedManager.first_name} {selectedManager.last_name}
-                  </h2>
-                  {selectedManager.username && (
-                    <a
-                      href={`https://t.me/${selectedManager.username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-tg-accent"
-                    >
-                      @{selectedManager.username}
-                    </a>
-                  )}
-                </div>
+              {/* Drag handle - fixed */}
+              <div className="flex-shrink-0 pt-3 pb-2">
+                <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto" />
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-tg-secondary-bg rounded-xl p-3">
-                  <div className="flex items-center gap-2 text-tg-hint mb-1">
-                    <FileText className="w-4 h-4" />
-                    <span className="text-xs">Заявок</span>
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto px-4 pb-2">
+                {/* Header */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+                    selectedManager.is_blocked ? 'bg-red-500/20' :
+                    selectedManager.role === 'admin' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
+                  }`}>
+                    {selectedManager.role === 'admin' ? (
+                      <Shield className="w-8 h-8 text-purple-500" />
+                    ) : (
+                      <User className={`w-8 h-8 ${
+                        selectedManager.is_blocked ? 'text-red-500' : 'text-tg-accent'
+                      }`} />
+                    )}
                   </div>
-                  <p className="text-2xl font-bold text-tg-text">
-                    {selectedManager.request_count || selectedManager.total_requests || 0}
-                  </p>
-                </div>
-                <div className="bg-tg-secondary-bg rounded-xl p-3">
-                  <div className="flex items-center gap-2 text-tg-hint mb-1">
-                    <BarChart3 className="w-4 h-4" />
-                    <span className="text-xs">Завершено</span>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-bold text-tg-text truncate">
+                      {selectedManager.first_name} {selectedManager.last_name}
+                    </h2>
+                    {selectedManager.username && (
+                      <a
+                        href={`https://t.me/${selectedManager.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-tg-accent text-sm"
+                      >
+                        @{selectedManager.username}
+                      </a>
+                    )}
                   </div>
-                  <p className="text-2xl font-bold text-green-500">
-                    {selectedManager.completed_requests || 0}
-                  </p>
+                  <button
+                    onClick={() => setSelectedManager(null)}
+                    className="p-2 rounded-full bg-tg-secondary-bg"
+                  >
+                    <X className="w-5 h-5 text-tg-hint" />
+                  </button>
                 </div>
-              </div>
 
-              {/* Info */}
-              <div className="bg-tg-secondary-bg rounded-xl p-4 mb-6 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-tg-hint">Telegram ID</span>
-                  <span className="text-tg-text">{selectedManager.tg_id}</span>
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-tg-secondary-bg rounded-xl p-3">
+                    <div className="flex items-center gap-2 text-tg-hint mb-1">
+                      <FileText className="w-4 h-4" />
+                      <span className="text-xs">Заявок</span>
+                    </div>
+                    <p className="text-2xl font-bold text-tg-text">
+                      {selectedManager.request_count || selectedManager.total_requests || 0}
+                    </p>
+                  </div>
+                  <div className="bg-tg-secondary-bg rounded-xl p-3">
+                    <div className="flex items-center gap-2 text-tg-hint mb-1">
+                      <BarChart3 className="w-4 h-4" />
+                      <span className="text-xs">Завершено</span>
+                    </div>
+                    <p className="text-2xl font-bold text-green-500">
+                      {selectedManager.completed_requests || 0}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-tg-hint">Роль</span>
-                  <span className="text-tg-text">{selectedManager.role === 'admin' ? 'Администратор' : 'Менеджер'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-tg-hint">Статус</span>
-                  <span className={selectedManager.is_blocked ? 'text-red-500' : 'text-green-500'}>
-                    {selectedManager.is_blocked ? 'Заблокирован' : 'Активен'}
-                  </span>
-                </div>
-                {selectedManager.contact && (
+
+                {/* Info */}
+                <div className="bg-tg-secondary-bg rounded-xl p-4 mb-4 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-tg-hint">Контакт</span>
-                    <span className="text-tg-text">{selectedManager.contact}</span>
+                    <span className="text-tg-hint">Telegram ID</span>
+                    <span className="text-tg-text font-mono">{selectedManager.tg_id}</span>
                   </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-tg-hint">Регистрация</span>
-                  <span className="text-tg-text">
-                    {new Date(selectedManager.created_at).toLocaleDateString('ru')}
-                  </span>
+                  <div className="flex justify-between">
+                    <span className="text-tg-hint">Роль</span>
+                    <span className="text-tg-text">{selectedManager.role === 'admin' ? 'Администратор' : 'Менеджер'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-tg-hint">Статус</span>
+                    <span className={selectedManager.is_blocked ? 'text-red-500' : 'text-green-500'}>
+                      {selectedManager.is_blocked ? 'Заблокирован' : 'Активен'}
+                    </span>
+                  </div>
+                  {selectedManager.contact && (
+                    <div className="flex justify-between">
+                      <span className="text-tg-hint">Контакт</span>
+                      <span className="text-tg-text">{selectedManager.contact}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-tg-hint">Регистрация</span>
+                    <span className="text-tg-text">
+                      {new Date(selectedManager.created_at).toLocaleDateString('ru')}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="space-y-2">
-                {/* Block/Unblock */}
-                {selectedManager.is_blocked ? (
-                  <button
-                    onClick={() => unblockMutation.mutate(selectedManager.id)}
-                    disabled={unblockMutation.isPending}
-                    className="w-full p-3 rounded-xl bg-green-500/20 text-green-600 font-medium flex items-center justify-center gap-2"
-                  >
-                    <Unlock className="w-5 h-5" />
-                    Разблокировать
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => blockMutation.mutate(selectedManager.id)}
-                    disabled={blockMutation.isPending}
-                    className="w-full p-3 rounded-xl bg-orange-500/20 text-orange-600 font-medium flex items-center justify-center gap-2"
-                  >
-                    <Ban className="w-5 h-5" />
-                    Заблокировать
-                  </button>
-                )}
+              {/* Actions - fixed at bottom */}
+              <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t border-tg-separator bg-tg-bg space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Block/Unblock */}
+                  {selectedManager.is_blocked ? (
+                    <button
+                      onClick={() => unblockMutation.mutate(selectedManager.id)}
+                      disabled={unblockMutation.isPending}
+                      className="p-3 rounded-xl bg-green-500/20 text-green-600 font-medium flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Unlock className="w-4 h-4" />
+                      Разблокировать
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => blockMutation.mutate(selectedManager.id)}
+                      disabled={blockMutation.isPending}
+                      className="p-3 rounded-xl bg-orange-500/20 text-orange-600 font-medium flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Ban className="w-4 h-4" />
+                      Заблокировать
+                    </button>
+                  )}
 
-                {/* Make Admin */}
-                {selectedManager.role !== 'admin' && (
-                  <button
-                    onClick={() => makeAdminMutation.mutate(selectedManager.id)}
-                    disabled={makeAdminMutation.isPending}
-                    className="w-full p-3 rounded-xl bg-purple-500/20 text-purple-600 font-medium flex items-center justify-center gap-2"
-                  >
-                    <Shield className="w-5 h-5" />
-                    Сделать админом
-                  </button>
-                )}
+                  {/* Make Admin */}
+                  {selectedManager.role !== 'admin' ? (
+                    <button
+                      onClick={() => makeAdminMutation.mutate(selectedManager.id)}
+                      disabled={makeAdminMutation.isPending}
+                      className="p-3 rounded-xl bg-purple-500/20 text-purple-600 font-medium flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Shield className="w-4 h-4" />
+                      Сделать админом
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                </div>
 
-                {/* Delete */}
+                {/* Delete - always visible */}
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full p-3 rounded-xl bg-red-500/20 text-red-600 font-medium flex items-center justify-center gap-2"
+                  className="w-full p-3 rounded-xl bg-red-500/10 text-red-500 font-medium flex items-center justify-center gap-2"
                 >
                   <Trash2 className="w-5 h-5" />
                   Удалить менеджера
-                </button>
-
-                {/* Close */}
-                <button
-                  onClick={() => setSelectedManager(null)}
-                  className="w-full p-3 rounded-xl bg-tg-secondary-bg text-tg-text font-medium"
-                >
-                  Закрыть
                 </button>
               </div>
             </motion.div>

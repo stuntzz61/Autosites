@@ -98,7 +98,21 @@ async def list_pending(user: dict = Depends(get_admin_user)):
 @router.post("/pending/{user_id}/approve")
 async def approve_registration(user_id: str, user: dict = Depends(get_admin_user)):
     """Approve a pending registration."""
-    await db.approve_user(user_id)
+    # Check current status first
+    current_status = await db.get_user_approval_status(user_id)
+    if not current_status:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if current_status == 'approved':
+        return {"success": True, "message": "Already approved"}
+
+    if current_status == 'rejected':
+        raise HTTPException(status_code=400, detail="User was already rejected by another admin")
+
+    result = await db.approve_user(user_id)
+    if not result:
+        raise HTTPException(status_code=400, detail="Status already changed by another admin")
+
     return {"success": True}
 
 
@@ -109,7 +123,35 @@ async def reject_registration(
     user: dict = Depends(get_admin_user)
 ):
     """Reject a pending registration."""
-    await db.reject_user(user_id, data.reason)
+    # Check current status first
+    current_status = await db.get_user_approval_status(user_id)
+    if not current_status:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if current_status == 'rejected':
+        return {"success": True, "message": "Already rejected"}
+
+    if current_status == 'approved':
+        raise HTTPException(status_code=400, detail="User was already approved by another admin")
+
+    result = await db.reject_user(user_id, data.reason)
+    if not result:
+        raise HTTPException(status_code=400, detail="Status already changed by another admin")
+
+    return {"success": True}
+
+
+@router.post("/pending/{user_id}/reset")
+async def reset_registration(user_id: str, user: dict = Depends(get_admin_user)):
+    """Reset a rejected user's status to pending (allow re-application)."""
+    current_status = await db.get_user_approval_status(user_id)
+    if not current_status:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if current_status != 'rejected':
+        raise HTTPException(status_code=400, detail="Can only reset rejected users")
+
+    await db.reset_user_approval(user_id)
     return {"success": True}
 
 

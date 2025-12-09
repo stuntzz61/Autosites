@@ -112,26 +112,63 @@ async def list_pending_registrations() -> List[Dict]:
             return await cur.fetchall()
 
 
-async def approve_user(user_id: str):
+async def approve_user(user_id: str) -> bool:
+    """Approve user registration. Returns False if already approved/rejected."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            # Only approve if status is 'pending'
+            await cur.execute(
+                """UPDATE users SET approval_status = 'approved',
+                   approved_at = NOW(), rejection_reason = NULL
+                   WHERE id = %s AND approval_status = 'pending'
+                   RETURNING id""",
+                (user_id,)
+            )
+            result = await cur.fetchone()
+            await conn.commit()
+            return result is not None
+
+
+async def reject_user(user_id: str, reason: str) -> bool:
+    """Reject user registration. Returns False if already approved/rejected."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            # Only reject if status is 'pending'
+            await cur.execute(
+                """UPDATE users SET approval_status = 'rejected',
+                   rejection_reason = %s
+                   WHERE id = %s AND approval_status = 'pending'
+                   RETURNING id""",
+                (reason, user_id)
+            )
+            result = await cur.fetchone()
+            await conn.commit()
+            return result is not None
+
+
+async def reset_user_approval(user_id: str):
+    """Reset user approval status to pending (allow re-application)."""
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                """UPDATE users SET approval_status = 'approved',
-                   approved_at = NOW() WHERE id = %s""",
+                """UPDATE users SET approval_status = 'pending',
+                   rejection_reason = NULL, approved_at = NULL
+                   WHERE id = %s AND approval_status = 'rejected'""",
                 (user_id,)
             )
             await conn.commit()
 
 
-async def reject_user(user_id: str, reason: str):
+async def get_user_approval_status(user_id: str) -> Optional[str]:
+    """Get user's current approval status."""
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
-                """UPDATE users SET approval_status = 'rejected',
-                   rejection_reason = %s WHERE id = %s""",
-                (reason, user_id)
+                "SELECT approval_status FROM users WHERE id = %s",
+                (user_id,)
             )
-            await conn.commit()
+            result = await cur.fetchone()
+            return result[0] if result else None
 
 
 async def block_user(user_id: str):
@@ -1560,6 +1597,21 @@ async def get_revision_by_n8n_job(job_id: str) -> Optional[Dict]:
             await cur.execute(
                 "SELECT * FROM revisions WHERE n8n_job_id = %s",
                 (job_id,)
+            )
+            return await cur.fetchone()
+
+
+async def get_active_revision_by_site(site_id: str) -> Optional[Dict]:
+    """Get the most recent active (in_progress/processing) revision for a site."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT * FROM revisions
+                   WHERE site_id = %s
+                   AND status IN ('in_progress', 'processing', 'pending')
+                   ORDER BY created_at DESC
+                   LIMIT 1""",
+                (site_id,)
             )
             return await cur.fetchone()
 

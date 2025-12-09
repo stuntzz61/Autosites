@@ -317,18 +317,25 @@ export default function NewRequestPage() {
   return (
     <div className="min-h-screen flex flex-col bg-tg-bg">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-tg-bg border-b border-tg-separator px-4 py-3">
+      <div className="sticky top-0 z-10 bg-tg-bg/80 backdrop-blur-xl border-b border-tg-separator px-4 py-3">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-lg font-semibold text-tg-text">Новая заявка</h1>
-          <span className="text-sm text-tg-hint">{currentStep + 1}/{steps.length}</span>
+          <div>
+            <h1 className="text-lg font-bold text-tg-text">Новая заявка</h1>
+            <p className="text-xs text-tg-hint">{steps[currentStep].title}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-tg-text">{currentStep + 1}</span>
+            <span className="text-sm text-tg-hint">/ {steps.length}</span>
+          </div>
         </div>
-        <div className="flex gap-1">
-          {steps.map((_, i) => (
+        <div className="flex gap-1.5">
+          {steps.map((step, i) => (
             <div
               key={i}
               className={clsx(
-                'flex-1 h-1 rounded-full transition-colors',
-                i <= currentStep ? 'bg-black dark:bg-white' : 'bg-tg-secondary-bg'
+                'flex-1 h-1.5 rounded-full transition-all duration-300',
+                i < currentStep ? 'bg-emerald-500' :
+                i === currentStep ? 'bg-zinc-900 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-700'
               )}
             />
           ))}

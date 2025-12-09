@@ -81,6 +81,7 @@ export const adminApi = {
     approve: (id: string) => api.post(`/admin/pending/${id}/approve`),
     reject: (id: string, reason: string) =>
       api.post(`/admin/pending/${id}/reject`, { reason }),
+    reset: (id: string) => api.post(`/admin/pending/${id}/reset`),
   },
 
   requests: {
@@ -222,7 +223,7 @@ export const sitesApi = {
   adminSyncAllStatuses: () => api.post('/sites/admin/sync-all-statuses'),
 
   // Create site for request (if not created automatically)
-  createForRequest: (requestId: string, deployId?: string) => 
+  createForRequest: (requestId: string, deployId?: string) =>
     api.post(`/sites/create-for-request/${requestId}`, { deploy_id: deployId }),
 
   // Admin: import deployments from deploy-node

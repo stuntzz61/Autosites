@@ -883,17 +883,40 @@ async def n8n_revision_callback(
     Webhook callback from n8n after processing revision.
     n8n sends result archive and status.
     """
-    log.info(f"n8n callback received: job_id={data.job_id}, status={data.status}")
+    log.info(f"n8n callback received: job_id={data.job_id}, status={data.status}, revision_id={data.revision_id}")
 
-    # Find revision by job_id or revision_id
+    # Find revision by multiple methods
     revision = None
+
+    # Method 1: By revision_id if provided
     if data.revision_id:
         revision = await db.get_revision(data.revision_id)
+        if revision:
+            log.info(f"Found revision by revision_id: {data.revision_id}")
+
+    # Method 2: By n8n_job_id
     if not revision:
         revision = await db.get_revision_by_n8n_job(data.job_id)
+        if revision:
+            log.info(f"Found revision by n8n_job_id: {data.job_id}")
+
+    # Method 3: Extract site_id from result_archive_s3_key and find active revision
+    # Format: sites/{site_id}/archives/v{N}.zip
+    if not revision and data.result_archive_s3_key:
+        try:
+            parts = data.result_archive_s3_key.split('/')
+            if len(parts) >= 2 and parts[0] == 'sites':
+                site_id = parts[1]
+                log.info(f"Trying to find revision by site_id from s3_key: {site_id}")
+                # Get the most recent in_progress/processing revision for this site
+                revision = await db.get_active_revision_by_site(site_id)
+                if revision:
+                    log.info(f"Found revision by site_id: {revision['id']}")
+        except Exception as e:
+            log.warning(f"Failed to extract site_id from s3_key: {e}")
 
     if not revision:
-        log.warning(f"Revision not found for job_id={data.job_id}")
+        log.warning(f"Revision not found for job_id={data.job_id}, revision_id={data.revision_id}, s3_key={data.result_archive_s3_key}")
         raise HTTPException(status_code=404, detail="Revision not found")
 
     site = await db.get_client_site(str(revision['site_id']))
