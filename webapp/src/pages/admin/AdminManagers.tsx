@@ -28,6 +28,7 @@ export default function AdminManagers() {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<'all' | 'pending'>('all')
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null)
+  const [managerToDelete, setManagerToDelete] = useState<Manager | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const { data: managers, isLoading } = useQuery({
@@ -80,10 +81,13 @@ export default function AdminManagers() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
       toast.success('Менеджер удалён')
       setSelectedManager(null)
+      setManagerToDelete(null)
       setShowDeleteConfirm(false)
     },
     onError: () => {
       toast.error('Ошибка удаления')
+      setShowDeleteConfirm(false)
+      setManagerToDelete(null)
     },
   })
 
@@ -394,7 +398,11 @@ export default function AdminManagers() {
 
                 {/* Delete - always visible */}
                 <button
-                  onClick={() => setShowDeleteConfirm(true)}
+                  onClick={() => {
+                    setManagerToDelete(selectedManager) // Save manager to delete
+                    setSelectedManager(null) // Close detail modal first
+                    setTimeout(() => setShowDeleteConfirm(true), 150)
+                  }}
                   className="w-full p-3 rounded-xl bg-red-500/10 text-red-500 font-medium flex items-center justify-center gap-2"
                 >
                   <Trash2 className="w-5 h-5" />
@@ -406,38 +414,50 @@ export default function AdminManagers() {
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation - Separate modal */}
       <AnimatePresence>
-        {showDeleteConfirm && selectedManager && (
+        {showDeleteConfirm && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/70 z-[60]"
+              className="fixed inset-0 bg-black/80 z-[100]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowDeleteConfirm(false)}
             />
             <motion.div
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-tg-bg rounded-2xl p-6 z-[70] w-[90%] max-w-sm shadow-2xl"
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900 rounded-3xl p-6 z-[110] w-[90%] max-w-sm shadow-2xl border border-zinc-200 dark:border-zinc-800"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
-              <h3 className="text-lg font-semibold text-tg-text mb-2">Удалить менеджера?</h3>
-              <p className="text-tg-hint mb-4">
-                {selectedManager.first_name} {selectedManager.last_name} будет удалён. Это действие нельзя отменить.
-              </p>
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-8 h-8 text-red-500" />
+                </div>
+                <h3 className="text-xl font-bold text-tg-text mb-2">Удалить менеджера?</h3>
+                <p className="text-tg-hint text-sm">
+                  Это действие нельзя отменить. Все данные будут удалены.
+                </p>
+              </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 p-3 rounded-xl bg-tg-secondary-bg text-tg-text font-medium"
+                  onClick={() => {
+                    setShowDeleteConfirm(false)
+                    setManagerToDelete(null)
+                  }}
+                  className="flex-1 p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                 >
                   Отмена
                 </button>
                 <button
-                  onClick={() => deleteMutation.mutate(selectedManager.id)}
+                  onClick={() => {
+                    if (managerToDelete) {
+                      deleteMutation.mutate(managerToDelete.id)
+                    }
+                  }}
                   disabled={deleteMutation.isPending}
-                  className="flex-1 p-3 rounded-xl bg-red-500 text-white font-medium"
+                  className="flex-1 p-3.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
                 >
                   {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
                 </button>

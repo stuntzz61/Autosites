@@ -980,6 +980,8 @@ async def list_client_sites(
 
 async def update_client_site(site_id: str, data: Dict) -> Optional[Dict]:
     """Update client site."""
+    from uuid import UUID as UUID_type
+    
     allowed_fields = [
         'company_name', 'client_name', 'client_contact',
         'deploy_id', 'preview_slug', 'preview_url',
@@ -1003,6 +1005,9 @@ async def update_client_site(site_id: str, data: Dict) -> Optional[Dict]:
             # Convert dict to JSON string for JSONB fields
             if field == 'metadata' and isinstance(value, dict):
                 value = json.dumps(value)
+            # Convert UUID to string
+            elif isinstance(value, UUID_type):
+                value = str(value)
             params.append(value)
 
     if not updates:

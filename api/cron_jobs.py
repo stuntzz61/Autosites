@@ -207,11 +207,18 @@ async def sync_deploy_statuses():
                         'uploading': 'deploying',
                         'building': 'deploying',
                         'deploying': 'deploying',
+                        'running': 'active',
                         'completed': 'active',
+                        'active': 'active',
+                        'stopped': 'stopped',
                         'failed': 'failed',
+                        'error': 'failed',
                         'rollback': 'failed',
                     }
                     deploy_status = status_map.get(deploy_status_raw, deploy_status_raw)
+                    
+                    if deploy_status_raw and deploy_status_raw not in status_map:
+                        log.warning(f"Unknown status from deploy-node: {deploy_status_raw}")
 
                     # Check if status changed
                     current_status = site.get('deploy_status')

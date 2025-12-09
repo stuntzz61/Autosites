@@ -22,32 +22,29 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def serialize_value(value):
+    """Serialize a single value to JSON-compatible type."""
+    if value is None:
+        return None
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: serialize_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [serialize_value(item) for item in value]
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    # For any other type, convert to string
+    return str(value)
+
+
 def serialize_site(site: dict) -> dict:
     """Convert UUID fields and other non-JSON-serializable types to strings."""
     if not site:
         return site
-    result = {}
-    for key, value in site.items():
-        if value is None:
-            result[key] = None
-        elif isinstance(value, UUID):
-            result[key] = str(value)
-        elif isinstance(value, datetime):
-            result[key] = value.isoformat()
-        elif isinstance(value, dict):
-            # Recursively serialize nested dicts
-            result[key] = serialize_site(value)
-        elif isinstance(value, list):
-            # Serialize list items
-            result[key] = [serialize_site(item) if isinstance(item, dict) else
-                          str(item) if isinstance(item, UUID) else item
-                          for item in value]
-        elif hasattr(value, '__str__') and not isinstance(value, (str, int, float, bool)):
-            # Convert any other objects to string
-            result[key] = str(value)
-        else:
-            result[key] = value
-    return result
+    return {key: serialize_value(value) for key, value in site.items()}
 
 
 # ==================== DTOs ====================
@@ -1347,13 +1344,14 @@ async def sync_site_status(
             if deploy_status == 'active' and site.get('request_id'):
                 await db.update_request_status(str(site['request_id']), 'success')
 
-            log.info(f"Synced status for site {site_id}: {deploy_status}")
+            log.info(f"Synced status for site {site_id}: raw={deploy_status_raw}, mapped={deploy_status}")
 
             return {
                 "success": True,
                 "message": "Status synced",
                 "status": deploy_status,
-                "deployment": deployment
+                "raw_status": deploy_status_raw,
+                "deployment": serialize_site(deployment) if isinstance(deployment, dict) else deployment
             }
 
     except httpx.TimeoutException:

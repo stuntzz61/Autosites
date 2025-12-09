@@ -771,10 +771,10 @@ export default function RequestDetailPage() {
                   <div>
                     <p className="font-medium text-tg-text">Статус деплоя</p>
                     <p className="text-sm text-tg-hint">
-                      {clientSite.deploy_status === 'active' && '✅ Активен'}
-                      {clientSite.deploy_status === 'deploying' && '🔄 Деплоится...'}
+                      {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running') && '✅ Активен'}
+                      {(clientSite.deploy_status === 'deploying' || clientSite.deploy_status === 'building' || clientSite.deploy_status === 'uploading') && '🔄 Деплоится...'}
                       {clientSite.deploy_status === 'pending' && '⏳ Ожидает деплоя'}
-                      {clientSite.deploy_status === 'failed' && '❌ Ошибка'}
+                      {(clientSite.deploy_status === 'failed' || clientSite.deploy_status === 'error') && '❌ Ошибка'}
                       {clientSite.deploy_status === 'stopped' && '⏸ Остановлен'}
                       {(!clientSite.deploy_status || clientSite.deploy_status === 'none') && '⏸ Не задеплоен'}
                     </p>
@@ -804,7 +804,7 @@ export default function RequestDetailPage() {
                     </button>
                   )}
 
-                  {(clientSite.deploy_status === 'none' || clientSite.deploy_status === 'stopped' || clientSite.deploy_status === 'failed' || !clientSite.deploy_status) && clientSite.archive_s3_key && (
+                  {(['none', 'stopped', 'failed', 'error'].includes(clientSite.deploy_status || '') || !clientSite.deploy_status) && clientSite.archive_s3_key && (
                     <button
                       onClick={() => deployMutation.mutate()}
                       disabled={deployMutation.isPending}
@@ -819,7 +819,7 @@ export default function RequestDetailPage() {
                     </button>
                   )}
 
-                  {clientSite.deploy_status === 'active' && (
+                  {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running') && (
                     <button
                       onClick={() => stopMutation.mutate()}
                       disabled={stopMutation.isPending}
