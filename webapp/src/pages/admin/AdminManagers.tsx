@@ -411,14 +411,14 @@ export default function AdminManagers() {
         {showDeleteConfirm && selectedManager && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-50"
+              className="fixed inset-0 bg-black/70 z-[60]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowDeleteConfirm(false)}
             />
             <motion.div
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-tg-bg rounded-2xl p-6 z-50 w-[90%] max-w-sm"
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-tg-bg rounded-2xl p-6 z-[70] w-[90%] max-w-sm shadow-2xl"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}

@@ -154,27 +154,39 @@ async def stop_site_preview(site: dict) -> bool:
         log.warning("DEPLOY_NODE_URL not configured")
         return False
 
-    if not site.get('preview_slug'):
-        log.warning(f"Site {site['id']} has no preview_slug")
+    deploy_id = site.get('deploy_id')
+    preview_slug = site.get('preview_slug')
+
+    if not deploy_id and not preview_slug:
+        log.warning(f"Site {site['id']} has no deploy_id or preview_slug")
         return False
 
     try:
-        async with httpx.AsyncClient() as client:
-            # Use preview_slug as domain identifier
-            domain = f"{site['preview_slug']}.autosites.ru"
-            response = await client.post(
-                f"{settings.DEPLOY_NODE_URL}/api/sites/{domain}/stop",
-                timeout=30.0
-            )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Try by deploy_id first (more reliable)
+            if deploy_id:
+                response = await client.post(
+                    f"{settings.DEPLOY_NODE_URL}/api/sites/by-id/{deploy_id}/stop"
+                )
+                if response.status_code == 200:
+                    log.info(f"Stopped site {site['id']} by deploy_id: {deploy_id}")
+                    return True
+                log.warning(f"Failed to stop by deploy_id {deploy_id}: {response.status_code}")
 
-            if response.status_code == 200:
-                log.info(f"Stopped preview for site {site['id']}")
-                return True
-            else:
-                log.warning(f"Failed to stop preview: {response.status_code}")
-                return False
+            # Fallback to domain
+            if preview_slug:
+                domain = f"{preview_slug}.autosites.ru"
+                response = await client.post(
+                    f"{settings.DEPLOY_NODE_URL}/api/sites/{domain}/stop"
+                )
+                if response.status_code == 200:
+                    log.info(f"Stopped site {site['id']} by domain: {domain}")
+                    return True
+                log.warning(f"Failed to stop by domain {domain}: {response.status_code}")
+
+            return False
     except Exception as e:
-        log.error(f"Error stopping preview: {e}")
+        log.error(f"Error stopping preview for site {site['id']}: {e}")
         return False
 
 
@@ -183,19 +195,36 @@ async def start_site_preview(site: dict) -> bool:
     if not settings.DEPLOY_NODE_URL:
         return False
 
-    if not site.get('preview_slug'):
+    deploy_id = site.get('deploy_id')
+    preview_slug = site.get('preview_slug')
+
+    if not deploy_id and not preview_slug:
         return False
 
     try:
-        async with httpx.AsyncClient() as client:
-            domain = f"{site['preview_slug']}.autosites.ru"
-            response = await client.post(
-                f"{settings.DEPLOY_NODE_URL}/api/sites/{domain}/start",
-                timeout=30.0
-            )
-            return response.status_code == 200
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Try by deploy_id first
+            if deploy_id:
+                response = await client.post(
+                    f"{settings.DEPLOY_NODE_URL}/api/sites/by-id/{deploy_id}/start"
+                )
+                if response.status_code == 200:
+                    log.info(f"Started site {site['id']} by deploy_id: {deploy_id}")
+                    return True
+
+            # Fallback to domain
+            if preview_slug:
+                domain = f"{preview_slug}.autosites.ru"
+                response = await client.post(
+                    f"{settings.DEPLOY_NODE_URL}/api/sites/{domain}/start"
+                )
+                if response.status_code == 200:
+                    log.info(f"Started site {site['id']} by domain: {domain}")
+                    return True
+
+            return False
     except Exception as e:
-        log.error(f"Error starting preview: {e}")
+        log.error(f"Error starting preview for site {site['id']}: {e}")
         return False
 
 

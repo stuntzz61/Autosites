@@ -23,15 +23,28 @@ router = APIRouter()
 
 
 def serialize_site(site: dict) -> dict:
-    """Convert UUID fields to strings for JSON serialization."""
+    """Convert UUID fields and other non-JSON-serializable types to strings."""
     if not site:
         return site
     result = {}
     for key, value in site.items():
-        if isinstance(value, UUID):
+        if value is None:
+            result[key] = None
+        elif isinstance(value, UUID):
             result[key] = str(value)
         elif isinstance(value, datetime):
             result[key] = value.isoformat()
+        elif isinstance(value, dict):
+            # Recursively serialize nested dicts
+            result[key] = serialize_site(value)
+        elif isinstance(value, list):
+            # Serialize list items
+            result[key] = [serialize_site(item) if isinstance(item, dict) else
+                          str(item) if isinstance(item, UUID) else item
+                          for item in value]
+        elif hasattr(value, '__str__') and not isinstance(value, (str, int, float, bool)):
+            # Convert any other objects to string
+            result[key] = str(value)
         else:
             result[key] = value
     return result
@@ -709,11 +722,19 @@ async def deploy_callback(data: DeployCallbackRequest):
     # Map deploy-node status to our status
     status_map = {
         'pending': 'pending',
-        'running': 'deploying',
+        'uploading': 'deploying',
+        'building': 'deploying',
+        'deploying': 'deploying',
+        'running': 'active',
         'completed': 'active',
-        'failed': 'failed'
+        'active': 'active',
+        'stopped': 'stopped',
+        'failed': 'failed',
+        'error': 'failed',
     }
     deploy_status = status_map.get(data.status, data.status)
+
+    log.info(f"Mapped status {data.status} -> {deploy_status}")
 
     # Update site with server_host for domain configuration instructions
     update_data = {
@@ -1273,11 +1294,19 @@ async def sync_site_status(
                 'uploading': 'deploying',
                 'building': 'deploying',
                 'deploying': 'deploying',
+                'running': 'active',  # Container is running = active
                 'completed': 'active',
+                'active': 'active',
+                'stopped': 'stopped',
                 'failed': 'failed',
                 'rollback': 'failed',
+                'error': 'failed',
             }
             deploy_status = status_map.get(deploy_status_raw, deploy_status_raw)
+
+            # If status not in map, log it for debugging
+            if deploy_status_raw and deploy_status_raw not in status_map:
+                log.warning(f"Unknown deploy status from deploy-node: {deploy_status_raw}")
 
             # Update site with all available data
             update_data = {
