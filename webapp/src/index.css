@@ -135,7 +135,7 @@ body {
   }
 
   .input {
-    @apply w-full rounded-xl bg-tg-secondary-bg px-4 py-3.5 text-tg-text placeholder:text-tg-hint/60 outline-none transition-all border border-transparent focus:border-zinc-300 dark:focus:border-zinc-600 focus:ring-4 focus:ring-zinc-900/5 dark:focus:ring-white/5;
+    @apply w-full rounded-xl bg-tg-secondary-bg px-4 py-3.5 text-tg-text placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none transition-all border border-transparent focus:border-zinc-300 dark:focus:border-zinc-600 focus:ring-4 focus:ring-zinc-900/5 dark:focus:ring-white/5;
   }
 
   .section-header {
