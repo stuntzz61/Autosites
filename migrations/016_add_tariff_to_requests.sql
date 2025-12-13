@@ -2,7 +2,7 @@
 -- Description: Adds tariff field to requests table for standard/premium generation
 
 -- Add tariff column to requests
-ALTER TABLE requests 
+ALTER TABLE requests
 ADD COLUMN IF NOT EXISTS tariff VARCHAR(20) DEFAULT 'standard' CHECK (tariff IN ('standard', 'premium'));
 
 -- Add index for tariff queries
