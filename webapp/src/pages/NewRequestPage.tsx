@@ -68,6 +68,7 @@ interface DraftFormData {
   work_hours: string
   services: ServiceItem[]
   color_palette: string
+  tariff: string
   currentStep: number
   savedAt: number
 }
@@ -86,6 +87,7 @@ interface FormData {
   services: ServiceItem[]
   photos: PhotoItem[]
   color_palette: string
+  tariff: string
 }
 
 interface ValidationErrors {
@@ -111,6 +113,7 @@ const getInitialFormData = (): FormData => ({
   services: [{ name: '', summary: '', priceFrom: '' }],
   photos: [],
   color_palette: 'На усмотрение дизайнера',
+  tariff: 'standard',
 })
 
 const saveDraft = (formData: FormData, currentStep: number): void => {
@@ -128,6 +131,7 @@ const saveDraft = (formData: FormData, currentStep: number): void => {
       work_hours: formData.work_hours,
       services: formData.services,
       color_palette: formData.color_palette,
+      tariff: formData.tariff,
       currentStep,
       savedAt: Date.now(),
     }
@@ -172,6 +176,7 @@ const loadDraft = (): { formData: Partial<FormData>; currentStep: number } | nul
         work_hours: draft.work_hours,
         services: draft.services,
         color_palette: draft.color_palette,
+        tariff: draft.tariff || 'standard',
       },
       currentStep: draft.currentStep,
     }
@@ -571,6 +576,67 @@ export default function NewRequestPage() {
           >
             {currentStep === 0 && (
               <div className="space-y-4">
+                {/* Tariff Selection */}
+                <div>
+                  <label className="text-sm text-tg-hint mb-2 block">Тариф генерации</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => updateField('tariff', 'standard')}
+                      className={clsx(
+                        'p-4 rounded-2xl border-2 transition-all text-left',
+                        formData.tariff === 'standard'
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : 'border-zinc-200 dark:border-zinc-700'
+                      )}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={clsx(
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                          formData.tariff === 'standard' ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'
+                        )}>
+                          {formData.tariff === 'standard' && (
+                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                          )}
+                        </div>
+                        <span className="font-semibold text-tg-text">Стандарт</span>
+                      </div>
+                      <p className="text-xs text-tg-hint">Базовая генерация лендинга</p>
+                      <p className="text-sm font-bold text-green-500 mt-2">Бесплатно</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateField('tariff', 'premium')}
+                      className={clsx(
+                        'p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden',
+                        formData.tariff === 'premium'
+                          ? 'border-purple-500 bg-purple-500/10'
+                          : 'border-zinc-200 dark:border-zinc-700'
+                      )}
+                    >
+                      <div className="absolute top-2 right-2">
+                        <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full font-medium">
+                          PRO
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={clsx(
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                          formData.tariff === 'premium' ? 'border-purple-500' : 'border-zinc-300 dark:border-zinc-600'
+                        )}>
+                          {formData.tariff === 'premium' && (
+                            <div className="w-3 h-3 rounded-full bg-purple-500" />
+                          )}
+                        </div>
+                        <span className="font-semibold text-tg-text">Премиум</span>
+                      </div>
+                      <p className="text-xs text-tg-hint">Расширенная генерация с AI</p>
+                      <p className="text-sm font-bold text-purple-500 mt-2">Платно</p>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-sm text-tg-hint mb-1 block">Название компании *</label>
                   <input
@@ -579,7 +645,6 @@ export default function NewRequestPage() {
                     onChange={(e) => updateField('company', e.target.value)}
                     placeholder="Webly"
                     className={clsx('input', errors.company && 'border-red-500')}
-                    autoFocus
                   />
                   {errors.company && <p className="text-xs text-red-500 mt-1">{errors.company}</p>}
                 </div>

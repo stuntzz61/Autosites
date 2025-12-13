@@ -30,7 +30,8 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "admin123"
 
     # n8n webhooks
-    N8N_WEBHOOK_URL: str = ""  # Main webhook for site generation
+    N8N_WEBHOOK_URL: str = ""  # Main webhook for site generation (standard)
+    N8N_PREMIUM_WEBHOOK_URL: str = ""  # Premium webhook for advanced generation
     N8N_REVISIONS_WEBHOOK_URL: str = ""  # Webhook for revision processing
 
     # Bot webhook (for notifications)

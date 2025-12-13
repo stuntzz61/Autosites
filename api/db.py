@@ -316,7 +316,7 @@ async def get_request(request_id: str) -> Optional[Dict]:
             return row
 
 
-async def create_request(user_id: str, company_name: str, client_name: str, payload: Dict) -> Dict:
+async def create_request(user_id: str, company_name: str, client_name: str, payload: Dict, tariff: str = 'standard') -> Dict:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             # First, get or create a project for this manager
@@ -341,12 +341,12 @@ async def create_request(user_id: str, company_name: str, client_name: str, payl
                 project = await cur.fetchone()
                 project_id = project['id']
 
-            # Create the request
+            # Create the request with tariff
             await cur.execute(
-                """INSERT INTO requests (project_id, status, payload_json)
-                   VALUES (%s, 'draft', %s)
-                   RETURNING id, status, payload_json, created_at""",
-                (project_id, json.dumps(payload))
+                """INSERT INTO requests (project_id, status, payload_json, tariff)
+                   VALUES (%s, 'draft', %s, %s)
+                   RETURNING id, status, payload_json, tariff, created_at""",
+                (project_id, json.dumps(payload), tariff)
             )
             await conn.commit()
             row = await cur.fetchone()

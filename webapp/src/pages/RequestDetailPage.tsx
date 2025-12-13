@@ -406,6 +406,7 @@ export default function RequestDetailPage() {
   const services = (site.services || []).map((s: any) => typeof s === 'string' ? { name: s } : s)
   const images = site.assets?.images || []
   const structure = site.structure || []
+  const tariff = request.tariff || 'standard'
   const colorPalette = site.color_palette || ''
   const resultUrl = request.result_url || site.result_url
 
@@ -449,8 +450,17 @@ export default function RequestDetailPage() {
       {/* Header */}
       <div className="m-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-white/20 dark:bg-black/20 flex items-center justify-center text-2xl font-bold">
-            {companyName[0]?.toUpperCase() || '?'}
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 dark:bg-black/20 flex items-center justify-center text-2xl font-bold">
+              {companyName[0]?.toUpperCase() || '?'}
+            </div>
+            {/* Tariff Badge */}
+            {tariff === 'premium' && (
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 dark:text-purple-600 border border-purple-400/30">
+                <span>⭐</span>
+                <span>PREMIUM</span>
+              </div>
+            )}
           </div>
           <button
             onClick={() => setShowStatusMenu(true)}

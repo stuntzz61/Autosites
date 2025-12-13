@@ -20,12 +20,14 @@ class CreateRequest(BaseModel):
     company_name: str
     client_name: str
     payload: Optional[dict] = None
+    tariff: Optional[str] = 'standard'
 
 
 class UpdateRequest(BaseModel):
     company_name: Optional[str] = None
     client_name: Optional[str] = None
     payload: Optional[dict] = None
+    tariff: Optional[str] = None
 
 
 class UpdateStatus(BaseModel):
@@ -117,7 +119,8 @@ async def create_request(data: CreateRequest, user: dict = Depends(get_current_u
         user_id=str(user['id']),
         company_name=data.company_name,
         client_name=data.client_name,
-        payload=data.payload or {}
+        payload=data.payload or {},
+        tariff=data.tariff or 'standard'
     )
 
     # Notify bot to offer additional services
@@ -229,10 +232,21 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
     # Update status
     await db.update_request_status(request_id, 'in_queue')
 
+    # Get tariff to determine which webhook to use
+    tariff = request.get('tariff', 'standard')
+    
+    # Select webhook based on tariff
+    if tariff == 'premium':
+        webhook_url = settings.N8N_PREMIUM_WEBHOOK_URL
+        if not webhook_url:
+            log.warning("N8N_PREMIUM_WEBHOOK_URL not configured - falling back to standard webhook")
+            webhook_url = settings.N8N_WEBHOOK_URL
+    else:
+        webhook_url = settings.N8N_WEBHOOK_URL
+    
     # Send to n8n webhook
-    webhook_url = settings.N8N_WEBHOOK_URL
     if not webhook_url:
-        log.warning("N8N_WEBHOOK_URL not configured - skipping webhook call")
+        log.warning("Webhook URL not configured - skipping webhook call")
     else:
         try:
             # Build payload in the expected format
@@ -246,11 +260,12 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
                 "request_id": request_id,
                 "manager_id": str(request.get('user_id', '')),
                 "manager_tg_id": manager_tg_id,  # Chat ID for Telegram notifications
+                "tariff": tariff,  # Pass tariff to n8n
                 "client": payload.get('client', {}),
                 "site": payload.get('site', {}),
             }
 
-            log.info(f"Sending to n8n webhook: {webhook_url}")
+            log.info(f"Sending to n8n webhook ({tariff} tariff): {webhook_url}")
             log.debug(f"Webhook data: {webhook_data}")
 
             async with httpx.AsyncClient() as client:
