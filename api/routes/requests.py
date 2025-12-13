@@ -234,6 +234,7 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
 
     # Get tariff to determine which webhook to use
     tariff = request.get('tariff', 'standard')
+    log.info(f"[GENERATE] Request {request_id}: tariff from DB = {tariff}, request keys = {list(request.keys())}")
 
     # Select webhook based on tariff
     if tariff == 'premium':
@@ -243,6 +244,8 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
             webhook_url = settings.N8N_WEBHOOK_URL
     else:
         webhook_url = settings.N8N_WEBHOOK_URL
+
+    log.info(f"[GENERATE] Request {request_id}: Selected webhook URL = {webhook_url} (tariff: {tariff})")
 
     # Send to n8n webhook
     if not webhook_url:

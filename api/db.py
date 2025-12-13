@@ -256,6 +256,7 @@ async def list_requests(
                            COALESCE(r.payload_json->'client'->>'name', '') as client_name,
                            COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) as status,
                            r.payload_json,
+                           COALESCE(r.tariff, 'standard') as tariff,
                            r.created_at
                     FROM requests r
                     JOIN projects p ON p.id = r.project_id
@@ -287,6 +288,7 @@ async def get_request(request_id: str) -> Optional[Dict]:
                           COALESCE(r.payload_json->'client'->>'name', '') as client_name,
                           COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) as status,
                           r.payload_json,
+                          COALESCE(r.tariff, 'standard') as tariff,
                           p.manager_id as user_id,
                           r.created_at
                    FROM requests r
@@ -414,6 +416,7 @@ async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
             if 'tariff' in data:
                 update_fields.append("tariff = %s")
                 update_values.append(data['tariff'])
+                print(f"[DEBUG] update_request {request_id}: updating tariff to {data['tariff']}")
 
             if not update_fields:
                 return await get_request(request_id)
@@ -441,6 +444,10 @@ async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
                 # Extract company_name and client_name from payload for backward compatibility
                 row['company_name'] = payload.get('site', {}).get('company', '')
                 row['client_name'] = payload.get('client', {}).get('name', '')
+
+                # Debug: log tariff after save
+                saved_tariff = row.get('tariff', 'standard')
+                print(f"[DEBUG] update_request {request_id}: saved tariff = {saved_tariff}")
 
                 # Debug: verify images after save
                 if 'payload' in data or 'company_name' in data or 'client_name' in data:
