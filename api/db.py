@@ -366,32 +366,54 @@ async def create_request(user_id: str, company_name: str, client_name: str, payl
 
 
 async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
-    """Update request - payload_json, tariff, company_name, client_name are updatable"""
+    """Update request - payload_json and tariff are updatable. company_name and client_name are stored in payload_json."""
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             # Build update query dynamically based on what's provided
             update_fields = []
             update_values = []
 
+            # Handle payload update - merge with existing payload if needed
             if 'payload' in data:
                 payload_to_save = data['payload']
+
+                # If company_name or client_name are provided separately, update them in payload
+                if 'company_name' in data:
+                    if 'site' not in payload_to_save:
+                        payload_to_save['site'] = {}
+                    payload_to_save['site']['company'] = data['company_name']
+
+                if 'client_name' in data:
+                    if 'client' not in payload_to_save:
+                        payload_to_save['client'] = {}
+                    payload_to_save['client']['name'] = data['client_name']
+
                 # Debug: log images before save
                 images = payload_to_save.get('site', {}).get('assets', {}).get('images', [])
                 print(f"[DEBUG] update_request {request_id}: saving {len(images)} images")
                 update_fields.append("payload_json = %s::jsonb")
                 update_values.append(json.dumps(payload_to_save))
+            elif 'company_name' in data or 'client_name' in data:
+                # If only company_name or client_name provided without payload, merge with existing
+                existing_request = await get_request(request_id)
+                if existing_request:
+                    existing_payload = existing_request.get('payload', {}) or {}
+                    if 'site' not in existing_payload:
+                        existing_payload['site'] = {}
+                    if 'client' not in existing_payload:
+                        existing_payload['client'] = {}
+
+                    if 'company_name' in data:
+                        existing_payload['site']['company'] = data['company_name']
+                    if 'client_name' in data:
+                        existing_payload['client']['name'] = data['client_name']
+
+                    update_fields.append("payload_json = %s::jsonb")
+                    update_values.append(json.dumps(existing_payload))
 
             if 'tariff' in data:
                 update_fields.append("tariff = %s")
                 update_values.append(data['tariff'])
-
-            if 'company_name' in data:
-                update_fields.append("company_name = %s")
-                update_values.append(data['company_name'])
-
-            if 'client_name' in data:
-                update_fields.append("client_name = %s")
-                update_values.append(data['client_name'])
 
             if not update_fields:
                 return await get_request(request_id)
@@ -416,11 +438,12 @@ async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
                         payload = {}
 
                 row['payload'] = payload
-                row['company_name'] = payload.get('site', {}).get('company', '') or row.get('company_name', '')
-                row['client_name'] = payload.get('client', {}).get('name', '') or row.get('client_name', '')
+                # Extract company_name and client_name from payload for backward compatibility
+                row['company_name'] = payload.get('site', {}).get('company', '')
+                row['client_name'] = payload.get('client', {}).get('name', '')
 
                 # Debug: verify images after save
-                if 'payload' in data:
+                if 'payload' in data or 'company_name' in data or 'client_name' in data:
                     saved_images = payload.get('site', {}).get('assets', {}).get('images', [])
                     print(f"[DEBUG] update_request {request_id}: saved {len(saved_images)} images")
 
