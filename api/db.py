@@ -981,7 +981,7 @@ async def list_client_sites(
 async def update_client_site(site_id: str, data: Dict) -> Optional[Dict]:
     """Update client site."""
     from uuid import UUID as UUID_type
-    
+
     allowed_fields = [
         'company_name', 'client_name', 'client_contact',
         'deploy_id', 'preview_slug', 'preview_url',
@@ -1940,3 +1940,703 @@ async def get_site_revision_stats(site_id: str) -> Dict:
                 (site_id, site_id)
             )
             return await cur.fetchone()
+
+
+# ==================== Service Categories ====================
+
+async def list_service_categories(parent_id: str = None, active_only: bool = True) -> List[Dict]:
+    """List service categories, optionally filtered by parent."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            conditions = []
+            params = []
+
+            if parent_id:
+                conditions.append("parent_id = %s")
+                params.append(parent_id)
+            else:
+                conditions.append("parent_id IS NULL")
+
+            if active_only:
+                conditions.append("is_active = TRUE")
+
+            where_clause = " AND ".join(conditions)
+
+            await cur.execute(
+                f"""SELECT id, parent_id, name, description, icon, sort_order, is_active
+                    FROM service_categories
+                    WHERE {where_clause}
+                    ORDER BY sort_order, name""",
+                params
+            )
+            return await cur.fetchall()
+
+
+async def get_service_category_tree() -> List[Dict]:
+    """Get full service category tree."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """WITH RECURSIVE category_tree AS (
+                    SELECT id, parent_id, name, description, icon, sort_order, 0 as level
+                    FROM service_categories
+                    WHERE parent_id IS NULL AND is_active = TRUE
+                    UNION ALL
+                    SELECT c.id, c.parent_id, c.name, c.description, c.icon, c.sort_order, ct.level + 1
+                    FROM service_categories c
+                    JOIN category_tree ct ON c.parent_id = ct.id
+                    WHERE c.is_active = TRUE
+                )
+                SELECT * FROM category_tree ORDER BY level, sort_order, name"""
+            )
+            return await cur.fetchall()
+
+
+async def create_service_category(
+    name: str,
+    parent_id: str = None,
+    description: str = None,
+    icon: str = None,
+    sort_order: int = 0
+) -> Dict:
+    """Create a new service category."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO service_categories (name, parent_id, description, icon, sort_order)
+                   VALUES (%s, %s, %s, %s, %s)
+                   RETURNING *""",
+                (name, parent_id, description, icon, sort_order)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def update_service_category(category_id: str, data: Dict) -> Optional[Dict]:
+    """Update a service category."""
+    allowed_fields = ['name', 'description', 'icon', 'sort_order', 'is_active', 'parent_id']
+    updates = []
+    params = []
+
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f"{field} = %s")
+            params.append(data[field])
+
+    if not updates:
+        return None
+
+    params.append(category_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE service_categories SET {", ".join(updates)}
+                    WHERE id = %s RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def delete_service_category(category_id: str):
+    """Delete a service category."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("DELETE FROM service_categories WHERE id = %s", (category_id,))
+            await conn.commit()
+
+
+# ==================== Admin Groups ====================
+
+async def create_admin_group(name: str, description: str = None, created_by: str = None) -> Dict:
+    """Create a new admin group."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO admin_groups (name, description, created_by)
+                   VALUES (%s, %s, %s)
+                   RETURNING *""",
+                (name, description, created_by)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def list_admin_groups(active_only: bool = True) -> List[Dict]:
+    """List all admin groups."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            query = """SELECT ag.*,
+                       (SELECT COUNT(*) FROM user_group_membership ugm WHERE ugm.group_id = ag.id) as member_count
+                       FROM admin_groups ag"""
+            if active_only:
+                query += " WHERE ag.is_active = TRUE"
+            query += " ORDER BY ag.name"
+            await cur.execute(query)
+            return await cur.fetchall()
+
+
+async def get_admin_group(group_id: str) -> Optional[Dict]:
+    """Get admin group by ID with members."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT * FROM admin_groups WHERE id = %s",
+                (group_id,)
+            )
+            group = await cur.fetchone()
+
+            if group:
+                await cur.execute(
+                    """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name,
+                              u.role, ugm.role as group_role, ugm.created_at as joined_at
+                       FROM user_group_membership ugm
+                       JOIN users u ON u.id = ugm.user_id
+                       WHERE ugm.group_id = %s
+                       ORDER BY ugm.role DESC, u.first_name""",
+                    (group_id,)
+                )
+                group['members'] = await cur.fetchall()
+
+            return group
+
+
+async def add_user_to_group(user_id: str, group_id: str, role: str = 'member', added_by: str = None) -> Dict:
+    """Add user to an admin group."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO user_group_membership (user_id, group_id, role, added_by)
+                   VALUES (%s, %s, %s, %s)
+                   ON CONFLICT (user_id, group_id) DO UPDATE SET role = EXCLUDED.role
+                   RETURNING *""",
+                (user_id, group_id, role, added_by)
+            )
+            # Also update user's primary group
+            await cur.execute(
+                "UPDATE users SET admin_group_id = %s WHERE id = %s",
+                (group_id, user_id)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def remove_user_from_group(user_id: str, group_id: str):
+    """Remove user from an admin group."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "DELETE FROM user_group_membership WHERE user_id = %s AND group_id = %s",
+                (user_id, group_id)
+            )
+            # Clear user's primary group if it was this one
+            await cur.execute(
+                "UPDATE users SET admin_group_id = NULL WHERE id = %s AND admin_group_id = %s",
+                (user_id, group_id)
+            )
+            await conn.commit()
+
+
+async def get_user_groups(user_id: str) -> List[Dict]:
+    """Get all groups a user belongs to."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT ag.*, ugm.role as user_role
+                   FROM admin_groups ag
+                   JOIN user_group_membership ugm ON ugm.group_id = ag.id
+                   WHERE ugm.user_id = %s AND ag.is_active = TRUE
+                   ORDER BY ag.name""",
+                (user_id,)
+            )
+            return await cur.fetchall()
+
+
+async def get_group_managers(group_id: str) -> List[Dict]:
+    """Get all managers in a specific group."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name,
+                          u.role, u.approval_status, u.is_blocked,
+                          COUNT(r.id) as request_count
+                   FROM users u
+                   JOIN user_group_membership ugm ON ugm.user_id = u.id
+                   LEFT JOIN projects p ON p.manager_id = u.id
+                   LEFT JOIN requests r ON r.project_id = p.id
+                   WHERE ugm.group_id = %s AND u.role = 'manager'
+                   GROUP BY u.id
+                   ORDER BY u.first_name""",
+                (group_id,)
+            )
+            return await cur.fetchall()
+
+
+async def list_managers_by_admin(admin_id: str) -> List[Dict]:
+    """List managers that belong to the same group as the admin."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            # Get admin's groups
+            await cur.execute(
+                """SELECT DISTINCT u.id, u.tg_id, u.username, u.first_name, u.last_name,
+                          u.contact, u.role, u.approval_status, u.is_blocked, u.created_at,
+                          COUNT(r.id) as request_count
+                   FROM users u
+                   JOIN user_group_membership ugm ON ugm.user_id = u.id
+                   JOIN user_group_membership admin_ugm ON admin_ugm.group_id = ugm.group_id
+                   LEFT JOIN projects p ON p.manager_id = u.id
+                   LEFT JOIN requests r ON r.project_id = p.id
+                   WHERE admin_ugm.user_id = %s
+                     AND u.role = 'manager'
+                     AND u.approval_status = 'approved'
+                   GROUP BY u.id
+                   ORDER BY request_count DESC""",
+                (admin_id,)
+            )
+            result = await cur.fetchall()
+
+            # If no group-based managers found, fall back to all managers
+            if not result:
+                return await list_managers()
+
+            return result
+
+
+# ==================== Anti-Nuke Protection ====================
+
+async def get_anti_nuke_setting(key: str) -> Optional[str]:
+    """Get an anti-nuke setting value."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT setting_value FROM anti_nuke_settings WHERE setting_key = %s",
+                (key,)
+            )
+            result = await cur.fetchone()
+            return result[0] if result else None
+
+
+async def update_anti_nuke_setting(key: str, value: str, updated_by: str = None):
+    """Update an anti-nuke setting."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """UPDATE anti_nuke_settings
+                   SET setting_value = %s, updated_by = %s, updated_at = NOW()
+                   WHERE setting_key = %s""",
+                (value, updated_by, key)
+            )
+            await conn.commit()
+
+
+async def log_deletion(
+    action_type: str,
+    target_type: str,
+    performed_by: str,
+    target_id: str = None,
+    target_ids: List[str] = None,
+    reason: str = None,
+    ip_address: str = None,
+    user_agent: str = None,
+    metadata: Dict = None
+) -> Dict:
+    """Log a deletion operation for audit purposes."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            target_count = 1 if target_id else len(target_ids) if target_ids else 0
+            await cur.execute(
+                """INSERT INTO deletion_audit_log
+                   (action_type, target_type, target_id, target_ids, target_count,
+                    performed_by, reason, ip_address, user_agent, metadata)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   RETURNING *""",
+                (action_type, target_type, target_id, target_ids, target_count,
+                 performed_by, reason, ip_address, user_agent,
+                 json.dumps(metadata) if metadata else '{}')
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def get_recent_deletions(user_id: str, seconds: int = 60) -> int:
+    """Get count of recent deletions by a user (for rate limiting)."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """SELECT COALESCE(SUM(target_count), 0)
+                   FROM deletion_audit_log
+                   WHERE performed_by = %s
+                   AND created_at > NOW() - INTERVAL '%s seconds'""",
+                (user_id, seconds)
+            )
+            result = await cur.fetchone()
+            return int(result[0]) if result else 0
+
+
+async def get_managers_count() -> int:
+    """Get total count of active managers."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT COUNT(*) FROM users WHERE role = 'manager' AND approval_status = 'approved'"
+            )
+            result = await cur.fetchone()
+            return result[0] if result else 0
+
+
+async def can_delete_manager(admin_id: str, manager_id: str) -> tuple:
+    """Check if a manager can be deleted (anti-nuke protection)."""
+    managers_count = await get_managers_count()
+    min_managers = int(await get_anti_nuke_setting('min_managers_count') or '1')
+
+    if managers_count <= min_managers:
+        return False, f"Cannot delete: minimum {min_managers} manager(s) must remain"
+
+    cooldown = int(await get_anti_nuke_setting('deletion_cooldown_seconds') or '30')
+    recent_deletions = await get_recent_deletions(admin_id, cooldown)
+
+    if recent_deletions > 0:
+        return False, f"Please wait {cooldown} seconds between deletion operations"
+
+    return True, None
+
+
+async def can_mass_delete_requests(admin_id: str, count: int) -> tuple:
+    """Check if bulk request deletion is allowed (anti-nuke protection)."""
+    max_bulk = int(await get_anti_nuke_setting('max_bulk_delete_requests') or '10')
+
+    if count > max_bulk:
+        return False, f"Cannot delete more than {max_bulk} requests at once"
+
+    cooldown = int(await get_anti_nuke_setting('deletion_cooldown_seconds') or '30')
+    recent_deletions = await get_recent_deletions(admin_id, cooldown)
+
+    if recent_deletions > 0:
+        return False, f"Please wait {cooldown} seconds between deletion operations"
+
+    return True, None
+
+
+# ==================== Invite Codes ====================
+
+import secrets
+import string
+
+def generate_invite_code(length: int = 8) -> str:
+    """Generate a random invite code."""
+    alphabet = string.ascii_uppercase + string.digits
+    # Exclude confusing characters
+    alphabet = alphabet.replace('O', '').replace('0', '').replace('I', '').replace('1', '').replace('L', '')
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
+async def create_invite_code(
+    created_by: str,
+    group_id: str = None,
+    name: str = None,
+    max_uses: int = None,
+    expires_at: datetime = None,
+    auto_approve: bool = False,
+    notes: str = None
+) -> Dict:
+    """Create a new invite code."""
+    code = generate_invite_code()
+
+    # Ensure code is unique
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            # Check uniqueness and regenerate if needed
+            for _ in range(5):
+                await cur.execute("SELECT id FROM invite_codes WHERE code = %s", (code,))
+                if not await cur.fetchone():
+                    break
+                code = generate_invite_code()
+
+            await cur.execute(
+                """INSERT INTO invite_codes
+                   (code, group_id, created_by, name, max_uses, expires_at, auto_approve, notes)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                   RETURNING *""",
+                (code, group_id, created_by, name, max_uses, expires_at, auto_approve, notes)
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def get_invite_code(code: str) -> Optional[Dict]:
+    """Get invite code by code string."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT ic.*,
+                          ag.name as group_name,
+                          u.first_name as creator_first_name,
+                          u.last_name as creator_last_name
+                   FROM invite_codes ic
+                   LEFT JOIN admin_groups ag ON ag.id = ic.group_id
+                   LEFT JOIN users u ON u.id = ic.created_by
+                   WHERE ic.code = %s""",
+                (code.upper(),)
+            )
+            return await cur.fetchone()
+
+
+async def get_invite_code_by_id(code_id: str) -> Optional[Dict]:
+    """Get invite code by ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT ic.*,
+                          ag.name as group_name,
+                          u.first_name as creator_first_name,
+                          u.last_name as creator_last_name
+                   FROM invite_codes ic
+                   LEFT JOIN admin_groups ag ON ag.id = ic.group_id
+                   LEFT JOIN users u ON u.id = ic.created_by
+                   WHERE ic.id = %s""",
+                (code_id,)
+            )
+            return await cur.fetchone()
+
+
+async def validate_invite_code(code: str) -> tuple:
+    """
+    Validate an invite code.
+    Returns (is_valid, invite_code_data or error_message)
+    """
+    invite = await get_invite_code(code)
+
+    if not invite:
+        return False, "Неверный инвайт-код"
+
+    if not invite['is_active']:
+        return False, "Инвайт-код деактивирован"
+
+    # Check expiration
+    if invite['expires_at'] and invite['expires_at'] < datetime.now(timezone.utc):
+        return False, "Инвайт-код истёк"
+
+    # Check usage limit
+    if invite['max_uses'] is not None and invite['uses_count'] >= invite['max_uses']:
+        return False, "Инвайт-код исчерпан (достигнут лимит использований)"
+
+    return True, invite
+
+
+async def use_invite_code(code: str, user_id: str) -> Optional[Dict]:
+    """
+    Use an invite code for a user.
+    Returns the invite code data if successful, None if failed.
+    """
+    is_valid, result = await validate_invite_code(code)
+
+    if not is_valid:
+        return None
+
+    invite = result
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            # Check if user already used this code
+            await cur.execute(
+                "SELECT id FROM invite_code_usage WHERE invite_code_id = %s AND user_id = %s",
+                (invite['id'], user_id)
+            )
+            if await cur.fetchone():
+                return None  # Already used by this user
+
+            # Record usage
+            await cur.execute(
+                """INSERT INTO invite_code_usage (invite_code_id, user_id)
+                   VALUES (%s, %s)""",
+                (invite['id'], user_id)
+            )
+
+            # Increment usage count
+            await cur.execute(
+                "UPDATE invite_codes SET uses_count = uses_count + 1 WHERE id = %s",
+                (invite['id'],)
+            )
+
+            # Update user with invite code reference
+            await cur.execute(
+                "UPDATE users SET registered_via_code = %s WHERE id = %s",
+                (invite['id'], user_id)
+            )
+
+            # If code has a group, add user to that group
+            if invite['group_id']:
+                await cur.execute(
+                    """INSERT INTO user_group_membership (user_id, group_id, role, added_by)
+                       VALUES (%s, %s, 'member', %s)
+                       ON CONFLICT (user_id, group_id) DO NOTHING""",
+                    (user_id, invite['group_id'], invite['created_by'])
+                )
+                # Set as primary group
+                await cur.execute(
+                    "UPDATE users SET admin_group_id = %s WHERE id = %s",
+                    (invite['group_id'], user_id)
+                )
+
+            # If auto_approve, approve the user
+            if invite['auto_approve']:
+                await cur.execute(
+                    """UPDATE users SET approval_status = 'approved', approved_at = NOW()
+                       WHERE id = %s AND approval_status = 'pending'""",
+                    (user_id,)
+                )
+
+            await conn.commit()
+            return invite
+
+
+async def list_invite_codes(created_by: str = None, group_id: str = None, active_only: bool = True) -> List[Dict]:
+    """List invite codes with optional filters."""
+    conditions = []
+    params = []
+
+    if created_by:
+        conditions.append("ic.created_by = %s")
+        params.append(created_by)
+
+    if group_id:
+        conditions.append("ic.group_id = %s")
+        params.append(group_id)
+
+    if active_only:
+        conditions.append("ic.is_active = TRUE")
+
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""SELECT ic.*,
+                           ag.name as group_name,
+                           u.first_name as creator_first_name,
+                           u.last_name as creator_last_name,
+                           (SELECT COUNT(*) FROM invite_code_usage icu WHERE icu.invite_code_id = ic.id) as actual_uses
+                    FROM invite_codes ic
+                    LEFT JOIN admin_groups ag ON ag.id = ic.group_id
+                    LEFT JOIN users u ON u.id = ic.created_by
+                    WHERE {where_clause}
+                    ORDER BY ic.created_at DESC""",
+                params
+            )
+            return await cur.fetchall()
+
+
+async def update_invite_code(code_id: str, data: Dict) -> Optional[Dict]:
+    """Update an invite code."""
+    allowed_fields = ['name', 'max_uses', 'expires_at', 'auto_approve', 'is_active', 'notes', 'group_id']
+    updates = []
+    params = []
+
+    for field in allowed_fields:
+        if field in data:
+            updates.append(f"{field} = %s")
+            params.append(data[field])
+
+    if not updates:
+        return await get_invite_code_by_id(code_id)
+
+    params.append(code_id)
+
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                f"""UPDATE invite_codes SET {", ".join(updates)}
+                    WHERE id = %s RETURNING *""",
+                params
+            )
+            await conn.commit()
+            return await cur.fetchone()
+
+
+async def delete_invite_code(code_id: str):
+    """Delete an invite code."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("DELETE FROM invite_codes WHERE id = %s", (code_id,))
+            await conn.commit()
+
+
+async def get_invite_code_usage(code_id: str) -> List[Dict]:
+    """Get list of users who used an invite code."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name,
+                          u.approval_status, u.is_blocked, icu.used_at
+                   FROM invite_code_usage icu
+                   JOIN users u ON u.id = icu.user_id
+                   WHERE icu.invite_code_id = %s
+                   ORDER BY icu.used_at DESC""",
+                (code_id,)
+            )
+            return await cur.fetchall()
+
+
+async def create_user_with_invite(
+    tg_id: int,
+    username: str,
+    first_name: str,
+    last_name: str,
+    invite_code: str = None
+) -> Dict:
+    """Create user and optionally apply invite code."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            # Check if invite code is valid
+            auto_approve = False
+            group_id = None
+            invite_id = None
+            invite_creator = None
+
+            if invite_code:
+                is_valid, result = await validate_invite_code(invite_code)
+                if is_valid:
+                    invite = result
+                    auto_approve = invite['auto_approve']
+                    group_id = invite['group_id']
+                    invite_id = invite['id']
+                    invite_creator = invite['created_by']
+
+            # Determine approval status
+            approval_status = 'approved' if auto_approve else 'pending'
+
+            # Create user
+            await cur.execute(
+                """INSERT INTO users (tg_id, username, first_name, last_name, role,
+                                     approval_status, registered_via_code, admin_group_id)
+                   VALUES (%s, %s, %s, %s, 'manager', %s, %s, %s)
+                   RETURNING id, tg_id, username, first_name, last_name, contact, role,
+                             approval_status, created_at, admin_group_id""",
+                (tg_id, username, first_name, last_name, approval_status, invite_id, group_id)
+            )
+            user = await cur.fetchone()
+            user_id = str(user['id'])
+
+            # If invite code was used, record usage and add to group
+            if invite_id:
+                await cur.execute(
+                    """INSERT INTO invite_code_usage (invite_code_id, user_id)
+                       VALUES (%s, %s)""",
+                    (invite_id, user_id)
+                )
+                await cur.execute(
+                    "UPDATE invite_codes SET uses_count = uses_count + 1 WHERE id = %s",
+                    (invite_id,)
+                )
+
+                if group_id:
+                    await cur.execute(
+                        """INSERT INTO user_group_membership (user_id, group_id, role, added_by)
+                           VALUES (%s, %s, 'member', %s)
+                           ON CONFLICT (user_id, group_id) DO NOTHING""",
+                        (user_id, group_id, invite_creator)
+                    )
+
+            await conn.commit()
+            return user

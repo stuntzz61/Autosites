@@ -95,6 +95,38 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
+/* Bottom navigation bar - fixed positioning with safe area */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background-color: var(--tg-theme-bg-color);
+  border-top: 1px solid var(--tg-theme-section-separator-color);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-bottom: max(env(safe-area-inset-bottom, 0), 8px);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Ensure bottom nav stays above all content */
+.bottom-nav::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--tg-theme-section-separator-color);
+}
+
+/* Content padding to prevent overlap with bottom nav */
+.main-content-with-nav {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0));
+}
+
 /* Premium Components */
 @layer components {
   .card {

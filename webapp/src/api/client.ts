@@ -32,7 +32,8 @@ api.interceptors.response.use(
 
 // API functions
 export const authApi = {
-  verify: (initData: string) => api.post('/auth/verify', { initData }),
+  verify: (initData: string, inviteCode?: string) =>
+    api.post('/auth/verify', { initData, invite_code: inviteCode }),
   me: () => api.get('/auth/me'),
 }
 
@@ -72,7 +73,8 @@ export const adminApi = {
     get: (id: string) => api.get(`/admin/managers/${id}`),
     block: (id: string) => api.post(`/admin/managers/${id}/block`),
     unblock: (id: string) => api.post(`/admin/managers/${id}/unblock`),
-    delete: (id: string) => api.delete(`/admin/managers/${id}`),
+    delete: (id: string, confirmation?: string) =>
+      api.delete(`/admin/managers/${id}`, { params: { confirmation } }),
     makeAdmin: (id: string) => api.post(`/admin/managers/${id}/make-admin`),
   },
 
@@ -89,7 +91,43 @@ export const adminApi = {
       api.get('/admin/requests', { params }),
     search: (query: string) => api.get('/admin/requests/search', { params: { q: query } }),
     massArchive: (ids: string[]) => api.post('/admin/requests/mass-archive', { ids }),
-    massDelete: (ids: string[]) => api.post('/admin/requests/mass-delete', { ids }),
+    massDelete: (ids: string[], confirmationCode?: string) =>
+      api.post('/admin/requests/mass-delete', { ids, confirmation_code: confirmationCode }),
+  },
+
+  groups: {
+    list: () => api.get('/admin/groups'),
+    create: (data: { name: string; description?: string }) => api.post('/admin/groups', data),
+    get: (id: string) => api.get(`/admin/groups/${id}`),
+    addMember: (groupId: string, data: { user_id: string; role?: string }) =>
+      api.post(`/admin/groups/${groupId}/members`, data),
+    removeMember: (groupId: string, userId: string) =>
+      api.delete(`/admin/groups/${groupId}/members/${userId}`),
+    myGroups: () => api.get('/admin/my-groups'),
+  },
+
+  inviteCodes: {
+    list: (groupId?: string) =>
+      api.get('/admin/invite-codes', { params: groupId ? { group_id: groupId } : {} }),
+    create: (data: {
+      group_id?: string
+      name?: string
+      max_uses?: number
+      expires_in_days?: number
+      auto_approve?: boolean
+      notes?: string
+    }) => api.post('/admin/invite-codes', data),
+    get: (id: string) => api.get(`/admin/invite-codes/${id}`),
+    update: (id: string, data: {
+      name?: string
+      max_uses?: number
+      auto_approve?: boolean
+      is_active?: boolean
+      notes?: string
+      group_id?: string
+    }) => api.patch(`/admin/invite-codes/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/invite-codes/${id}`),
+    validate: (code: string) => api.get(`/admin/invite-codes/validate/${code}`),
   },
 
   broadcast: (data: { message: string; photo?: string; recipient_ids?: string[] }) =>

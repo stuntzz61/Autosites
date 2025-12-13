@@ -1,5 +1,5 @@
 """
-Routes for additional services and manager feedback.
+Routes for additional services, service categories and manager feedback.
 """
 from typing import Optional, List
 import logging
@@ -21,6 +21,23 @@ class AddServiceRequest(BaseModel):
     service_id: str
     notes: Optional[str] = None
     price: Optional[str] = None
+
+
+class CreateCategoryRequest(BaseModel):
+    name: str
+    parent_id: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    sort_order: Optional[int] = 0
+
+
+class UpdateCategoryRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
+    parent_id: Optional[str] = None
 
 
 class UpdateServiceRequest(BaseModel):
@@ -338,4 +355,67 @@ async def admin_feedback_count(user: dict = Depends(get_admin_user)):
     """Get count of new feedback messages."""
     count = await db.count_new_feedback()
     return {"new_count": count}
+
+
+# ==================== Service Categories ====================
+
+@router.get("/categories")
+async def list_categories(
+    parent_id: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """List service categories. If parent_id is provided, returns subcategories."""
+    categories = await db.list_service_categories(parent_id=parent_id)
+    return [
+        {**c, "id": str(c["id"]), "parent_id": str(c["parent_id"]) if c.get("parent_id") else None}
+        for c in categories
+    ]
+
+
+@router.get("/categories/tree")
+async def get_category_tree(user: dict = Depends(get_current_user)):
+    """Get full hierarchical category tree."""
+    tree = await db.get_service_category_tree()
+    return [
+        {**c, "id": str(c["id"]), "parent_id": str(c["parent_id"]) if c.get("parent_id") else None}
+        for c in tree
+    ]
+
+
+@router.post("/categories")
+async def create_category(data: CreateCategoryRequest, user: dict = Depends(get_admin_user)):
+    """Create a new service category (admin only)."""
+    category = await db.create_service_category(
+        name=data.name,
+        parent_id=data.parent_id,
+        description=data.description,
+        icon=data.icon,
+        sort_order=data.sort_order
+    )
+    return {**category, "id": str(category["id"])}
+
+
+@router.patch("/categories/{category_id}")
+async def update_category(
+    category_id: str,
+    data: UpdateCategoryRequest,
+    user: dict = Depends(get_admin_user)
+):
+    """Update a service category (admin only)."""
+    update_data = data.model_dump(exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+
+    category = await db.update_service_category(category_id, update_data)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    return {**category, "id": str(category["id"])}
+
+
+@router.delete("/categories/{category_id}")
+async def delete_category(category_id: str, user: dict = Depends(get_admin_user)):
+    """Delete a service category (admin only). Also deletes subcategories."""
+    await db.delete_service_category(category_id)
+    return {"success": True}
 

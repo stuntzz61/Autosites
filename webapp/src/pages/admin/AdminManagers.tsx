@@ -76,7 +76,7 @@ export default function AdminManagers() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => adminApi.managers.delete(id),
+    mutationFn: (id: string) => adminApi.managers.delete(id, 'Confirmed by admin'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
       toast.success('Менеджер удалён')
@@ -84,8 +84,9 @@ export default function AdminManagers() {
       setManagerToDelete(null)
       setShowDeleteConfirm(false)
     },
-    onError: () => {
-      toast.error('Ошибка удаления')
+    onError: (error: any) => {
+      const message = error.response?.data?.detail || 'Ошибка удаления'
+      toast.error(message)
       setShowDeleteConfirm(false)
       setManagerToDelete(null)
     },

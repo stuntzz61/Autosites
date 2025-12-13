@@ -32,6 +32,7 @@ import PaymentPage from './pages/PaymentPage'
 
 // Admin Pages
 import AdminSites from './pages/admin/AdminSites'
+import AdminInviteCodes from './pages/admin/AdminInviteCodes'
 
 // Loading
 import LoadingScreen from './components/LoadingScreen'
@@ -170,6 +171,7 @@ function App() {
             <Route path="broadcast" element={<AdminBroadcast />} />
             <Route path="feedback" element={<AdminFeedback />} />
             <Route path="sites" element={<AdminSites />} />
+            <Route path="invite-codes" element={<AdminInviteCodes />} />
           </Route>
         ) : (
           <Route path="/admin/*" element={<Navigate to="/admin-login" replace />} />

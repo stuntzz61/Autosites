@@ -145,14 +145,50 @@ def get_more_services_keyboard(request_id: str, selected_codes: list) -> InlineK
 # Handlers
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message, state: FSMContext):
-    """Handle /start command."""
+    """Handle /start command with optional invite code deep link."""
     await state.clear()
 
     tg_id = message.from_user.id
     user = await db.get_user_by_tg_id(tg_id)
 
+    # Parse deep link parameter (format: /start invite_XXXXX)
+    args = message.text.split(maxsplit=1)
+    invite_code = None
+    if len(args) > 1 and args[1].startswith("invite_"):
+        invite_code = args[1].replace("invite_", "").strip().upper()
+
     if not user:
-        # New user - show registration
+        # New user - check for invite code
+        if invite_code:
+            # Validate invite code
+            is_valid, result = await db.validate_invite_code(invite_code)
+            if is_valid:
+                invite = result
+                # Store invite code in state for later use
+                await state.update_data(invite_code=invite_code)
+
+                group_info = f"\n📁 Группа: {invite['group_name']}" if invite.get('group_name') else ""
+                auto_info = "\n✅ Автоматическое одобрение" if invite.get('auto_approve') else ""
+
+                await message.answer(
+                    "👋 Добро пожаловать в Wenlyx!\n\n"
+                    f"🔗 Вы регистрируетесь по приглашению:{group_info}{auto_info}\n\n"
+                    "Нажмите кнопку для регистрации.",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="📝 Зарегистрироваться", callback_data=f"register_invite_{invite_code}")]
+                    ])
+                )
+                return
+            else:
+                # Invalid invite code
+                await message.answer(
+                    f"❌ {result}\n\n"
+                    "Попросите новую ссылку у администратора или зарегистрируйтесь обычным способом.",
+                    reply_markup=get_registration_keyboard()
+                )
+                return
+
+        # No invite code - standard registration
         await message.answer(
             "👋 Добро пожаловать в Wenlyx!\n\n"
             "Чтобы начать работу, необходимо зарегистрироваться.",
@@ -308,6 +344,114 @@ async def cb_register(callback: types.CallbackQuery, state: FSMContext):
             )
         except Exception as e:
             logger.error(f"Failed to notify admin {admin['tg_id']}: {e}")
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("register_invite_"))
+async def cb_register_with_invite(callback: types.CallbackQuery, state: FSMContext):
+    """Handle registration with invite code."""
+    tg_id = callback.from_user.id
+    invite_code = callback.data.replace("register_invite_", "")
+
+    # Check if already registered
+    user = await db.get_user_by_tg_id(tg_id)
+    if user:
+        await callback.answer("Вы уже зарегистрированы", show_alert=True)
+        return
+
+    # Validate invite code again
+    is_valid, result = await db.validate_invite_code(invite_code)
+    if not is_valid:
+        await callback.message.edit_text(
+            f"❌ {result}\n\n"
+            "Попросите новую ссылку у администратора."
+        )
+        await callback.answer()
+        return
+
+    invite = result
+
+    # Create user with invite code
+    new_user = await db.create_user_with_invite(
+        tg_id=tg_id,
+        username=callback.from_user.username or "",
+        first_name=callback.from_user.first_name or "",
+        last_name=callback.from_user.last_name or "",
+        invite_code=invite_code
+    )
+
+    if invite.get('auto_approve'):
+        # Auto-approved - show success
+        group_info = f"\n📁 Группа: {invite.get('group_name')}" if invite.get('group_name') else ""
+
+        await callback.message.edit_text(
+            f"🎉 Регистрация успешна!{group_info}\n\n"
+            "Вы можете сразу начать работу.",
+            reply_markup=get_main_keyboard(is_approved=True)
+        )
+
+        # Notify admins about new user (info only)
+        admins = await db.get_all_admins()
+        for admin in admins:
+            try:
+                await bot.send_message(
+                    admin["tg_id"],
+                    f"👤 <b>Новый менеджер зарегистрирован</b>\n\n"
+                    f"👤 {callback.from_user.first_name} {callback.from_user.last_name or ''}\n"
+                    f"📱 @{callback.from_user.username or 'нет username'}\n"
+                    f"🔗 Инвайт-код: <code>{invite_code}</code>\n"
+                    f"📁 Группа: {invite.get('group_name', 'Без группы')}\n"
+                    f"✅ Автоматически одобрен",
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify admin {admin['tg_id']}: {e}")
+    else:
+        # Need manual approval
+        await callback.message.edit_text(
+            "✅ Заявка на регистрацию отправлена!\n\n"
+            f"🔗 Инвайт-код: {invite_code}\n"
+            f"📁 Группа: {invite.get('group_name', 'Без группы')}\n\n"
+            "Администратор рассмотрит её в ближайшее время."
+        )
+
+        # Notify admin who created the invite code
+        if invite.get('created_by'):
+            try:
+                creator = await db.get_user_by_id(invite['created_by'])
+                if creator:
+                    await bot.send_message(
+                        creator["tg_id"],
+                        f"🆕 <b>Новая регистрация по вашему инвайту</b>\n\n"
+                        f"👤 {callback.from_user.first_name} {callback.from_user.last_name or ''}\n"
+                        f"📱 @{callback.from_user.username or 'нет username'}\n"
+                        f"🔗 Код: <code>{invite_code}</code>\n"
+                        f"📁 Группа: {invite.get('group_name', 'Без группы')}",
+                        parse_mode="HTML",
+                        reply_markup=get_admin_pending_keyboard(tg_id)
+                    )
+            except Exception as e:
+                logger.error(f"Failed to notify invite creator: {e}")
+
+        # Also notify other admins
+        admins = await db.get_all_admins()
+        for admin in admins:
+            if str(admin.get('id')) == str(invite.get('created_by')):
+                continue  # Skip invite creator
+            try:
+                await bot.send_message(
+                    admin["tg_id"],
+                    f"🆕 Новая заявка на регистрацию!\n\n"
+                    f"👤 {callback.from_user.first_name} {callback.from_user.last_name or ''}\n"
+                    f"📱 @{callback.from_user.username or 'нет username'}\n"
+                    f"🔗 Инвайт: <code>{invite_code}</code>\n"
+                    f"📁 Группа: {invite.get('group_name', 'Без группы')}",
+                    parse_mode="HTML",
+                    reply_markup=get_admin_pending_keyboard(tg_id)
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify admin {admin['tg_id']}: {e}")
 
     await callback.answer()
 

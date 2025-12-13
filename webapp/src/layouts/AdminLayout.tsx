@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Users, FileText, BarChart3, Radio, ChevronLeft, MessageSquare, Globe } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, BarChart3, Radio, ChevronLeft, MessageSquare, Globe, Link2 } from 'lucide-react'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useEffect } from 'react'
 import clsx from 'clsx'
@@ -8,6 +8,7 @@ import clsx from 'clsx'
 const adminNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Панель', exact: true },
   { path: '/admin/managers', icon: Users, label: 'Менеджеры' },
+  { path: '/admin/invite-codes', icon: Link2, label: 'Инвайты' },
   { path: '/admin/requests', icon: FileText, label: 'Заявки' },
   { path: '/admin/sites', icon: Globe, label: 'Сайты' },
   { path: '/admin/feedback', icon: MessageSquare, label: 'Обращения' },

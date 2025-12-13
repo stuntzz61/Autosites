@@ -16,6 +16,7 @@ router = APIRouter()
 
 class VerifyRequest(BaseModel):
     initData: str
+    invite_code: Optional[str] = None  # Optional invite code for registration
 
 
 def verify_telegram_init_data(init_data: str) -> Optional[dict]:
@@ -113,8 +114,21 @@ async def verify_init_data(request: VerifyRequest):
     user = await db.get_user_by_tg_id(tg_id)
 
     if not user:
-        # Create new user
-        user = await db.create_user(tg_id, username, first_name, last_name)
+        # Create new user - optionally with invite code
+        if request.invite_code:
+            # Validate invite code first
+            is_valid, result = await db.validate_invite_code(request.invite_code)
+            if not is_valid:
+                raise HTTPException(status_code=400, detail=result)
+
+            # Create user with invite code
+            user = await db.create_user_with_invite(
+                tg_id, username, first_name, last_name,
+                invite_code=request.invite_code
+            )
+        else:
+            # Create user without invite code
+            user = await db.create_user(tg_id, username, first_name, last_name)
 
     # Check if blocked
     if user.get('is_blocked'):

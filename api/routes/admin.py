@@ -30,6 +30,35 @@ class BroadcastRequest(BaseModel):
 
 class MassActionRequest(BaseModel):
     ids: List[str]
+    confirmation_code: Optional[str] = None
+
+
+class CreateGroupRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class AddToGroupRequest(BaseModel):
+    user_id: str
+    role: Optional[str] = "member"
+
+
+class CreateInviteCodeRequest(BaseModel):
+    group_id: Optional[str] = None
+    name: Optional[str] = None
+    max_uses: Optional[int] = None
+    expires_in_days: Optional[int] = None
+    auto_approve: Optional[bool] = False
+    notes: Optional[str] = None
+
+
+class UpdateInviteCodeRequest(BaseModel):
+    name: Optional[str] = None
+    max_uses: Optional[int] = None
+    auto_approve: Optional[bool] = None
+    is_active: Optional[bool] = None
+    notes: Optional[str] = None
+    group_id: Optional[str] = None
 
 
 # ==================== Dashboard ====================
@@ -44,8 +73,13 @@ async def get_dashboard(user: dict = Depends(get_admin_user)):
 
 @router.get("/managers")
 async def list_managers(user: dict = Depends(get_admin_user)):
-    """List all managers."""
-    return await db.list_managers()
+    """List managers. If admin is in a group, show only group members."""
+    # Try to get group-based managers first
+    managers = await db.list_managers_by_admin(str(user['id']))
+    if not managers:
+        # Fallback to all managers
+        managers = await db.list_managers()
+    return managers
 
 
 @router.get("/managers/{manager_id}")
@@ -74,8 +108,28 @@ async def unblock_manager(manager_id: str, user: dict = Depends(get_admin_user))
 
 
 @router.delete("/managers/{manager_id}")
-async def delete_manager(manager_id: str, user: dict = Depends(get_admin_user)):
-    """Delete a manager."""
+async def delete_manager(
+    manager_id: str,
+    user: dict = Depends(get_admin_user),
+    confirmation: Optional[str] = None
+):
+    """Delete a manager with anti-nuke protection."""
+    admin_id = str(user['id'])
+
+    # Anti-nuke check
+    can_delete, error_msg = await db.can_delete_manager(admin_id, manager_id)
+    if not can_delete:
+        raise HTTPException(status_code=429, detail=error_msg)
+
+    # Log the deletion
+    await db.log_deletion(
+        action_type='delete_manager',
+        target_type='user',
+        target_id=manager_id,
+        performed_by=admin_id,
+        reason=confirmation or 'Admin deletion'
+    )
+
     await db.delete_user(manager_id)
     return {"success": True}
 
@@ -201,9 +255,217 @@ async def mass_archive(data: MassActionRequest, user: dict = Depends(get_admin_u
 
 @router.post("/requests/mass-delete")
 async def mass_delete(data: MassActionRequest, user: dict = Depends(get_admin_user)):
-    """Delete multiple requests."""
+    """Delete multiple requests with anti-nuke protection."""
+    admin_id = str(user['id'])
+    count = len(data.ids)
+
+    # Anti-nuke check
+    can_delete, error_msg = await db.can_mass_delete_requests(admin_id, count)
+    if not can_delete:
+        raise HTTPException(status_code=429, detail=error_msg)
+
+    # Require confirmation code for large deletions
+    require_confirm = int(await db.get_anti_nuke_setting('require_confirmation_above') or '5')
+    if count > require_confirm:
+        expected_code = f"DELETE-{count}"
+        if data.confirmation_code != expected_code:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Для удаления {count} заявок требуется код подтверждения: {expected_code}"
+            )
+
+    # Log the deletion
+    await db.log_deletion(
+        action_type='mass_delete_requests',
+        target_type='request',
+        target_ids=data.ids,
+        performed_by=admin_id,
+        reason=f'Mass deletion of {count} requests'
+    )
+
     await db.mass_delete_requests(data.ids)
-    return {"success": True, "count": len(data.ids)}
+    return {"success": True, "count": count}
+
+
+# ==================== Admin Groups ====================
+
+@router.get("/groups")
+async def list_groups(user: dict = Depends(get_admin_user)):
+    """List all admin groups."""
+    return await db.list_admin_groups()
+
+
+@router.post("/groups")
+async def create_group(data: CreateGroupRequest, user: dict = Depends(get_admin_user)):
+    """Create a new admin group."""
+    group = await db.create_admin_group(
+        name=data.name,
+        description=data.description,
+        created_by=str(user['id'])
+    )
+    return {**group, "id": str(group["id"])}
+
+
+@router.get("/groups/{group_id}")
+async def get_group(group_id: str, user: dict = Depends(get_admin_user)):
+    """Get admin group details with members."""
+    group = await db.get_admin_group(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return group
+
+
+@router.post("/groups/{group_id}/members")
+async def add_group_member(
+    group_id: str,
+    data: AddToGroupRequest,
+    user: dict = Depends(get_admin_user)
+):
+    """Add a user to an admin group."""
+    membership = await db.add_user_to_group(
+        user_id=data.user_id,
+        group_id=group_id,
+        role=data.role,
+        added_by=str(user['id'])
+    )
+    return {"success": True, "membership": membership}
+
+
+@router.delete("/groups/{group_id}/members/{user_id}")
+async def remove_group_member(
+    group_id: str,
+    user_id: str,
+    user: dict = Depends(get_admin_user)
+):
+    """Remove a user from an admin group."""
+    await db.remove_user_from_group(user_id, group_id)
+    return {"success": True}
+
+
+@router.get("/my-groups")
+async def get_my_groups(user: dict = Depends(get_admin_user)):
+    """Get groups the current admin belongs to."""
+    return await db.get_user_groups(str(user['id']))
+
+
+# ==================== Invite Codes ====================
+
+@router.get("/invite-codes")
+async def list_invite_codes(
+    group_id: Optional[str] = None,
+    user: dict = Depends(get_admin_user)
+):
+    """List invite codes created by this admin or for their groups."""
+    codes = await db.list_invite_codes(created_by=str(user['id']), group_id=group_id)
+    return [
+        {**c, "id": str(c["id"]), "group_id": str(c["group_id"]) if c.get("group_id") else None}
+        for c in codes
+    ]
+
+
+@router.post("/invite-codes")
+async def create_invite_code(data: CreateInviteCodeRequest, user: dict = Depends(get_admin_user)):
+    """Create a new invite code."""
+    from datetime import timedelta
+
+    expires_at = None
+    if data.expires_in_days:
+        expires_at = datetime.now() + timedelta(days=data.expires_in_days)
+
+    code = await db.create_invite_code(
+        created_by=str(user['id']),
+        group_id=data.group_id,
+        name=data.name,
+        max_uses=data.max_uses,
+        expires_at=expires_at,
+        auto_approve=data.auto_approve or False,
+        notes=data.notes
+    )
+
+    return {
+        **code,
+        "id": str(code["id"]),
+        "group_id": str(code["group_id"]) if code.get("group_id") else None
+    }
+
+
+@router.get("/invite-codes/{code_id}")
+async def get_invite_code_details(code_id: str, user: dict = Depends(get_admin_user)):
+    """Get invite code details with usage info."""
+    code = await db.get_invite_code_by_id(code_id)
+    if not code:
+        raise HTTPException(status_code=404, detail="Invite code not found")
+
+    # Check if user owns this code or is superadmin
+    if str(code['created_by']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    usage = await db.get_invite_code_usage(code_id)
+
+    return {
+        **code,
+        "id": str(code["id"]),
+        "group_id": str(code["group_id"]) if code.get("group_id") else None,
+        "usage": [
+            {**u, "id": str(u["id"])}
+            for u in usage
+        ]
+    }
+
+
+@router.patch("/invite-codes/{code_id}")
+async def update_invite_code(
+    code_id: str,
+    data: UpdateInviteCodeRequest,
+    user: dict = Depends(get_admin_user)
+):
+    """Update an invite code."""
+    code = await db.get_invite_code_by_id(code_id)
+    if not code:
+        raise HTTPException(status_code=404, detail="Invite code not found")
+
+    if str(code['created_by']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    update_data = data.model_dump(exclude_none=True)
+    updated = await db.update_invite_code(code_id, update_data)
+
+    return {
+        **updated,
+        "id": str(updated["id"]),
+        "group_id": str(updated["group_id"]) if updated.get("group_id") else None
+    }
+
+
+@router.delete("/invite-codes/{code_id}")
+async def delete_invite_code(code_id: str, user: dict = Depends(get_admin_user)):
+    """Delete an invite code."""
+    code = await db.get_invite_code_by_id(code_id)
+    if not code:
+        raise HTTPException(status_code=404, detail="Invite code not found")
+
+    if str(code['created_by']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    await db.delete_invite_code(code_id)
+    return {"success": True}
+
+
+@router.get("/invite-codes/validate/{code}")
+async def validate_invite_code(code: str):
+    """Validate an invite code (public endpoint for registration)."""
+    is_valid, result = await db.validate_invite_code(code)
+
+    if not is_valid:
+        return {"valid": False, "error": result}
+
+    invite = result
+    return {
+        "valid": True,
+        "group_name": invite.get('group_name'),
+        "auto_approve": invite.get('auto_approve', False),
+        "creator_name": f"{invite.get('creator_first_name', '')} {invite.get('creator_last_name', '')}".strip()
+    }
 
 
 # ==================== Broadcast ====================
