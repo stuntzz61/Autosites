@@ -366,24 +366,44 @@ async def create_request(user_id: str, company_name: str, client_name: str, payl
 
 
 async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
-    """Update request - only payload_json is updatable"""
-    if 'payload' not in data:
-        return await get_request(request_id)
-
-    payload_to_save = data['payload']
-
-    # Debug: log images before save
-    images = payload_to_save.get('site', {}).get('assets', {}).get('images', [])
-    print(f"[DEBUG] update_request {request_id}: saving {len(images)} images")
-
+    """Update request - payload_json, tariff, company_name, client_name are updatable"""
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
-            await cur.execute(
-                """UPDATE requests SET payload_json = %s::jsonb
+            # Build update query dynamically based on what's provided
+            update_fields = []
+            update_values = []
+
+            if 'payload' in data:
+                payload_to_save = data['payload']
+                # Debug: log images before save
+                images = payload_to_save.get('site', {}).get('assets', {}).get('images', [])
+                print(f"[DEBUG] update_request {request_id}: saving {len(images)} images")
+                update_fields.append("payload_json = %s::jsonb")
+                update_values.append(json.dumps(payload_to_save))
+
+            if 'tariff' in data:
+                update_fields.append("tariff = %s")
+                update_values.append(data['tariff'])
+
+            if 'company_name' in data:
+                update_fields.append("company_name = %s")
+                update_values.append(data['company_name'])
+
+            if 'client_name' in data:
+                update_fields.append("client_name = %s")
+                update_values.append(data['client_name'])
+
+            if not update_fields:
+                return await get_request(request_id)
+
+            # Add request_id for WHERE clause
+            update_values.append(request_id)
+
+            query = f"""UPDATE requests SET {', '.join(update_fields)}
                     WHERE id = %s
-                    RETURNING id, status, payload_json, created_at""",
-                (json.dumps(payload_to_save), request_id)
-            )
+                    RETURNING id, status, payload_json, tariff, created_at"""
+
+            await cur.execute(query, update_values)
             await conn.commit()
             row = await cur.fetchone()
             if row:
@@ -396,12 +416,13 @@ async def update_request(request_id: str, data: Dict) -> Optional[Dict]:
                         payload = {}
 
                 row['payload'] = payload
-                row['company_name'] = payload.get('site', {}).get('company', '')
-                row['client_name'] = payload.get('client', {}).get('name', '')
+                row['company_name'] = payload.get('site', {}).get('company', '') or row.get('company_name', '')
+                row['client_name'] = payload.get('client', {}).get('name', '') or row.get('client_name', '')
 
                 # Debug: verify images after save
-                saved_images = payload.get('site', {}).get('assets', {}).get('images', [])
-                print(f"[DEBUG] update_request {request_id}: saved {len(saved_images)} images")
+                if 'payload' in data:
+                    saved_images = payload.get('site', {}).get('assets', {}).get('images', [])
+                    print(f"[DEBUG] update_request {request_id}: saved {len(saved_images)} images")
 
                 if 'payload_json' in row:
                     del row['payload_json']

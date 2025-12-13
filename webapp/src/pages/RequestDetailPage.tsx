@@ -1727,6 +1727,7 @@ function EditRequestForm({
     client_contact: client.contact || '',
     summary: site.summary || '',
     color_palette: site.color_palette || '',
+    tariff: request.tariff || 'standard',
     services: existingServices.length > 0 ? existingServices : [{ name: '', summary: '', priceFrom: '' }],
   })
 
@@ -1782,6 +1783,7 @@ function EditRequestForm({
         company_name: formData.company,
         client_name: formData.client_name,
         payload: updatedPayload,
+        tariff: formData.tariff,
       })
 
       onSave()
@@ -1995,6 +1997,97 @@ function EditRequestForm({
               className="input"
               placeholder="синий и белый"
             />
+          </div>
+
+          {/* Tariff Selection */}
+          <div>
+            <label className="text-xs text-tg-hint mb-2 block">Тариф генерации</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, tariff: 'standard' }))}
+                className={clsx(
+                  'p-4 rounded-2xl border-2 transition-all text-left',
+                  formData.tariff === 'standard'
+                    ? 'border-blue-500 bg-blue-500/10'
+                    : 'border-zinc-200 dark:border-zinc-700'
+                )}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={clsx(
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                    formData.tariff === 'standard' ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'
+                  )}>
+                    {formData.tariff === 'standard' && (
+                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    )}
+                  </div>
+                  <span className="font-semibold text-tg-text">Стандарт</span>
+                </div>
+                <p className="text-xs text-tg-hint">Базовая генерация лендинга</p>
+                <p className="text-sm font-bold text-green-500 mt-2">Бесплатно</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, tariff: 'premium' }))}
+                className={clsx(
+                  'p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden',
+                  formData.tariff === 'premium'
+                    ? 'border-purple-500 bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-blue-500/10 shadow-lg shadow-purple-500/20'
+                    : 'border-zinc-200 dark:border-zinc-700 hover:border-purple-300 dark:hover:border-purple-600'
+                )}
+              >
+                {/* Premium badge */}
+                <div className="absolute top-2 right-2">
+                  <span className="text-xs bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2.5 py-1 rounded-full font-bold shadow-md">
+                    ⭐ PRO
+                  </span>
+                </div>
+
+                {/* Shine effect when selected */}
+                {formData.tariff === 'premium' && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 2s ease-in-out infinite'
+                  }} />
+                )}
+
+                <div className="flex items-center gap-2 mb-2 relative z-10">
+                  <div className={clsx(
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all',
+                    formData.tariff === 'premium'
+                      ? 'border-purple-500 bg-purple-500/20 shadow-md'
+                      : 'border-zinc-300 dark:border-zinc-600'
+                  )}>
+                    {formData.tariff === 'premium' && (
+                      <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 shadow-sm" />
+                    )}
+                  </div>
+                  <span className={clsx(
+                    'font-bold text-base',
+                    formData.tariff === 'premium'
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
+                      : 'text-tg-text'
+                  )}>
+                    Премиум лендинг
+                  </span>
+                </div>
+                <p className="text-xs text-tg-hint mb-2">Профессиональный дизайн и качество</p>
+                <div className="flex items-center gap-1 mt-2">
+                  <span className="text-sm font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    Платно
+                  </span>
+                  <span className="text-xs text-tg-hint">• Премиум качество</span>
+                </div>
+              </button>
+            </div>
+            {formData.tariff === 'premium' && request.tariff === 'standard' && (
+              <p className="text-xs text-blue-500 mt-2 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Тариф будет изменён с базового на премиум
+              </p>
+            )}
           </div>
         </div>
       )}
