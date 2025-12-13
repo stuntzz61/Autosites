@@ -1571,23 +1571,27 @@ export default function RequestDetailPage() {
               onClick={() => setShowEditModal(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[80vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
             >
-              <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
-              <p className="text-lg font-semibold mb-4">Редактирование</p>
+              <div className="flex-shrink-0 p-4 pb-2">
+                <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
+                <p className="text-lg font-semibold mb-4">Редактирование</p>
+              </div>
 
-              <EditRequestForm
-                request={request}
-                onSave={() => {
-                  queryClient.invalidateQueries({ queryKey: ['request', id] })
-                  setShowEditModal(false)
-                  toast.success('Сохранено')
-                }}
-                onCancel={() => setShowEditModal(false)}
-              />
+              <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-20">
+                <EditRequestForm
+                  request={request}
+                  onSave={() => {
+                    queryClient.invalidateQueries({ queryKey: ['request', id] })
+                    setShowEditModal(false)
+                    toast.success('Сохранено')
+                  }}
+                  onCancel={() => setShowEditModal(false)}
+                />
+              </div>
             </motion.div>
           </>
         )}
@@ -1795,9 +1799,10 @@ function EditRequestForm({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-tg-separator pb-3">
+    <>
+      <div className="space-y-4 pb-4">
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-tg-separator pb-3">
         <button
           onClick={() => setActiveTab('info')}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
@@ -2092,15 +2097,19 @@ function EditRequestForm({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-tg-separator">
-        <button onClick={onCancel} className="btn btn-secondary flex-1">
-          Отмена
-        </button>
-        <button onClick={handleSave} disabled={saving} className="btn btn-primary flex-1">
-          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Сохранить'}
-        </button>
       </div>
-    </div>
+
+      {/* Actions - fixed at bottom of modal */}
+      <div className="sticky bottom-0 bg-tg-bg pt-4 pb-2 -mx-4 px-4 border-t border-tg-separator mt-4 shadow-lg">
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="btn btn-secondary flex-1">
+            Отмена
+          </button>
+          <button onClick={handleSave} disabled={saving} className="btn btn-primary flex-1">
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Сохранить'}
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
