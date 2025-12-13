@@ -146,51 +146,54 @@ export default function AdminRequests() {
               onClick={() => setShowDeleteConfirm(false)}
             />
             <motion.div
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900 rounded-3xl p-6 z-[110] w-[90%] max-w-sm shadow-2xl border border-zinc-200 dark:border-zinc-800"
+              className="fixed inset-0 flex items-center justify-center p-4 z-[110]"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-center mb-4">
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertTriangle className="w-8 h-8 text-red-500" />
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-zinc-200 dark:border-zinc-800">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertTriangle className="w-8 h-8 text-red-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-tg-text mb-2">Подтверждение удаления</h3>
+                  <p className="text-tg-hint text-sm leading-relaxed mb-4">
+                    Вы собираетесь удалить <strong>{selectedIds.length}</strong> заявок.
+                    Это действие нельзя отменить.
+                  </p>
+                  <p className="text-sm text-tg-text mb-2">
+                    Для подтверждения введите код:
+                  </p>
+                  <p className="text-lg font-mono font-bold text-red-500 mb-4">
+                    DELETE-{selectedIds.length}
+                  </p>
+                  <input
+                    type="text"
+                    value={confirmationCode}
+                    onChange={(e) => setConfirmationCode(e.target.value)}
+                    placeholder="Введите код подтверждения"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-center font-mono"
+                  />
                 </div>
-                <h3 className="text-xl font-bold text-tg-text mb-2">Подтверждение удаления</h3>
-                <p className="text-tg-hint text-sm mb-4">
-                  Вы собираетесь удалить <strong>{selectedIds.length}</strong> заявок.
-                  Это действие нельзя отменить.
-                </p>
-                <p className="text-sm text-tg-text mb-2">
-                  Для подтверждения введите код:
-                </p>
-                <p className="text-lg font-mono font-bold text-red-500 mb-4">
-                  DELETE-{selectedIds.length}
-                </p>
-                <input
-                  type="text"
-                  value={confirmationCode}
-                  onChange={(e) => setConfirmationCode(e.target.value)}
-                  placeholder="Введите код подтверждения"
-                  className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-center font-mono"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(false)
-                    setConfirmationCode('')
-                  }}
-                  className="flex-1 p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={confirmMassDelete}
-                  disabled={massDeleteMutation.isPending}
-                  className="flex-1 p-3.5 rounded-xl bg-red-500 text-white font-semibold disabled:opacity-50"
-                >
-                  {massDeleteMutation.isPending ? 'Удаление...' : 'Удалить'}
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false)
+                      setConfirmationCode('')
+                    }}
+                    className="flex-1 px-4 py-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={confirmMassDelete}
+                    disabled={massDeleteMutation.isPending}
+                    className="flex-1 px-4 py-3.5 rounded-xl bg-red-500 text-white font-semibold disabled:opacity-50"
+                  >
+                    {massDeleteMutation.isPending ? 'Удаление...' : 'Удалить'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>

@@ -492,38 +492,41 @@ export default function NewRequestPage() {
               onClick={handleDiscardDraft}
             />
             <motion.div
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900 rounded-3xl p-6 z-[60] w-[90%] max-w-sm shadow-2xl border border-zinc-200 dark:border-zinc-800"
+              className="fixed inset-0 flex items-center justify-center p-4 z-[60]"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <RotateCcw className="w-8 h-8 text-blue-500" />
-                </div>
-                <h3 className="text-xl font-bold text-tg-text mb-2">Найден черновик</h3>
-                <p className="text-tg-hint text-sm leading-relaxed mb-3">
-                  У вас есть незаконченная заявка. Хотите продолжить заполнение?
-                </p>
-                {draftData?.formData.company && (
-                  <p className="text-sm text-tg-text font-medium">
-                    "{draftData.formData.company}"
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-zinc-200 dark:border-zinc-800">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <RotateCcw className="w-8 h-8 text-blue-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-tg-text mb-2">Найден черновик</h3>
+                  <p className="text-tg-hint text-sm leading-relaxed mb-3">
+                    У вас есть незаконченная заявка. Хотите продолжить заполнение?
                   </p>
-                )}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleDiscardDraft}
-                  className="flex-1 px-4 py-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  Начать заново
-                </button>
-                <button
-                  onClick={handleRestoreDraft}
-                  className="flex-1 px-4 py-3.5 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
-                >
-                  Продолжить
-                </button>
+                  {draftData?.formData.company && (
+                    <p className="text-sm text-tg-text font-medium">
+                      "{draftData.formData.company}"
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleDiscardDraft}
+                    className="flex-1 px-4 py-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    Начать заново
+                  </button>
+                  <button
+                    onClick={handleRestoreDraft}
+                    className="flex-1 px-4 py-3.5 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
+                  >
+                    Продолжить
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>

@@ -598,38 +598,41 @@ export default function AdminInviteCodes() {
               }}
             />
             <motion.div
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900 rounded-3xl p-6 z-[110] w-[90%] max-w-sm shadow-2xl border border-zinc-200 dark:border-zinc-800"
+              className="fixed inset-0 flex items-center justify-center p-4 z-[110]"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-center mb-4">
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Trash2 className="w-8 h-8 text-red-500" />
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-zinc-200 dark:border-zinc-800">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-8 h-8 text-red-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-tg-text mb-2">Удалить код?</h3>
+                  <p className="text-tg-hint text-sm leading-relaxed">
+                    Код <strong className="font-mono">{codeToDelete.code}</strong> будет удалён.
+                    Менеджеры, зарегистрированные по нему, останутся.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold text-tg-text mb-2">Удалить код?</h3>
-                <p className="text-tg-hint text-sm">
-                  Код <strong className="font-mono">{codeToDelete.code}</strong> будет удалён.
-                  Менеджеры, зарегистрированные по нему, останутся.
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(false)
-                    setCodeToDelete(null)
-                  }}
-                  className="flex-1 p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold"
-                >
-                  Отмена
-                </button>
-                <button
-                  onClick={() => deleteMutation.mutate(codeToDelete.id)}
-                  disabled={deleteMutation.isPending}
-                  className="flex-1 p-3.5 rounded-xl bg-red-500 text-white font-semibold disabled:opacity-50"
-                >
-                  {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false)
+                      setCodeToDelete(null)
+                    }}
+                    className="flex-1 px-4 py-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={() => deleteMutation.mutate(codeToDelete.id)}
+                    disabled={deleteMutation.isPending}
+                    className="flex-1 px-4 py-3.5 rounded-xl bg-red-500 text-white font-semibold disabled:opacity-50"
+                  >
+                    {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
