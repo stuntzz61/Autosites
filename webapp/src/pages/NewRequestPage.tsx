@@ -497,16 +497,16 @@ export default function NewRequestPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
-              <div className="text-center mb-4">
+              <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <RotateCcw className="w-8 h-8 text-blue-500" />
                 </div>
                 <h3 className="text-xl font-bold text-tg-text mb-2">Найден черновик</h3>
-                <p className="text-tg-hint text-sm">
+                <p className="text-tg-hint text-sm leading-relaxed mb-3">
                   У вас есть незаконченная заявка. Хотите продолжить заполнение?
                 </p>
                 {draftData?.formData.company && (
-                  <p className="text-sm text-tg-text mt-2 font-medium">
+                  <p className="text-sm text-tg-text font-medium">
                     "{draftData.formData.company}"
                   </p>
                 )}
@@ -514,13 +514,13 @@ export default function NewRequestPage() {
               <div className="flex gap-3">
                 <button
                   onClick={handleDiscardDraft}
-                  className="flex-1 p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                  className="flex-1 px-4 py-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                 >
                   Начать заново
                 </button>
                 <button
                   onClick={handleRestoreDraft}
-                  className="flex-1 p-3.5 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
+                  className="flex-1 px-4 py-3.5 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
                 >
                   Продолжить
                 </button>

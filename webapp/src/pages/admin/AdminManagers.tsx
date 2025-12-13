@@ -432,12 +432,12 @@ export default function AdminManagers() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
-              <div className="text-center mb-4">
+              <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Trash2 className="w-8 h-8 text-red-500" />
                 </div>
                 <h3 className="text-xl font-bold text-tg-text mb-2">Удалить менеджера?</h3>
-                <p className="text-tg-hint text-sm">
+                <p className="text-tg-hint text-sm leading-relaxed">
                   Это действие нельзя отменить. Все данные будут удалены.
                 </p>
               </div>

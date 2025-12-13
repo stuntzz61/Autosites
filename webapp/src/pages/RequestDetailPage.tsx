@@ -1516,8 +1516,15 @@ export default function RequestDetailPage() {
 
           {/* Generate button - show for statuses that can be sent to generation */}
           {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
-            <button onClick={handleGenerate} disabled={generateMutation.isPending} className="btn btn-primary flex-1">
-              {generateMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" /> В разработку</>}
+            <button onClick={handleGenerate} disabled={generateMutation.isPending} className="btn btn-primary flex-1 whitespace-nowrap">
+              {generateMutation.isPending ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Send className="w-5 h-5" />
+                  <span>В разработку</span>
+                </>
+              )}
             </button>
           )}
 
