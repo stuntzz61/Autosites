@@ -290,6 +290,48 @@ export const paymentApi = {
   listBySite: (siteId: string) => api.get('/payments', { params: { site_id: siteId } }),
 }
 
+// Manager Registration API
+export const managerApi = {
+  // Check invite status
+  checkInvite: (token: string) =>
+    api.get(`/manager/invite/${token}`),
+
+  // Register manager via invite
+  register: (token: string, data: { full_name: string; phone: string; agree_terms?: boolean }) =>
+    api.post(`/manager/invite/${token}/register`, data),
+
+  // Get session for activated invite
+  getSession: (token: string) =>
+    api.get(`/manager/invite/${token}/session`),
+
+  // Get current manager profile
+  getProfile: () =>
+    api.get('/manager/profile'),
+
+  // Update profile
+  updateProfile: (data: { full_name?: string; phone?: string }) =>
+    api.patch('/manager/profile', data),
+}
+
+// Domain API (REG.RU integration)
+export const domainApi = {
+  // Check domain availability
+  check: (requestId: string, data: { domain: string; tlds?: string[]; max_suggestions?: number }) =>
+    api.post(`/requests/${requestId}/domain/check`, data),
+
+  // Register domain
+  register: (requestId: string, data: { domain: string; period?: number; configure_dns?: boolean }) =>
+    api.post(`/requests/${requestId}/domain/register`, data),
+
+  // Get domain status
+  getStatus: (requestId: string) =>
+    api.get(`/requests/${requestId}/domain/status`),
+
+  // Get TLD prices
+  getPrices: () =>
+    api.get('/requests/domain/prices'),
+}
+
 // Revisions API (правки сайтов)
 export const revisionsApi = {
   // List revisions for site

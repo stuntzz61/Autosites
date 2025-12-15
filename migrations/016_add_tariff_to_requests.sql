@@ -14,3 +14,4 @@ COMMENT ON COLUMN requests.tariff IS 'Generation tariff: standard (free) or prem
 -- Update existing requests to have standard tariff
 UPDATE requests SET tariff = 'standard' WHERE tariff IS NULL;
 
+

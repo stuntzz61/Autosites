@@ -4,7 +4,8 @@ import { adminApi } from '@/api/client'
 import {
   Link2, Plus, Copy, Trash2, Users, Clock, CheckCircle2,
   XCircle, ChevronRight, X, QrCode, Share2, Eye, EyeOff,
-  Sparkles, Shield, Calendar, Hash, ToggleLeft, ToggleRight
+  Sparkles, Shield, Calendar, Hash, ToggleLeft, ToggleRight,
+  ExternalLink
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -57,7 +58,14 @@ export default function AdminInviteCodes() {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: any) => adminApi.inviteCodes.create(data),
+    mutationFn: (data: {
+      name?: string
+      group_id?: string
+      max_uses?: number
+      expires_in_days?: number
+      auto_approve?: boolean
+      notes?: string
+    }) => adminApi.inviteCodes.create(data),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'invite-codes'] })
       toast.success('Инвайт-код создан!')
@@ -99,12 +107,21 @@ export default function AdminInviteCodes() {
   })
 
   const handleCreate = () => {
-    const data: any = {}
+    const data: {
+      name?: string
+      group_id?: string
+      max_uses?: number
+      expires_in_days?: number
+      auto_approve?: boolean
+      notes?: string
+    } = {
+      auto_approve: formData.auto_approve,
+    }
+
     if (formData.name) data.name = formData.name
     if (formData.group_id) data.group_id = formData.group_id
-    if (formData.max_uses) data.max_uses = parseInt(formData.max_uses)
-    if (formData.expires_in_days) data.expires_in_days = parseInt(formData.expires_in_days)
-    data.auto_approve = formData.auto_approve
+    if (formData.max_uses) data.max_uses = parseInt(formData.max_uses, 10)
+    if (formData.expires_in_days) data.expires_in_days = parseInt(formData.expires_in_days, 10)
     if (formData.notes) data.notes = formData.notes
 
     createMutation.mutate(data)
@@ -116,10 +133,18 @@ export default function AdminInviteCodes() {
   }
 
   const copyLink = (code: string) => {
-    const botUsername = 'weblyMN_bot' // Replace with actual bot username
+    const botUsername = 'wenlix_bot'
     const link = `https://t.me/${botUsername}?start=invite_${code}`
     navigator.clipboard.writeText(link)
-    toast.success('Ссылка скопирована!')
+    toast.success('Ссылка для Telegram скопирована!')
+  }
+
+  const copyWebLink = (code: string) => {
+    // Direct web registration link
+    const webappUrl = import.meta.env.VITE_WEBAPP_URL || window.location.origin
+    const link = `${webappUrl}/invite/${code}`
+    navigator.clipboard.writeText(link)
+    toast.success('Веб-ссылка скопирована!')
   }
 
   const formatDate = (dateStr: string) => {
@@ -443,20 +468,29 @@ export default function AdminInviteCodes() {
                 </div>
 
                 {/* Copy Buttons */}
-                <div className="flex gap-3 mb-6">
+                <div className="space-y-3 mb-6">
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => copyCode(selectedCode.code)}
+                      className="flex-1 p-3 bg-tg-secondary-bg rounded-xl flex items-center justify-center gap-2 text-tg-text"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Копировать код
+                    </button>
+                    <button
+                      onClick={() => copyLink(selectedCode.code)}
+                      className="flex-1 p-3 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center gap-2"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      TG ссылка
+                    </button>
+                  </div>
                   <button
-                    onClick={() => copyCode(selectedCode.code)}
-                    className="flex-1 p-3 bg-tg-secondary-bg rounded-xl flex items-center justify-center gap-2 text-tg-text"
+                    onClick={() => copyWebLink(selectedCode.code)}
+                    className="w-full p-3 bg-purple-500/10 text-purple-500 rounded-xl flex items-center justify-center gap-2"
                   >
-                    <Copy className="w-4 h-4" />
-                    Копировать код
-                  </button>
-                  <button
-                    onClick={() => copyLink(selectedCode.code)}
-                    className="flex-1 p-3 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center gap-2"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Копировать ссылку
+                    <ExternalLink className="w-4 h-4" />
+                    Веб-ссылка для регистрации
                   </button>
                 </div>
 
@@ -524,14 +558,24 @@ export default function AdminInviteCodes() {
                   </div>
                 )}
 
-                {/* Deep Link Preview */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
-                    Ссылка для регистрации:
-                  </p>
-                  <p className="text-xs text-blue-500 break-all font-mono">
-                    https://t.me/weblyMN_bot?start=invite_{selectedCode.code}
-                  </p>
+                {/* Links Preview */}
+                <div className="space-y-3 mb-6">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                    <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
+                      📱 Telegram ссылка:
+                    </p>
+                    <p className="text-xs text-blue-500 break-all font-mono">
+                      https://t.me/wenlix_bot?start=invite_{selectedCode.code}
+                    </p>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+                    <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-2">
+                      🌐 Веб-ссылка:
+                    </p>
+                    <p className="text-xs text-purple-500 break-all font-mono">
+                      {import.meta.env.VITE_WEBAPP_URL || window.location.origin}/invite/{selectedCode.code}
+                    </p>
+                  </div>
                 </div>
               </div>
 

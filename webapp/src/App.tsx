@@ -29,6 +29,7 @@ import DevLoginPage from './pages/DevLoginPage'
 // Manager Pages
 import FeedbackPage from './pages/FeedbackPage'
 import PaymentPage from './pages/PaymentPage'
+import InvitePage from './pages/InvitePage'
 
 // Admin Pages
 import AdminSites from './pages/admin/AdminSites'
@@ -134,7 +135,7 @@ function App() {
               Добро пожаловать!
             </h1>
             <p className="text-tg-hint">
-              Откройте приложение через бота @weblyMN_bot
+              Откройте приложение через бота @wenlix_bot
             </p>
           </div>
         </div>
@@ -160,6 +161,9 @@ function App() {
         {/* Dev & Admin Login Routes */}
         <Route path="/dev-login" element={<DevLoginPage />} />
         <Route path="/admin-login" element={<AdminLoginPage />} />
+
+        {/* Manager Invite Registration */}
+        <Route path="/invite/:token" element={<InvitePage />} />
 
         {/* Admin Routes */}
         {isAdmin ? (

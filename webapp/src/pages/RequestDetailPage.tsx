@@ -2,18 +2,19 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Building2, User, Phone, Mail, MapPin, Briefcase,
+  Building2, User, Phone, Mail, MapPin,
   Image, Archive, Send, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronDown, X, ExternalLink,
-  Palette, Upload, Camera, Edit3, Trash2, Plus, Sparkles,
+  Palette, Camera, Edit3, Trash2, Plus, Sparkles,
   ChevronLeft, ChevronRight, ZoomIn, ImageIcon, Globe,
-  CreditCard, Power, RotateCcw, Play, Square, Link2, Shield,
-  MessageSquare, FileEdit, History, SendHorizonal, RefreshCw
+  CreditCard, Play, Square, Link2, Shield,
+  FileEdit, SendHorizonal, RefreshCw
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useAuthStore } from '@/stores/authStore'
 import { requestsApi, servicesApi, sitesApi, revisionsApi } from '@/api/client'
+import DomainModal from '@/components/DomainModal'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -52,9 +53,7 @@ export default function RequestDetailPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [viewingPhotoIndex, setViewingPhotoIndex] = useState<number | null>(null)
   const [showDomainModal, setShowDomainModal] = useState(false)
-  const [domainInput, setDomainInput] = useState('')
-  const [enableSsl, setEnableSsl] = useState(true)
-  const [showRevisionsModal, setShowRevisionsModal] = useState(false)
+  // const [showRevisionsModal, setShowRevisionsModal] = useState(false) // Unused for now
   const [showNewRevisionModal, setShowNewRevisionModal] = useState(false)
   const [newRevisionChanges, setNewRevisionChanges] = useState<Array<{
     type: string
@@ -65,7 +64,7 @@ export default function RequestDetailPage() {
   }>>([{ type: 'text_change', description: '', area: '' }])
   const [isCreatingRevision, setIsCreatingRevision] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const revisionScreenshotRef = useRef<HTMLInputElement>(null)
+  // const revisionScreenshotRef = useRef<HTMLInputElement>(null) // Unused for now
 
   // Check if user is admin
   const isAdmin = user?.role === 'admin'
@@ -90,9 +89,22 @@ export default function RequestDetailPage() {
   })
 
   // Get client site for this request
-  const { data: clientSite, isLoading: isLoadingSite } = useQuery({
+  const { data: clientSite, isLoading: isLoadingSite, error: clientSiteError } = useQuery({
     queryKey: ['client-site', id],
-    queryFn: () => sitesApi.getByRequest(id!).then(res => res.data),
+    queryFn: async () => {
+      try {
+        const res = await sitesApi.getByRequest(id!)
+        return res.data
+      } catch (err: any) {
+        // If 404, site doesn't exist yet - that's OK
+        if (err.response?.status === 404) {
+          return null
+        }
+        // Log technical error but don't show raw exception to user
+        console.error('Failed to load site data:', err)
+        throw err
+      }
+    },
     enabled: !!id,
     retry: false, // Don't retry if site doesn't exist yet
     refetchInterval: (query) => {
@@ -256,44 +268,30 @@ export default function RequestDetailPage() {
     },
   })
 
-  // Assign domain mutation
-  const assignDomainMutation = useMutation({
-    mutationFn: ({ domain, ssl }: { domain: string; ssl: boolean }) =>
-      sitesApi.assignDomain(clientSite!.id, domain, ssl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-site', id] })
-      toast.success('Домен привязан!')
-      haptic?.notificationOccurred('success')
-      setShowDomainModal(false)
-      setDomainInput('')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка привязки домена')
-      haptic?.notificationOccurred('error')
-    },
-  })
 
-  // Create revision mutation
-  const createRevisionMutation = useMutation({
-    mutationFn: (changes: Array<{ type: string; client_description: string; location?: { area: string } }>) =>
-      revisionsApi.create({
-        site_id: clientSite!.id,
-        changes,
-        source: 'webapp',
-        auto_submit: false,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['revisions', clientSite?.id] })
-      toast.success('Правки созданы!')
-      haptic?.notificationOccurred('success')
-      setShowNewRevisionModal(false)
-      setNewRevisionChanges([{ type: 'text_change', description: '', area: '' }])
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.detail || 'Ошибка создания правок')
-      haptic?.notificationOccurred('error')
-    },
-  })
+  // Create revision mutation (unused for now)
+  // Create revision mutation (unused for now)
+  // const createRevisionMutation = useMutation({
+  //   mutationFn: (changes: Array<{ type: string; client_description: string; location?: { area: string } }>) =>
+  //     revisionsApi.create({
+  //       site_id: clientSite!.id,
+  //       changes,
+  //       source: 'webapp',
+  //       auto_submit: false,
+  //     }),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ['revisions', clientSite?.id] })
+  //     toast.success('Правки созданы!')
+  //     haptic?.notificationOccurred('success')
+  //     setShowNewRevisionModal(false)
+  //     setNewRevisionChanges([{ type: 'text_change', description: '', area: '' }])
+  //   },
+  //   onError: (error: unknown) => {
+  //     const err = error as { response?: { data?: { detail?: string } } }
+  //     toast.error(err.response?.data?.detail || 'Ошибка создания правок')
+  //     haptic?.notificationOccurred('error')
+  //   },
+  // })
 
   // Submit revision mutation
   const submitRevisionMutation = useMutation({
@@ -743,8 +741,34 @@ export default function RequestDetailPage() {
           </div>
         </Section>
 
+        {/* Site Loading Error */}
+        {clientSiteError && !clientSite && (
+          <Section title="Хостинг сайта">
+            <div className="p-4">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  <p className="font-medium text-red-600 dark:text-red-400">
+                    Не удалось загрузить данные хостинга
+                  </p>
+                </div>
+                <p className="text-sm text-tg-hint mb-3">
+                  Попробуйте обновить страницу или повторите попытку позже.
+                </p>
+                <button
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ['client-site', id] })}
+                  className="btn btn-secondary text-sm"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Повторить
+                </button>
+              </div>
+            </div>
+          </Section>
+        )}
+
         {/* Create Site Button - if site doesn't exist */}
-        {!clientSite && !isLoadingSite && (
+        {!clientSite && !isLoadingSite && !clientSiteError && (
           <Section title="Сайт">
             <div className="p-4">
               <div className="text-center py-6">
@@ -786,11 +810,14 @@ export default function RequestDetailPage() {
                       {clientSite.deploy_status === 'pending' && '⏳ Ожидает деплоя'}
                       {(clientSite.deploy_status === 'failed' || clientSite.deploy_status === 'error') && '❌ Ошибка'}
                       {clientSite.deploy_status === 'stopped' && '⏸ Остановлен'}
-                      {(!clientSite.deploy_status || clientSite.deploy_status === 'none') && '⏸ Не задеплоен'}
+                      {/* If deploy_id exists but status unknown -> show "unknown" instead of "not deployed" */}
+                      {(!clientSite.deploy_status || clientSite.deploy_status === 'none') && (
+                        clientSite.deploy_id ? '❓ Статус неизвестен' : '⏸ Не задеплоен'
+                      )}
                     </p>
                     {clientSite.deploy_id && (
                       <p className="text-xs text-tg-hint/70 mt-0.5">
-                        Deploy ID: {clientSite.deploy_id.slice(0, 8)}...
+                        Deploy ID: {String(clientSite.deploy_id).slice(0, 8)}...
                       </p>
                     )}
                   </div>
@@ -881,7 +908,9 @@ export default function RequestDetailPage() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm text-tg-hint">{clientSite.domain}</p>
                       {clientSite.ssl_enabled && (
-                        <Shield className="w-3 h-3 text-green-500" title="SSL включен" />
+                        <div title="SSL включен">
+                          <Shield className="w-3 h-3 text-green-500" aria-label="SSL включен" />
+                        </div>
                       )}
                       <span className={`text-xs px-1.5 py-0.5 rounded ${
                         clientSite.domain_status === 'active' ? 'bg-green-100 text-green-700' :
@@ -897,12 +926,9 @@ export default function RequestDetailPage() {
                   )}
                 </div>
                 <button
-                  onClick={() => {
-                    setDomainInput(clientSite.domain || '')
-                    setShowDomainModal(true)
-                  }}
+                  onClick={() => setShowDomainModal(true)}
                   className="p-2 bg-purple-500/10 text-purple-500 rounded-lg hover:bg-purple-500/20 transition-colors"
-                  title="Настроить домен"
+                  title="Подключить домен через REG.RU"
                 >
                   <Edit3 className="w-4 h-4" />
                 </button>
@@ -1097,93 +1123,20 @@ export default function RequestDetailPage() {
           </Section>
         )}
 
-        {/* Domain Assignment Modal */}
-        <AnimatePresence>
-          {showDomainModal && clientSite && (
-            <>
-              <motion.div
-                className="fixed inset-0 bg-black/50 z-40"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowDomainModal(false)}
-              />
-              <motion.div
-                className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom"
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-              >
-                <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
-                <div className="flex items-center gap-2 mb-4">
-                  <Link2 className="w-5 h-5 text-purple-500" />
-                  <p className="text-lg font-semibold">Настройка домена</p>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-tg-hint mb-1 block">Домен</label>
-                    <input
-                      type="text"
-                      value={domainInput}
-                      onChange={(e) => setDomainInput(e.target.value.toLowerCase().trim())}
-                      placeholder="example.com"
-                      className="input"
-                    />
-                    <p className="text-xs text-tg-hint mt-1">
-                      Укажите домен без http:// и www
-                    </p>
-                  </div>
-
-                  <label className="flex items-center gap-3 p-3 bg-tg-secondary-bg rounded-xl cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={enableSsl}
-                      onChange={(e) => setEnableSsl(e.target.checked)}
-                      className="w-5 h-5 rounded border-tg-separator"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium text-tg-text flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-green-500" />
-                        Включить SSL (HTTPS)
-                      </p>
-                      <p className="text-xs text-tg-hint">Бесплатный сертификат Let's Encrypt</p>
-                    </div>
-                  </label>
-
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
-                    <p className="text-sm text-blue-600 dark:text-blue-400">
-                      <strong>Инструкция:</strong>
-                      <br />1. Добавьте A-запись для домена, указав IP: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">{clientSite.server_host || 'см. сервер'}</code>
-                      <br />2. Дождитесь обновления DNS (5-60 минут)
-                      <br />3. Нажмите "Привязать домен"
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowDomainModal(false)}
-                      className="btn btn-secondary flex-1"
-                    >
-                      Отмена
-                    </button>
-                    <button
-                      onClick={() => assignDomainMutation.mutate({ domain: domainInput, ssl: enableSsl })}
-                      disabled={!domainInput || assignDomainMutation.isPending}
-                      className="btn btn-primary flex-1"
-                    >
-                      {assignDomainMutation.isPending ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        'Привязать домен'
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+        {/* Domain Registration Modal (REG.RU Integration) */}
+        {clientSite && (
+          <DomainModal
+            isOpen={showDomainModal}
+            onClose={() => setShowDomainModal(false)}
+            requestId={id!}
+            currentDomain={clientSite.domain}
+            onDomainRegistered={(domain) => {
+              queryClient.invalidateQueries({ queryKey: ['client-site', id] })
+              toast.success(`Домен ${domain} подключён!`)
+              haptic?.notificationOccurred('success')
+            }}
+          />
+        )}
 
         {/* New Revision Modal */}
         <AnimatePresence>
@@ -1714,7 +1667,7 @@ function EditRequestForm({
   const client = payload.client || {}
 
   // Parse existing services
-  const existingServices = (site.services || []).map((s: any) =>
+  const existingServices = (site.services || []).map((s: string | ServiceItem): ServiceItem =>
     typeof s === 'string' ? { name: s, summary: '', priceFrom: '' } : s
   )
 
@@ -1747,14 +1700,14 @@ function EditRequestForm({
   const updateService = (index: number, field: keyof ServiceItem, value: string) => {
     setFormData(prev => ({
       ...prev,
-      services: prev.services.map((s, i) => i === index ? { ...s, [field]: value } : s),
+      services: prev.services.map((s: ServiceItem, i: number) => i === index ? { ...s, [field]: value } : s),
     }))
   }
 
   const removeService = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      services: prev.services.filter((_, i) => i !== index),
+      services: prev.services.filter((_: ServiceItem, i: number) => i !== index),
     }))
   }
 
@@ -1779,7 +1732,7 @@ function EditRequestForm({
           work_hours: formData.work_hours,
           summary: formData.summary,
           color_palette: formData.color_palette,
-          services: formData.services.filter(s => s.name.trim()),
+          services: formData.services.filter((s: ServiceItem) => s.name.trim()),
         }
       }
 
@@ -1817,7 +1770,7 @@ function EditRequestForm({
             activeTab === 'services' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-tg-hint'
           }`}
         >
-          Услуги ({formData.services.filter(s => s.name.trim()).length})
+          Услуги ({formData.services.filter((s: ServiceItem) => s.name.trim()).length})
         </button>
         <button
           onClick={() => setActiveTab('details')}
@@ -1936,7 +1889,7 @@ function EditRequestForm({
       {/* Services Tab */}
       {activeTab === 'services' && (
         <div className="space-y-4">
-          {formData.services.map((service, i) => (
+          {formData.services.map((service: ServiceItem, i: number) => (
             <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-sm font-medium text-tg-text">Услуга {i + 1}</span>
