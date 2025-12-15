@@ -7,7 +7,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci && \
+    chmod -R +x node_modules/.bin/ || true
 
 # Copy source code
 COPY . .
