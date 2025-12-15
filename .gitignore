@@ -1,2 +1,16 @@
 .env
 webappnode_modules/
+# Node
+node_modules
+**/node_modules
+
+# Build
+dist
+**/dist
+
+# Env
+
+.env.*
+
+# Logs
+npm-debug.log*
