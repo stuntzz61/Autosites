@@ -706,53 +706,62 @@ export default function NewRequestPage() {
                       className="w-full p-4 rounded-2xl transition-all text-left relative overflow-hidden"
                       style={{
                         background: formData.tariff === 'premium'
-                          ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(59, 130, 246, 0.2) 50%, rgba(139, 92, 246, 0.25) 100%)'
-                          : 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)',
-                        backgroundSize: formData.tariff === 'premium' ? '200% 200%' : '100% 100%',
-                        animation: formData.tariff === 'premium' ? 'gradientShift 3s ease infinite' : 'none',
+                          ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.4) 0%, rgba(59, 130, 246, 0.35) 50%, rgba(139, 92, 246, 0.4) 100%)'
+                          : 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.15) 50%, rgba(139, 92, 246, 0.2) 100%)',
+                        backgroundSize: '200% 200%',
+                        animation: 'gradientShift 3s ease infinite',
                         boxShadow: formData.tariff === 'premium'
-                          ? '0 0 0 2px rgba(139, 92, 246, 0.4), 0 0 0 4px rgba(59, 130, 246, 0.2), 0 8px 32px -8px rgba(139, 92, 246, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.15)'
-                          : '0 0 0 2px rgba(139, 92, 246, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
+                          ? '0 0 0 2px rgba(139, 92, 246, 0.6), 0 0 0 4px rgba(59, 130, 246, 0.3), 0 8px 32px -4px rgba(139, 92, 246, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                          : '0 0 0 2px rgba(139, 92, 246, 0.3), 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 16px -4px rgba(139, 92, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
                       }}
                     >
-                      {/* Shine effect when selected */}
-                      {formData.tariff === 'premium' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none rounded-2xl" style={{
-                          backgroundSize: '200% 100%',
-                          animation: 'shimmer 2s ease-in-out infinite',
-                          zIndex: 1
-                        }} />
-                      )}
+                      {/* Shine effect - always visible for premium */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none rounded-2xl" style={{
+                        backgroundSize: '200% 100%',
+                        animation: 'shimmer 2.5s ease-in-out infinite',
+                        zIndex: 1,
+                        opacity: formData.tariff === 'premium' ? 1 : 0.6
+                      }} />
                       <div className="flex items-start gap-3 relative z-10">
                         <div className={clsx(
                           'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                           formData.tariff === 'premium'
-                            ? 'border-purple-400 shadow-[0_0_8px_rgba(139,92,246,0.5)]'
-                            : 'border-slate-500'
+                            ? 'border-purple-300 shadow-[0_0_12px_rgba(139,92,246,0.7)]'
+                            : 'border-purple-400/50 shadow-[0_0_6px_rgba(139,92,246,0.4)]'
                         )}>
-                          {formData.tariff === 'premium' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
-                          )}
+                          <div className={clsx(
+                            "w-2.5 h-2.5 rounded-full transition-all",
+                            formData.tariff === 'premium'
+                              ? 'bg-gradient-to-r from-purple-300 to-blue-300 shadow-[0_0_8px_rgba(139,92,246,0.8)]'
+                              : 'bg-gradient-to-r from-purple-400/60 to-blue-400/60 shadow-[0_0_4px_rgba(139,92,246,0.5)]'
+                          )} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={clsx(
                               'font-semibold',
                               formData.tariff === 'premium'
-                                ? 'bg-gradient-to-r from-purple-300 via-blue-300 to-purple-300 bg-clip-text text-transparent'
-                                : 'text-slate-100'
+                                ? 'bg-gradient-to-r from-purple-200 via-blue-200 to-purple-200 bg-clip-text text-transparent'
+                                : 'bg-gradient-to-r from-purple-300/80 via-blue-300/80 to-purple-300/80 bg-clip-text text-transparent'
                             )}>
                               Премиум лендинг
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide text-white ml-auto whitespace-nowrap" style={{
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-white ml-auto whitespace-nowrap relative overflow-hidden" style={{
                               background: formData.tariff === 'premium'
-                                ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)'
-                                : 'linear-gradient(135deg, rgba(251, 191, 36, 0.5) 0%, rgba(245, 158, 11, 0.5) 50%, rgba(217, 119, 6, 0.5) 100%)',
+                                ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 30%, #d97706 60%, #f59e0b 100%)'
+                                : 'linear-gradient(135deg, rgba(251, 191, 36, 0.7) 0%, rgba(245, 158, 11, 0.7) 30%, rgba(217, 119, 6, 0.7) 60%, rgba(245, 158, 11, 0.7) 100%)',
+                              backgroundSize: '200% 100%',
+                              animation: 'gradientShift 2s ease infinite',
                               boxShadow: formData.tariff === 'premium'
-                                ? '0 2px 12px -2px rgba(251, 191, 36, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
-                                : '0 2px 8px -2px rgba(251, 191, 36, 0.3)'
+                                ? '0 2px 16px -2px rgba(251, 191, 36, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 0 rgba(0, 0, 0, 0.2)'
+                                : '0 2px 12px -2px rgba(251, 191, 36, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.25)'
                             }}>
-                              PREMIUM
+                              {/* Metallic shine effect */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" style={{
+                                backgroundSize: '200% 100%',
+                                animation: 'shimmer 2s ease-in-out infinite'
+                              }} />
+                              <span className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">PREMIUM</span>
                             </span>
                           </div>
                           <p className="text-xs text-slate-300 mt-1">Профессиональный дизайн и качество</p>
@@ -1369,8 +1378,9 @@ export default function NewRequestPage() {
         )}
 
         <div className="px-4 pb-4 pt-2">
-          <div className="flex gap-3 items-center">
-            {currentStep > 0 && (
+          {/* Back button - separate row if exists */}
+          {currentStep > 0 && (
+            <div className="mb-3">
               <Tooltip content="Вернуться назад" position="top">
                 <button
                   onClick={goBack}
@@ -1384,55 +1394,57 @@ export default function NewRequestPage() {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               </Tooltip>
-            )}
-            <Tooltip
-              content={
-                createMutation.isPending
-                  ? 'Подождите...'
-                  : !canGoNext()
-                    ? 'Заполните обязательные поля'
-                    : currentStep === steps.length - 1
-                      ? 'Создать заявку'
-                      : 'Перейти к следующему шагу'
-              }
-              position="top"
+            </div>
+          )}
+
+          {/* Main CTA Button - Full Width */}
+          <Tooltip
+            content={
+              createMutation.isPending
+                ? 'Подождите...'
+                : !canGoNext()
+                  ? 'Заполните обязательные поля'
+                  : currentStep === steps.length - 1
+                    ? 'Создать заявку'
+                    : 'Перейти к следующему шагу'
+            }
+            position="top"
+          >
+            <button
+              onClick={goNext}
+              disabled={createMutation.isPending || !canGoNext()}
+              className={clsx(
+                "w-full flex items-center justify-center gap-2.5 h-14 rounded-xl font-bold text-base transition-all active:scale-[0.98] shadow-lg",
+                (canGoNext() && !createMutation.isPending)
+                  ? "text-white border-0"
+                  : "text-slate-500 cursor-not-allowed border border-slate-700/50"
+              )}
+              style={canGoNext() && !createMutation.isPending ? {
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+                boxShadow: '0 4px 20px -4px rgba(59, 130, 246, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+              } : {
+                background: 'linear-gradient(145deg, #1a1d26 0%, #151820 100%)',
+                boxShadow: 'none'
+              }}
             >
-              <button
-                onClick={goNext}
-                disabled={createMutation.isPending || !canGoNext()}
-                className={clsx(
-                  "flex-1 flex items-center justify-center gap-2.5 h-14 rounded-xl font-bold text-base transition-all active:scale-[0.98] min-w-0 shadow-lg",
-                  (canGoNext() && !createMutation.isPending)
-                    ? "text-white border-0"
-                    : "text-slate-500 cursor-not-allowed border border-slate-700/50"
-                )}
-                style={canGoNext() && !createMutation.isPending ? {
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-                  boxShadow: '0 4px 20px -4px rgba(59, 130, 246, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
-                } : {
-                  background: 'linear-gradient(145deg, #1a1d26 0%, #151820 100%)',
-                  boxShadow: 'none'
-                }}
-              >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
-                  </>
-                ) : currentStep === steps.length - 1 ? (
-                  <>
-                    <Check className="w-5 h-5 flex-shrink-0" />
-                    <span className="truncate">Создать заявку</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="truncate">Далее</span>
-                    <ArrowRight className="w-5 h-5 flex-shrink-0" />
-                  </>
-                )}
-              </button>
-            </Tooltip>
-          </div>
+              {createMutation.isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
+                </>
+              ) : currentStep === steps.length - 1 ? (
+                <>
+                  <Check className="w-5 h-5 flex-shrink-0" />
+                  <span className="truncate">Создать заявку</span>
+                </>
+              ) : (
+                <>
+                  <span className="truncate">Далее</span>
+                  <ArrowRight className="w-5 h-5 flex-shrink-0" />
+                </>
+              )}
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>
