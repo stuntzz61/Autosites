@@ -45,7 +45,7 @@ async def list_requests(
     offset = (page - 1) * limit
 
     # Regular users can only see their own requests
-    user_id = str(user['id']) if user['role'] != 'admin' else None
+    user_id = str(user['id']) if user['role'] not in ('supervisor', 'director', 'owner') else None
 
     print(f"[DEBUG] list_requests: user_id={user_id}, role={user.get('role')}, status={status}")
 
@@ -77,7 +77,7 @@ async def get_request(request_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check ownership (admin can view all)
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     return {**request, "id": str(request["id"])}
@@ -112,7 +112,7 @@ async def notify_bot_request_created(tg_id: int, request_id: str, company_name: 
 async def create_request(data: CreateRequest, user: dict = Depends(get_current_user)):
     """Create a new request."""
     # Check if user is approved
-    if user.get('approval_status') != 'approved' and user.get('role') != 'admin':
+    if user.get('approval_status') != 'approved' and user.get('role') not in ('supervisor', 'director', 'owner'):
         raise HTTPException(status_code=403, detail="Account not approved")
 
     request = await db.create_request(
@@ -147,7 +147,7 @@ async def update_request(
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     update_data = data.model_dump(exclude_none=True)
@@ -169,7 +169,7 @@ async def update_status(
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     await db.update_request_status(request_id, data.status)
@@ -186,7 +186,7 @@ async def archive_request(request_id: str, user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     await db.archive_request(request_id)
@@ -203,7 +203,7 @@ async def delete_request(request_id: str, user: dict = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Managers can only delete drafts or error requests
@@ -226,7 +226,7 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Update status
@@ -327,7 +327,7 @@ async def upload_photos(
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Handle both single file and multiple files
@@ -399,7 +399,7 @@ async def delete_photo(
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Delete from S3

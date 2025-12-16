@@ -7,7 +7,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from routes.auth import get_current_user, get_admin_user
+from routes.auth import get_current_user, get_supervisor_user
 import db
 
 log = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ async def get_request_services(request_id: str, user: dict = Depends(get_current
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     services = await db.get_request_additional_services(request_id)
@@ -101,7 +101,7 @@ async def add_service_to_request(
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     result = await db.add_request_additional_service(
@@ -128,7 +128,7 @@ async def update_request_service(
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     result = await db.update_request_additional_service(
@@ -157,7 +157,7 @@ async def remove_service_from_request(
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     await db.remove_request_additional_service(request_id, service_id)
@@ -269,7 +269,7 @@ async def get_feedback_detail(feedback_id: str, user: dict = Depends(get_current
         raise HTTPException(status_code=404, detail="Feedback not found")
 
     # Check ownership (admin can view all)
-    if user['role'] != 'admin' and str(feedback['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(feedback['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     return {**feedback, "id": str(feedback["id"]), "manager_id": str(feedback["manager_id"])}
@@ -282,7 +282,7 @@ async def admin_list_feedback(
     status: Optional[str] = None,
     page: int = 1,
     limit: int = 50,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
     """List all feedback messages (admin only)."""
     offset = (page - 1) * limit
@@ -310,7 +310,7 @@ async def admin_list_feedback(
 async def admin_respond_feedback(
     feedback_id: str,
     data: RespondFeedbackRequest,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
     """Respond to feedback (admin only)."""
     # Get feedback to find manager tg_id
@@ -343,7 +343,7 @@ async def admin_respond_feedback(
 async def admin_update_feedback_status(
     feedback_id: str,
     status: str,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
     """Update feedback status (admin only)."""
     await db.update_feedback_status(feedback_id, status)
@@ -351,7 +351,7 @@ async def admin_update_feedback_status(
 
 
 @router.get("/admin/feedback/count")
-async def admin_feedback_count(user: dict = Depends(get_admin_user)):
+async def admin_feedback_count(user: dict = Depends(get_supervisor_user)):
     """Get count of new feedback messages."""
     count = await db.count_new_feedback()
     return {"new_count": count}
@@ -383,7 +383,7 @@ async def get_category_tree(user: dict = Depends(get_current_user)):
 
 
 @router.post("/categories")
-async def create_category(data: CreateCategoryRequest, user: dict = Depends(get_admin_user)):
+async def create_category(data: CreateCategoryRequest, user: dict = Depends(get_supervisor_user)):
     """Create a new service category (admin only)."""
     category = await db.create_service_category(
         name=data.name,
@@ -399,7 +399,7 @@ async def create_category(data: CreateCategoryRequest, user: dict = Depends(get_
 async def update_category(
     category_id: str,
     data: UpdateCategoryRequest,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
     """Update a service category (admin only)."""
     update_data = data.model_dump(exclude_none=True)
@@ -414,7 +414,7 @@ async def update_category(
 
 
 @router.delete("/categories/{category_id}")
-async def delete_category(category_id: str, user: dict = Depends(get_admin_user)):
+async def delete_category(category_id: str, user: dict = Depends(get_supervisor_user)):
     """Delete a service category (admin only). Also deletes subcategories."""
     await db.delete_service_category(category_id)
     return {"success": True}

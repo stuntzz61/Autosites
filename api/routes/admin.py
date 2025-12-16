@@ -329,7 +329,7 @@ async def list_all_requests(
 
 
 @router.get("/requests/search")
-async def search_requests(q: str, user: dict = Depends(get_admin_user)):
+async def search_requests(q: str, user: dict = Depends(get_supervisor_user)):
     """Search requests by company or client name."""
     # Simple search - can be enhanced with full-text search
     all_requests = await db.list_requests(limit=1000)
@@ -346,14 +346,14 @@ async def search_requests(q: str, user: dict = Depends(get_admin_user)):
 
 
 @router.post("/requests/mass-archive")
-async def mass_archive(data: MassActionRequest, user: dict = Depends(get_admin_user)):
+async def mass_archive(data: MassActionRequest, user: dict = Depends(get_supervisor_user)):
     """Archive multiple requests."""
     await db.mass_archive_requests(data.ids)
     return {"success": True, "count": len(data.ids)}
 
 
 @router.post("/requests/mass-delete")
-async def mass_delete(data: MassActionRequest, user: dict = Depends(get_admin_user)):
+async def mass_delete(data: MassActionRequest, user: dict = Depends(get_supervisor_user)):
     """Delete multiple requests with anti-nuke protection."""
     admin_id = str(user['id'])
     count = len(data.ids)
@@ -694,16 +694,16 @@ class AssignRoleRequest(BaseModel):
 @router.get("/supervisors")
 async def list_supervisors(user: dict = Depends(get_director_user)):
     """List all supervisors. Only owner/director can access."""
-    supervisors = await db.list_admins()  # This will need to be updated to filter by role
-    # Filter to only supervisors
+    # Get all supervisors
+    supervisors = await db.list_admins()
     supervisors = [s for s in supervisors if s.get('role') == 'supervisor']
     return supervisors
 
 @router.get("/directors")
 async def list_directors(user: dict = Depends(get_owner_user)):
     """List all directors. Only owner can access."""
-    directors = await db.list_admins()  # This will need to be updated to filter by role
-    # Filter to only directors
+    # Get all directors
+    directors = await db.list_admins()
     directors = [d for d in directors if d.get('role') == 'director']
     return directors
 
@@ -871,7 +871,7 @@ async def send_telegram_message(tg_id: int, text: str, photo_data: Optional[str]
 
 
 @router.post("/broadcast")
-async def send_broadcast(data: BroadcastRequest, user: dict = Depends(get_admin_user)):
+async def send_broadcast(data: BroadcastRequest, user: dict = Depends(get_supervisor_user)):
     """Send broadcast message to managers."""
     if not data.message:
         raise HTTPException(status_code=400, detail="Message is required")

@@ -167,7 +167,7 @@ async def create_payment(
         raise HTTPException(status_code=404, detail="Site not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Get plan
@@ -253,7 +253,7 @@ async def get_payment(payment_id: str, user: dict = Depends(get_current_user)):
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     return payment
@@ -270,7 +270,7 @@ async def get_payment_qr(payment_id: str, user: dict = Depends(get_current_user)
     # Check ownership
     site = await db.get_client_site(str(payment['client_site_id']))
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Check if expired
@@ -305,7 +305,7 @@ async def verify_payment(payment_id: str, user: dict = Depends(get_current_user)
     # Check ownership
     site = await db.get_client_site(str(payment['client_site_id']))
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     if payment['status'] == 'completed':
@@ -352,12 +352,12 @@ async def list_payments(
         if not site:
             raise HTTPException(status_code=404, detail="Site not found")
 
-        if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+        if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
             raise HTTPException(status_code=403, detail="Access denied")
 
         payments = await db.list_hosting_transactions(client_site_id=site_id, status=status)
     else:
-        if user['role'] != 'admin':
+        if user['role'] not in ('supervisor', 'director', 'owner'):
             raise HTTPException(status_code=403, detail="Admin access required")
 
         payments = await db.list_hosting_transactions(status=status)

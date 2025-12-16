@@ -114,6 +114,11 @@ async def get_owner_user(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
+# Helper function to check if user has supervisor role or higher
+def is_supervisor_role(role: str) -> bool:
+    """Check if role is supervisor, director, or owner."""
+    return role in ('supervisor', 'director', 'owner')
+
 # Legacy alias for backward compatibility
 async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
     """Legacy dependency - maps to get_supervisor_user for backward compatibility."""

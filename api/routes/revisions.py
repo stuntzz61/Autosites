@@ -466,7 +466,7 @@ async def list_revisions(
     limit: int = 20,
     user: dict = Depends(get_current_user)
 ):
-    """List revisions for current user or all (admin)."""
+    """List revisions for current user or all (supervisor/director/owner)."""
     offset = (page - 1) * limit
 
     if site_id:
@@ -475,13 +475,13 @@ async def list_revisions(
         if not site:
             raise HTTPException(status_code=404, detail="Site not found")
 
-        if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+        if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
             raise HTTPException(status_code=403, detail="Access denied")
 
         revisions = await db.get_site_revisions(site_id, status, limit, offset)
     else:
         # List active revisions
-        manager_id = None if user['role'] == 'admin' else str(user['id'])
+        manager_id = None if user['role'] in ('supervisor', 'director', 'owner') else str(user['id'])
         revisions = await db.list_active_revisions(manager_id, limit, offset)
 
     return {
@@ -493,9 +493,9 @@ async def list_revisions(
 
 @router.get("/stats")
 async def get_revision_stats(user: dict = Depends(get_current_user)):
-    """Get revision statistics (admin only)."""
-    if user['role'] != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Get revision statistics (supervisor/director/owner only)."""
+    if user['role'] not in ('supervisor', 'director', 'owner'):
+        raise HTTPException(status_code=403, detail="Supervisor access required")
 
     stats = await db.get_revision_stats()
     return stats
@@ -510,7 +510,7 @@ async def get_revision(revision_id: str, user: dict = Depends(get_current_user))
 
     # Check access
     site = await db.get_client_site(str(revision['site_id']))
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Get changes
@@ -540,7 +540,7 @@ async def create_revision(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Check if there's already an active revision
@@ -667,7 +667,7 @@ async def add_change(
 
     # Check access
     site = await db.get_client_site(str(revision['site_id']))
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     change = await db.create_revision_change(
@@ -701,7 +701,7 @@ async def upload_screenshot(
 
     # Check access
     site = await db.get_client_site(str(revision['site_id']))
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Get existing changes count for index
@@ -761,7 +761,7 @@ async def submit_revision(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found for this revision")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Get changes
@@ -860,7 +860,7 @@ async def cancel_revision(
 
     # Check access
     site = await db.get_client_site(str(revision['site_id']))
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     await db.update_revision_status(
@@ -883,7 +883,7 @@ async def delete_revision(
     revision_id: str,
     user: dict = Depends(get_current_user)
 ):
-    """Delete a revision (admin or owner, only if pending/cancelled)."""
+    """Delete a revision (supervisor/director/owner or manager, only if pending/cancelled)."""
     revision = await db.get_revision(revision_id)
     if not revision:
         raise HTTPException(status_code=404, detail="Revision not found")
@@ -893,7 +893,7 @@ async def delete_revision(
 
     # Check access
     site = await db.get_client_site(str(revision['site_id']))
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     await db.delete_revision(revision_id)
@@ -1047,7 +1047,7 @@ async def get_site_revisions_list(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     offset = (page - 1) * limit
@@ -1070,7 +1070,7 @@ async def get_site_revision_stats_endpoint(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     stats = await db.get_site_revision_stats(site_id)

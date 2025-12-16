@@ -149,7 +149,7 @@ async def check_domain(
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(req['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(req['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     client_ip = get_client_ip(request)
@@ -237,7 +237,7 @@ async def register_domain(
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(req['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(req['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     client_ip = get_client_ip(request)
@@ -344,7 +344,7 @@ async def get_domain_status(
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(req['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(req['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Get site for this request

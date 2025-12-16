@@ -323,7 +323,7 @@ async def list_sites(
     offset = (page - 1) * limit
 
     # Regular users see only their sites
-    manager_id = str(user['id']) if user['role'] != 'admin' else None
+    manager_id = str(user['id']) if user['role'] not in ('supervisor', 'director', 'owner') else None
 
     sites = await db.list_client_sites(
         manager_id=manager_id,
@@ -343,7 +343,7 @@ async def list_sites(
 @router.get("/stats")
 async def get_sites_stats(user: dict = Depends(get_current_user)):
     """Get sites statistics (admin only)."""
-    if user['role'] != 'admin':
+    if user['role'] not in ('supervisor', 'director', 'owner'):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     stats = await db.get_sites_stats()
@@ -356,7 +356,7 @@ async def get_expiring_sites(
     user: dict = Depends(get_current_user)
 ):
     """Get sites with expiring hosting."""
-    if user['role'] != 'admin':
+    if user['role'] not in ('supervisor', 'director', 'owner'):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     sites = await db.get_expiring_sites(days)
@@ -379,7 +379,7 @@ async def get_site_by_request(request_id: str, user: dict = Depends(get_current_
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     site = await db.get_client_site_by_request(request_id)
@@ -399,7 +399,7 @@ async def get_site(site_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Site not found")
 
     # Check ownership
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     return serialize_site(site)
@@ -417,7 +417,7 @@ async def get_site_history(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     history = await db.get_deploy_history(site_id, limit)
@@ -433,7 +433,7 @@ async def create_site(data: CreateSiteRequest, user: dict = Depends(get_current_
     if not request:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Check if site already exists for this request
@@ -468,7 +468,7 @@ async def update_site(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     update_data = data.model_dump(exclude_none=True)
@@ -491,7 +491,7 @@ async def deploy_site(
         log.warning(f"Site {site_id} not found for deploy")
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         log.warning(f"Access denied for user {user['id']} to deploy site {site_id}")
         raise HTTPException(status_code=403, detail="Access denied")
 
@@ -539,7 +539,7 @@ async def assign_domain(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Check hosting plan allows custom domains
@@ -581,7 +581,7 @@ async def extend_hosting(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Verify plan exists
@@ -606,7 +606,7 @@ async def stop_site(site_id: str, user: dict = Depends(get_current_user)):
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     if site.get('deploy_status') != 'active':
@@ -639,7 +639,7 @@ async def delete_site(site_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Site not found")
 
     # Only admin can delete
-    if user['role'] != 'admin':
+    if user['role'] not in ('supervisor', 'director', 'owner'):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     # Stop and cleanup in deploy-node if deployed
@@ -1012,7 +1012,7 @@ async def admin_list_all_sites(
     user: dict = Depends(get_current_user)
 ):
     """List all sites (admin only)."""
-    if user['role'] != 'admin':
+    if user['role'] not in ('supervisor', 'director', 'owner'):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     offset = (page - 1) * limit
@@ -1038,7 +1038,7 @@ async def admin_force_deploy(
     user: dict = Depends(get_current_user)
 ):
     """Force re-deploy a site (admin only)."""
-    if user['role'] != 'admin':
+    if user['role'] not in ('supervisor', 'director', 'owner'):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     site = await db.get_client_site(site_id)
@@ -1092,7 +1092,7 @@ async def create_site_for_request(
         raise HTTPException(status_code=404, detail="Request not found")
 
     # Check access
-    if user['role'] != 'admin' and str(request['user_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(request['user_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Check if site already exists
@@ -1143,7 +1143,7 @@ async def admin_import_from_deploy_node(
     Import existing deployments from deploy-node and create client_sites.
     Admin only.
     """
-    if user['role'] != 'admin':
+    if user['role'] not in ('supervisor', 'director', 'owner'):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     if not settings.DEPLOY_NODE_URL:
@@ -1258,7 +1258,7 @@ async def sync_site_status(
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
 
-    if user['role'] != 'admin' and str(site['manager_id']) != str(user['id']):
+    if user['role'] not in ('supervisor', 'director', 'owner') and str(site['manager_id']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Access denied")
 
     if not site.get('deploy_id'):
@@ -1382,7 +1382,7 @@ async def admin_sync_all_statuses(
     background_tasks: BackgroundTasks = None
 ):
     """Sync all deployment statuses from deploy-node (admin only)."""
-    if user['role'] != 'admin':
+    if user['role'] not in ('supervisor', 'director', 'owner'):
         raise HTTPException(status_code=403, detail="Admin access required")
 
     if not settings.DEPLOY_NODE_URL:
