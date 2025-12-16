@@ -558,7 +558,7 @@ export default function NewRequestPage() {
   }, [currentStep, selectedCategory, selectedServiceIndexForPhoto])
 
   return (
-    <div className="min-h-screen flex flex-col bg-tg-bg">
+    <div className="min-h-screen flex flex-col" style={{ background: '#0F1115' }}>
       {/* Draft Restoration Prompt */}
       <AnimatePresence>
         {showDraftPrompt && (
@@ -693,7 +693,6 @@ export default function NewRequestPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-slate-100">Стандарт</span>
-                            <span className="text-sm font-bold text-slate-300 ml-auto">Бесплатно</span>
                           </div>
                           <p className="text-xs text-slate-400 mt-1">Базовая генерация лендинга</p>
                         </div>

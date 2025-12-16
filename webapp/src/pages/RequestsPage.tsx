@@ -149,17 +149,17 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-tg-bg">
+    <div className="min-h-screen" style={{ background: '#0F1115' }}>
       {/* Premium Header */}
-      <div className="relative overflow-hidden pt-8 pb-20 px-5" style={{ background: 'linear-gradient(145deg, #1a1f2e 0%, #0f1419 100%)' }}>
+      <div className="relative overflow-hidden pt-8 pb-20 px-5" style={{ background: '#0F1115' }}>
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between mb-6 relative z-10"
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-100">Заявки</h1>
-            <p className="text-slate-400 text-sm mt-0.5">
+            <h1 className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>Заявки</h1>
+            <p className="text-sm mt-0.5" style={{ color: '#9CA3AF' }}>
               {requests.length} {requests.length === 1 ? 'заявка' : requests.length < 5 ? 'заявки' : 'заявок'}
             </p>
           </div>
@@ -169,10 +169,11 @@ export default function RequestsPage() {
                 haptic?.impactOccurred('medium')
                 navigate('/requests/new')
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-100 border"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm border"
               style={{
-                background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
-                borderColor: 'rgba(148, 163, 184, 0.25)'
+                background: '#3B82F6',
+                borderColor: '#3B82F6',
+                color: '#FFFFFF'
               }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -203,7 +204,7 @@ export default function RequestsPage() {
             onBlur={() => setIsSearchFocused(false)}
             className="w-full pl-12 pr-12 py-3.5 rounded-2xl text-slate-100 placeholder:text-slate-500 outline-none border transition-all shadow-lg"
             style={{
-              background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+              background: '#1E222B',
               borderColor: isSearchFocused ? 'rgba(148, 163, 184, 0.3)' : 'rgba(100, 116, 139, 0.15)'
             }}
           />
@@ -246,8 +247,8 @@ export default function RequestsPage() {
               )}
               style={{
                 background: statusFilter === filter.value
-                  ? 'linear-gradient(145deg, #334155 0%, #1e293b 100%)'
-                  : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                  ? '#1E222B'
+                  : '#1E222B',
                 borderColor: statusFilter === filter.value
                   ? 'rgba(148, 163, 184, 0.3)'
                   : 'rgba(100, 116, 139, 0.2)'
@@ -284,7 +285,7 @@ export default function RequestsPage() {
             <motion.div
               className="w-24 h-24 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-xl border"
               style={{
-                background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
+                background: '#1E222B',
                 borderColor: 'rgba(148, 163, 184, 0.2)'
               }}
               animate={{ y: [0, -8, 0] }}
@@ -303,7 +304,7 @@ export default function RequestsPage() {
                 onClick={() => navigate('/requests/new')}
                 className="inline-flex items-center gap-2 px-6 py-3.5 text-slate-100 rounded-2xl font-semibold shadow-xl border"
                 style={{
-                  background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
+                  background: '#1E222B',
                   borderColor: 'rgba(148, 163, 184, 0.25)'
                 }}
                 whileHover={{ scale: 1.02, y: -2 }}
@@ -357,7 +358,7 @@ export default function RequestsPage() {
                         {/* Avatar */}
                         <div className="relative flex-shrink-0">
                           <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-slate-100 font-bold text-xl shadow-lg border" style={{
-                            background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
+                            background: '#1E222B',
                             borderColor: 'rgba(148, 163, 184, 0.2)'
                           }}>
                             {request.company_name?.[0]?.toUpperCase() || '?'}

@@ -500,7 +500,7 @@ export default function RequestDetailPage() {
   }
 
   return (
-    <div className="min-h-screen pb-48 bg-tg-bg">
+    <div className="min-h-screen pb-48" style={{ background: '#0F1115' }}>
       {/* Header */}
       <div className="m-4 rounded-2xl p-6 relative overflow-hidden border" style={{
         background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
@@ -574,7 +574,8 @@ export default function RequestDetailPage() {
               onClick={() => setShowStatusMenu(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[70vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl p-4 z-50 safe-bottom max-h-[70vh] overflow-y-auto"
+              style={{ background: '#1E222B' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -618,7 +619,8 @@ export default function RequestDetailPage() {
               onClick={() => !uploadingPhoto && setShowPhotoUpload(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-[10001] safe-bottom max-h-[80vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl p-4 z-[10001] safe-bottom max-h-[80vh] overflow-y-auto"
+              style={{ background: '#1E222B' }}
               style={{ paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0) + 80px)` }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -1291,7 +1293,8 @@ export default function RequestDetailPage() {
                 onClick={() => setShowNewRevisionModal(false)}
               />
               <motion.div
-                className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[80vh] overflow-y-auto"
+                className="fixed bottom-0 left-0 right-0 rounded-t-3xl p-4 z-50 safe-bottom max-h-[80vh] overflow-y-auto"
+                style={{ background: '#1E222B' }}
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
@@ -1732,7 +1735,8 @@ export default function RequestDetailPage() {
               onClick={() => setShowEditModal(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
+              style={{ background: '#1E222B' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -1770,7 +1774,8 @@ export default function RequestDetailPage() {
               onClick={() => setShowServicesModal(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[70vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl p-4 z-50 safe-bottom max-h-[70vh] overflow-y-auto"
+              style={{ background: '#1E222B' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -2284,30 +2289,33 @@ function EditRequestForm({
                 className={clsx(
                   'w-full p-4 rounded-2xl border transition-all text-left',
                   formData.tariff === 'standard'
-                    ? 'border-slate-500'
-                    : 'border-slate-700/50'
+                    ? 'border-[#3B82F6]'
+                    : 'border-[rgba(156,163,175,0.1)]'
                 )}
                 style={{
-                  background: formData.tariff === 'standard'
-                    ? 'linear-gradient(145deg, #334155 0%, #1e293b 100%)'
-                    : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                  background: '#1E222B',
+                  boxShadow: formData.tariff === 'standard'
+                    ? '0 0 0 1px rgba(59, 130, 246, 0.2), 0 4px 12px -2px rgba(59, 130, 246, 0.1)'
+                    : 'none'
                 }}
               >
                 <div className="flex items-start gap-3">
                   <div className={clsx(
-                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5',
-                    formData.tariff === 'standard' ? 'border-slate-300' : 'border-slate-600'
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
+                    formData.tariff === 'standard' ? 'border-[#3B82F6]' : 'border-[rgba(156,163,175,0.3)]'
                   )}>
                     {formData.tariff === 'standard' && (
-                      <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-100">Стандарт</span>
-                      <span className="text-sm font-bold text-slate-300 ml-auto">Бесплатно</span>
+                      <span className={clsx(
+                        'font-semibold',
+                        formData.tariff === 'standard' ? 'text-white' : 'text-[#9CA3AF]'
+                      )}>Стандарт</span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">Базовая генерация лендинга</p>
+                    <p className="text-xs text-[#9CA3AF] mt-1">Базовая генерация лендинга</p>
                   </div>
                 </div>
               </button>
@@ -2319,33 +2327,40 @@ function EditRequestForm({
                 className={clsx(
                   'w-full p-4 rounded-2xl border transition-all text-left relative overflow-hidden',
                   formData.tariff === 'premium'
-                    ? 'border-purple-500/40'
-                    : 'border-slate-700/50'
+                    ? 'border-[#3B82F6]'
+                    : 'border-[rgba(59,130,246,0.3)]'
                 )}
                 style={formData.tariff === 'premium' ? {
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.15) 50%, rgba(139, 92, 246, 0.2) 100%)',
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 50%, rgba(59, 130, 246, 0.15) 100%)',
                   backgroundSize: '200% 200%',
                   animation: 'gradientShift 3s ease infinite',
-                  boxShadow: '0 8px 32px -8px rgba(139, 92, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+                  boxShadow: '0 8px 32px -8px rgba(59, 130, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
                 } : {
-                  background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                  boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.15)'
                 }}
               >
                 {formData.tariff === 'premium' && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" style={{
                     backgroundSize: '200% 100%',
                     animation: 'shimmer 2s ease-in-out infinite'
                   }} />
+                )}
+                {formData.tariff !== 'premium' && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#3B82F6]/5 via-transparent to-[#3B82F6]/5 pointer-events-none" />
                 )}
                 <div className="flex items-start gap-3 relative z-10">
                   <div className={clsx(
                     'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                     formData.tariff === 'premium'
-                      ? 'border-purple-400'
-                      : 'border-slate-600'
+                      ? 'border-[#3B82F6]'
+                      : 'border-[rgba(59,130,246,0.4)]'
                   )}>
                     {formData.tariff === 'premium' && (
-                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-blue-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
+                    )}
+                    {formData.tariff !== 'premium' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-[rgba(59,130,246,0.2)]" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -2353,19 +2368,24 @@ function EditRequestForm({
                       <span className={clsx(
                         'font-semibold',
                         formData.tariff === 'premium'
-                          ? 'bg-gradient-to-r from-purple-300 via-blue-300 to-purple-300 bg-clip-text text-transparent'
-                          : 'text-slate-100'
+                          ? 'text-white'
+                          : 'text-[#60A5FA]'
                       )}>
                         Премиум лендинг
                       </span>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white ml-auto whitespace-nowrap" style={{
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
-                        boxShadow: '0 2px 8px -2px rgba(139, 92, 246, 0.4)'
+                        background: formData.tariff === 'premium'
+                          ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
+                          : 'linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(37, 99, 235, 0.4) 100%)',
+                        boxShadow: '0 2px 8px -2px rgba(59, 130, 246, 0.3)'
                       }}>
                         PRO
                       </span>
                     </div>
-                    <p className="text-xs text-slate-300 mt-1">Профессиональный дизайн и качество</p>
+                    <p className={clsx(
+                      'text-xs mt-1',
+                      formData.tariff === 'premium' ? 'text-white' : 'text-[#9CA3AF]'
+                    )}>Профессиональный дизайн и качество</p>
                   </div>
                 </div>
               </button>
@@ -2383,7 +2403,10 @@ function EditRequestForm({
       </div>
 
       {/* Actions - fixed at bottom of modal */}
-      <div className="sticky bottom-0 bg-tg-bg pt-4 pb-2 -mx-4 px-4 border-t border-tg-separator mt-4 shadow-lg">
+      <div className="sticky bottom-0 pt-4 pb-2 -mx-4 px-4 border-t mt-4 shadow-lg" style={{
+        background: '#1E222B',
+        borderColor: 'rgba(156, 163, 175, 0.1)'
+      }}>
         <div className="flex gap-3">
           <button onClick={onCancel} className="btn btn-secondary flex-1">
             Отмена

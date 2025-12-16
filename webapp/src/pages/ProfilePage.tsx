@@ -67,9 +67,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen pb-8 bg-tg-bg">
+    <div className="min-h-screen pb-8" style={{ background: '#0F1115' }}>
       {/* Header */}
-      <div className="px-5 pt-10 pb-24" style={{ background: 'linear-gradient(145deg, #1a1f2e 0%, #0f1419 100%)' }}>
+      <div className="px-5 pt-10 pb-24" style={{ background: '#0F1115' }}>
         <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
