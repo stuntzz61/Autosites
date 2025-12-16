@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
 import {
   User, CheckCircle, XCircle, Ban, Unlock, Trash2,
-  ChevronRight, Shield, UserCog, X, FileText, BarChart3, Users2, ArrowRight
+  ChevronRight, Shield, UserCog, X, FileText, BarChart3, Users2, ArrowRight, Download, Info, Crown, Sparkles
 } from 'lucide-react'
+import { getRoleLabel } from '@/stores/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 
@@ -14,6 +15,9 @@ interface Manager {
   username?: string
   first_name: string
   last_name?: string
+  full_name?: string
+  phone?: string
+  email?: string
   contact?: string
   role: string
   approval_status: string
@@ -24,6 +28,22 @@ interface Manager {
   created_at: string
   group_id?: string
   group_name?: string
+  stats?: {
+    total_requests: number
+    completed_requests: number
+    pending_requests: number
+    this_week: number
+    today: number
+  }
+  requests?: Array<{
+    id: string
+    company_name: string
+    status: string
+    created_at: string
+    updated_at: string
+    project_id?: string
+    project_name?: string
+  }>
 }
 
 export default function AdminManagers() {
@@ -38,6 +58,12 @@ export default function AdminManagers() {
   const { data: managers, isLoading } = useQuery({
     queryKey: ['admin', 'managers'],
     queryFn: () => adminApi.managers.list().then(res => res.data),
+  })
+
+  const { data: detailedManagerData, refetch: refetchDetailed } = useQuery({
+    queryKey: ['admin', 'managers', detailedManager?.id],
+    queryFn: () => detailedManager ? adminApi.managers.get(detailedManager.id).then(res => res.data) : null,
+    enabled: !!detailedManager && showDetailedInfo,
   })
 
   const { data: pending } = useQuery({
@@ -96,8 +122,8 @@ export default function AdminManagers() {
     },
   })
 
-  const makeAdminMutation = useMutation({
-    mutationFn: (id: string) => adminApi.managers.makeAdmin(id),
+  const makeSupervisorMutation = useMutation({
+    mutationFn: (id: string) => adminApi.managers.makeSupervisor(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
       toast.success('Роль изменена на админа')
@@ -232,9 +258,15 @@ export default function AdminManagers() {
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                       manager.is_blocked ? 'bg-red-500/20' :
-                      manager.role === 'admin' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
+                      manager.role === 'owner' ? 'bg-yellow-500/20' :
+                      manager.role === 'director' ? 'bg-yellow-400/20' :
+                      manager.role === 'supervisor' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
                     }`}>
-                      {manager.role === 'admin' ? (
+                      {manager.role === 'owner' ? (
+                        <Crown className={`w-5 h-5 text-yellow-500`} />
+                      ) : manager.role === 'director' ? (
+                        <Crown className={`w-5 h-5 text-yellow-400`} />
+                      ) : manager.role === 'supervisor' ? (
                         <Shield className={`w-5 h-5 text-purple-500`} />
                       ) : (
                         <User className={`w-5 h-5 ${
@@ -248,8 +280,14 @@ export default function AdminManagers() {
                         {manager.is_blocked && (
                           <span className="ml-2 text-xs text-red-500">(заблокирован)</span>
                         )}
-                        {manager.role === 'admin' && (
-                          <span className="ml-2 text-xs text-purple-500">(админ)</span>
+                        {manager.role === 'owner' && (
+                          <span className="ml-2 text-xs text-yellow-500">(владелец)</span>
+                        )}
+                        {manager.role === 'director' && (
+                          <span className="ml-2 text-xs text-yellow-400">(директор)</span>
+                        )}
+                        {manager.role === 'supervisor' && (
+                          <span className="ml-2 text-xs text-purple-500">(супервайзер)</span>
                         )}
                       </p>
                       {manager.username && (
@@ -301,9 +339,15 @@ export default function AdminManagers() {
                 <div className="flex items-center gap-4 mb-6">
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
                     selectedManager.is_blocked ? 'bg-red-500/20' :
-                    selectedManager.role === 'admin' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
+                    selectedManager.role === 'owner' ? 'bg-yellow-500/20' :
+                    selectedManager.role === 'director' ? 'bg-yellow-400/20' :
+                    selectedManager.role === 'supervisor' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
                   }`}>
-                    {selectedManager.role === 'admin' ? (
+                    {selectedManager.role === 'owner' ? (
+                      <Crown className="w-8 h-8 text-yellow-500" />
+                    ) : selectedManager.role === 'director' ? (
+                      <Crown className="w-8 h-8 text-yellow-400" />
+                    ) : selectedManager.role === 'supervisor' ? (
                       <Shield className="w-8 h-8 text-purple-500" />
                     ) : (
                       <User className={`w-8 h-8 ${
@@ -313,7 +357,7 @@ export default function AdminManagers() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-xl font-bold text-tg-text truncate">
-                      {selectedManager.first_name} {selectedManager.last_name}
+                      {selectedManager.full_name || `${selectedManager.first_name} ${selectedManager.last_name}`.trim() || 'Менеджер'}
                     </h2>
                     {selectedManager.username && (
                       <a
@@ -358,13 +402,31 @@ export default function AdminManagers() {
 
                 {/* Info */}
                 <div className="bg-tg-secondary-bg rounded-xl p-4 mb-4 space-y-2 text-sm">
+                  {selectedManager.full_name && (
+                    <div className="flex justify-between">
+                      <span className="text-tg-hint">ФИО</span>
+                      <span className="text-tg-text font-medium">{selectedManager.full_name}</span>
+                    </div>
+                  )}
+                  {selectedManager.phone && (
+                    <div className="flex justify-between">
+                      <span className="text-tg-hint">Телефон</span>
+                      <span className="text-tg-text">{selectedManager.phone}</span>
+                    </div>
+                  )}
+                  {selectedManager.email && (
+                    <div className="flex justify-between">
+                      <span className="text-tg-hint">Email</span>
+                      <span className="text-tg-text">{selectedManager.email}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-tg-hint">Telegram ID</span>
                     <span className="text-tg-text font-mono">{selectedManager.tg_id}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-tg-hint">Роль</span>
-                    <span className="text-tg-text">{selectedManager.role === 'admin' ? 'Администратор' : 'Менеджер'}</span>
+                    <span className="text-tg-text">{getRoleLabel(selectedManager.role as any)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-tg-hint">Статус</span>
@@ -419,15 +481,15 @@ export default function AdminManagers() {
                     </button>
                   )}
 
-                  {/* Make Admin */}
-                  {selectedManager.role !== 'admin' ? (
+                  {/* Make Supervisor - only for owner/director */}
+                  {selectedManager.role === 'manager' ? (
                     <button
-                      onClick={() => makeAdminMutation.mutate(selectedManager.id)}
-                      disabled={makeAdminMutation.isPending}
+                      onClick={() => makeSupervisorMutation.mutate(selectedManager.id)}
+                      disabled={makeSupervisorMutation.isPending}
                       className="p-3 rounded-xl bg-purple-500/20 text-purple-600 font-medium flex items-center justify-center gap-2 text-sm"
                     >
                       <Shield className="w-4 h-4" />
-                      Сделать админом
+                      Сделать супервайзером
                     </button>
                   ) : (
                     <div />
@@ -617,6 +679,209 @@ export default function AdminManagers() {
                     ))
                   )}
                 </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Detailed Info Modal */}
+      <AnimatePresence>
+        {showDetailedInfo && (detailedManagerData || detailedManager) && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setShowDetailedInfo(false)
+                setDetailedManager(null)
+              }}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[90vh] flex flex-col"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+            >
+              <div className="flex-shrink-0 pt-3 pb-2">
+                <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto" />
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 pb-2">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-tg-text">Отчет о менеджере</h2>
+                  <button
+                    onClick={() => {
+                      setShowDetailedInfo(false)
+                      setDetailedManager(null)
+                    }}
+                    className="p-2 rounded-full bg-tg-secondary-bg"
+                  >
+                    <X className="w-5 h-5 text-tg-hint" />
+                  </button>
+                </div>
+
+                {(() => {
+                  const manager = detailedManagerData || detailedManager
+                  if (!manager) return null
+
+                  return (
+                    <>
+                      {/* Manager Info */}
+                      <div className="bg-tg-secondary-bg rounded-xl p-4 mb-4">
+                        <h3 className="font-semibold text-tg-text mb-3">Данные менеджера</h3>
+                        <div className="space-y-2 text-sm">
+                          {manager.full_name && (
+                            <div className="flex justify-between">
+                              <span className="text-tg-hint">ФИО</span>
+                              <span className="text-tg-text font-medium">{manager.full_name}</span>
+                            </div>
+                          )}
+                          {manager.username && (
+                            <div className="flex justify-between">
+                              <span className="text-tg-hint">Username</span>
+                              <a
+                                href={`https://t.me/${manager.username}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-tg-accent"
+                              >
+                                @{manager.username}
+                              </a>
+                            </div>
+                          )}
+                          {manager.phone && (
+                            <div className="flex justify-between">
+                              <span className="text-tg-hint">Телефон</span>
+                              <span className="text-tg-text">{manager.phone}</span>
+                            </div>
+                          )}
+                          {manager.email && (
+                            <div className="flex justify-between">
+                              <span className="text-tg-hint">Email</span>
+                              <span className="text-tg-text">{manager.email}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-tg-hint">Telegram ID</span>
+                            <span className="text-tg-text font-mono">{manager.tg_id}</span>
+                          </div>
+                          {manager.group_name && (
+                            <div className="flex justify-between">
+                              <span className="text-tg-hint">Группа</span>
+                              <span className="text-tg-text text-tg-accent">{manager.group_name}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-tg-hint">Регистрация</span>
+                            <span className="text-tg-text">
+                              {new Date(manager.created_at).toLocaleDateString('ru')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Statistics */}
+                      {manager.stats && (
+                        <div className="bg-tg-secondary-bg rounded-xl p-4 mb-4">
+                          <h3 className="font-semibold text-tg-text mb-3">Статистика</h3>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-xs text-tg-hint mb-1">Всего заявок</p>
+                              <p className="text-2xl font-bold text-tg-text">
+                                {manager.stats.total_requests || manager.request_count || 0}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tg-hint mb-1">Завершено</p>
+                              <p className="text-2xl font-bold text-green-500">
+                                {manager.stats.completed_requests || 0}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tg-hint mb-1">В работе</p>
+                              <p className="text-2xl font-bold text-blue-500">
+                                {manager.stats.pending_requests || 0}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tg-hint mb-1">За неделю</p>
+                              <p className="text-2xl font-bold text-orange-500">
+                                {manager.stats.this_week || 0}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recent Requests */}
+                      {manager.requests && manager.requests.length > 0 && (
+                        <div className="bg-tg-secondary-bg rounded-xl p-4 mb-4">
+                          <h3 className="font-semibold text-tg-text mb-3">Последние заявки</h3>
+                          <div className="space-y-2">
+                            {manager.requests.slice(0, 10).map((req: any) => (
+                              <div
+                                key={req.id}
+                                className="flex items-center justify-between p-2 rounded-lg bg-tg-bg"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-tg-text truncate">
+                                    {req.company_name}
+                                  </p>
+                                  <p className="text-xs text-tg-hint">
+                                    {new Date(req.created_at).toLocaleDateString('ru')}
+                                  </p>
+                                </div>
+                                <span className={`text-xs px-2 py-1 rounded ${
+                                  req.status === 'completed' ? 'bg-green-500/20 text-green-500' :
+                                  req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' :
+                                  'bg-blue-500/20 text-blue-500'
+                                }`}>
+                                  {req.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
+
+              <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t border-tg-separator bg-tg-bg">
+                <button
+                  onClick={() => {
+                    const manager = detailedManagerData || detailedManager
+                    if (!manager) return
+
+                    // Generate report text
+                    const report = `ОТЧЕТ О МЕНЕДЖЕРЕ\n\n` +
+                      `Данные менеджера:\n` +
+                      `${manager.full_name ? `ФИО: ${manager.full_name}\n` : ''}` +
+                      `${manager.username ? `Username: @${manager.username}\n` : ''}` +
+                      `${manager.phone ? `Телефон: ${manager.phone}\n` : ''}` +
+                      `${manager.email ? `Email: ${manager.email}\n` : ''}` +
+                      `Telegram ID: ${manager.tg_id}\n` +
+                      `${manager.group_name ? `Группа: ${manager.group_name}\n` : ''}` +
+                      `Регистрация: ${new Date(manager.created_at).toLocaleDateString('ru')}\n\n` +
+                      `Статистика:\n` +
+                      `Всего заявок: ${manager.stats?.total_requests || manager.request_count || 0}\n` +
+                      `Завершено: ${manager.stats?.completed_requests || 0}\n` +
+                      `В работе: ${manager.stats?.pending_requests || 0}\n` +
+                      `За неделю: ${manager.stats?.this_week || 0}\n`
+
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(report)
+                    toast.success('Отчет скопирован в буфер обмена')
+                  }}
+                  className="w-full p-3 rounded-xl bg-indigo-500/10 text-indigo-500 font-medium flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  Скопировать отчет
+                </button>
               </div>
             </motion.div>
           </>

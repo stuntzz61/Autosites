@@ -75,9 +75,27 @@ export const adminApi = {
     unblock: (id: string) => api.post(`/admin/managers/${id}/unblock`),
     delete: (id: string, confirmation?: string) =>
       api.delete(`/admin/managers/${id}`, { params: { confirmation } }),
-    makeAdmin: (id: string) => api.post(`/admin/managers/${id}/make-admin`),
+    makeSupervisor: (id: string) => api.post(`/admin/managers/${id}/make-supervisor`),
     moveGroup: (id: string, groupId: string) =>
       api.post(`/admin/managers/${id}/move-group`, { group_id: groupId }),
+  },
+
+  // Role management (owner only)
+  roles: {
+    assign: (userId: string, role: 'manager' | 'supervisor' | 'director') =>
+      api.post(`/admin/users/${userId}/assign-role`, { role }),
+  },
+
+  // Director management (owner only)
+  directors: {
+    list: () => api.get('/admin/directors'),
+    delete: (id: string) => api.delete(`/admin/directors/${id}`),
+  },
+
+  // Supervisor management (owner/director)
+  supervisors: {
+    list: () => api.get('/admin/supervisors'),
+    delete: (id: string) => api.delete(`/admin/supervisors/${id}`),
   },
 
   pending: {
@@ -111,16 +129,22 @@ export const adminApi = {
     myGroups: () => api.get('/admin/my-groups'),
   },
 
-  managers: {
-    list: () => api.get('/admin/managers'),
-    get: (id: string) => api.get(`/admin/managers/${id}`),
-    block: (id: string) => api.post(`/admin/managers/${id}/block`),
-    unblock: (id: string) => api.post(`/admin/managers/${id}/unblock`),
-    delete: (id: string, confirmation?: string) =>
-      api.delete(`/admin/managers/${id}`, { params: { confirmation } }),
-    makeAdmin: (id: string) => api.post(`/admin/managers/${id}/make-admin`),
-    moveGroup: (id: string, groupId: string) =>
-      api.post(`/admin/managers/${id}/move-group`, { group_id: groupId }),
+  // Role management (owner only)
+  roles: {
+    assign: (userId: string, role: 'manager' | 'supervisor' | 'director') =>
+      api.post(`/admin/users/${userId}/assign-role`, { role }),
+  },
+
+  // Director management (owner only)
+  directors: {
+    list: () => api.get('/admin/directors'),
+    delete: (id: string) => api.delete(`/admin/directors/${id}`),
+  },
+
+  // Supervisor management (owner/director)
+  supervisors: {
+    list: () => api.get('/admin/supervisors'),
+    delete: (id: string) => api.delete(`/admin/supervisors/${id}`),
   },
 
   inviteCodes: {

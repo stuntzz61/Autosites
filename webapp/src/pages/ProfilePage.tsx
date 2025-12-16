@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   User, Phone, Star, FileText, CheckCircle, Clock,
-  TrendingUp, Edit2, X, Loader2, LogOut, Sparkles, Crown
+  TrendingUp, Edit2, X, Loader2, LogOut, Sparkles, Crown, Mail, Shield
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
@@ -130,7 +130,7 @@ export default function ProfilePage() {
             className="text-xl font-bold mb-0.5"
             style={{ color: 'var(--text-primary)' }}
           >
-            {user?.first_name} {user?.last_name}
+            {user?.full_name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Менеджер'}
           </h1>
           {user?.username && (
             <p className="text-sm" style={{ color: 'var(--text-subtle)' }}>
@@ -251,41 +251,82 @@ export default function ProfilePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <p className="section-header">Контакт</p>
+          <p className="section-header">Контактная информация</p>
           <div
-            className="rounded-2xl overflow-hidden"
+            className="rounded-2xl overflow-hidden space-y-1"
             style={{
               background: 'var(--bg-surface)',
               border: '1px solid var(--border-default)'
             }}
           >
-            <button
-              onClick={() => {
-                haptic?.impactOccurred('light')
-                setContactValue(user?.contact || '')
-                setEditContact(true)
-              }}
-              className="flex items-center gap-3 p-4 w-full text-left transition-all hover:bg-white/[0.02] active:scale-[0.99]"
-            >
+            {/* Phone */}
+            {user?.phone && (
+              <div className="flex items-center gap-3 p-4">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.12)',
+                    border: '1px solid var(--border-accent)'
+                  }}
+                >
+                  <Phone className="w-5 h-5" style={{ color: 'var(--accent-primary-light)' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs mb-0.5" style={{ color: 'var(--text-subtle)' }}>
+                    Телефон
+                  </p>
+                  <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                    {user.phone}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Email */}
+            {user?.email && (
               <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center"
-                style={{
-                  background: 'rgba(59, 130, 246, 0.12)',
-                  border: '1px solid var(--border-accent)'
-                }}
+                className="flex items-center gap-3 p-4"
+                style={{ borderTop: user?.phone ? '1px solid var(--border-subtle)' : 'none' }}
               >
-                <Phone className="w-5 h-5" style={{ color: 'var(--accent-primary-light)' }} />
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <Mail className="w-5 h-5" style={{ color: 'var(--success)' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs mb-0.5" style={{ color: 'var(--text-subtle)' }}>
+                    Email
+                  </p>
+                  <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                    {user.email}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs mb-0.5" style={{ color: 'var(--text-subtle)' }}>
-                  Телефон / Email
-                </p>
-                <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                  {user?.contact || 'Не указан'}
-                </p>
+            )}
+
+            {/* Fallback if no phone/email */}
+            {!user?.phone && !user?.email && (
+              <div className="flex items-center gap-3 p-4">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.12)',
+                    border: '1px solid var(--border-accent)'
+                  }}
+                >
+                  <Phone className="w-5 h-5" style={{ color: 'var(--accent-primary-light)' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs mb-0.5" style={{ color: 'var(--text-subtle)' }}>
+                    Контакт не указан
+                  </p>
+                </div>
               </div>
-              <Edit2 className="w-4 h-4 shrink-0" style={{ color: 'var(--text-subtle)' }} />
-            </button>
+            )}
           </div>
         </motion.div>
 
@@ -332,12 +373,20 @@ export default function ProfilePage() {
               <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center"
                 style={{
-                  background: user?.role === 'admin'
+                  background: user?.role === 'owner'
+                    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%)'
+                    : user?.role === 'director'
+                    ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.1) 100%)'
+                    : user?.role === 'supervisor'
                     ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%)'
                     : 'rgba(139, 92, 246, 0.12)'
                 }}
               >
-                {user?.role === 'admin' ? (
+                {user?.role === 'owner' ? (
+                  <Crown className="w-5 h-5" style={{ color: 'var(--gold-primary)' }} />
+                ) : user?.role === 'director' ? (
+                  <Shield className="w-5 h-5" style={{ color: '#fbbf24' }} />
+                ) : user?.role === 'supervisor' ? (
                   <Sparkles className="w-5 h-5" style={{ color: 'var(--gold-primary)' }} />
                 ) : (
                   <Star className="w-5 h-5" style={{ color: 'var(--info-light)' }} />
@@ -347,10 +396,18 @@ export default function ProfilePage() {
                 <p className="text-xs mb-0.5" style={{ color: 'var(--text-subtle)' }}>Роль</p>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {user?.role === 'admin' ? 'Администратор' : 'Менеджер'}
+                    {user?.role === 'owner' ? 'Владелец' :
+                     user?.role === 'director' ? 'Директор' :
+                     user?.role === 'supervisor' ? 'Супервайзер' : 'Менеджер'}
                   </p>
-                  {user?.role === 'admin' && (
-                    <span className="badge-premium text-[9px] px-2 py-1">ADMIN</span>
+                  {user?.role === 'owner' && (
+                    <span className="badge-premium text-[9px] px-2 py-1">OWNER</span>
+                  )}
+                  {user?.role === 'director' && (
+                    <span className="text-[9px] px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded">DIRECTOR</span>
+                  )}
+                  {user?.role === 'supervisor' && (
+                    <span className="badge-premium text-[9px] px-2 py-1">SUPERVISOR</span>
                   )}
                 </div>
               </div>

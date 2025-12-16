@@ -49,7 +49,7 @@ export default function AuthGuard({ children, requireAdmin = false }: AuthGuardP
     )
   }
 
-  if (requireAdmin && user.role !== 'admin') {
+  if (requireAdmin && !['supervisor', 'director', 'owner'].includes(user.role)) {
     return <Navigate to="/" replace />
   }
 

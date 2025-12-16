@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel
+from psycopg.rows import dict_row
 
 from config import settings
 import db
@@ -90,11 +91,33 @@ async def get_current_user(x_telegram_init_data: str = Header(None)) -> dict:
     return user
 
 
-async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
-    """Dependency to require admin role."""
-    if user.get('role') != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+async def get_supervisor_user(user: dict = Depends(get_current_user)) -> dict:
+    """Dependency to require supervisor role or higher (supervisor, director, owner)."""
+    role = user.get('role')
+    if role not in ('supervisor', 'director', 'owner'):
+        raise HTTPException(status_code=403, detail="Supervisor access required")
     return user
+
+
+async def get_director_user(user: dict = Depends(get_current_user)) -> dict:
+    """Dependency to require director or owner role."""
+    role = user.get('role')
+    if role not in ('director', 'owner'):
+        raise HTTPException(status_code=403, detail="Director access required")
+    return user
+
+
+async def get_owner_user(user: dict = Depends(get_current_user)) -> dict:
+    """Dependency to require owner role."""
+    if user.get('role') != 'owner':
+        raise HTTPException(status_code=403, detail="Owner access required")
+    return user
+
+
+# Legacy alias for backward compatibility
+async def get_admin_user(user: dict = Depends(get_current_user)) -> dict:
+    """Legacy dependency - maps to get_supervisor_user for backward compatibility."""
+    return await get_supervisor_user(user)
 
 
 @router.post("/verify")
@@ -186,14 +209,29 @@ async def verify_init_data(request: VerifyRequest):
     if user.get('is_blocked'):
         raise HTTPException(status_code=403, detail="User is blocked")
 
-    # Check if user should be admin (from ADMIN_IDS env)
-    is_admin_by_config = tg_id in settings.admin_tg_ids
+    # Assign roles based on config (only for initial setup, owner can manage roles later via UI)
     current_role = user.get('role', 'manager')
 
-    # Update role to admin if in ADMIN_IDS and not already admin
-    if is_admin_by_config and current_role != 'admin':
-        await db.update_user_role(str(user['id']), 'admin')
-        user['role'] = 'admin'
+    # Check if user should be Owner (from OWNER_IDS env) - only for initial setup
+    # Owner role can only be set via config, not via UI
+    is_owner_by_config = tg_id in settings.owner_tg_ids
+    if is_owner_by_config and current_role != 'owner':
+        await db.update_user_role(str(user['id']), 'owner')
+        user['role'] = 'owner'
+    # Check if user should be Director (from DIRECTOR_IDS env) - only for initial setup
+    # After initial setup, directors are managed by owner via UI
+    elif not is_owner_by_config and current_role == 'manager':
+        # Only assign director from config if user is still a manager (not manually assigned)
+        is_director_by_config = tg_id in settings.director_tg_ids
+        if is_director_by_config:
+            await db.update_user_role(str(user['id']), 'director')
+            user['role'] = 'director'
+        # Check if user should be Supervisor (from SUPERVISOR_IDS or ADMIN_IDS env) - only for initial setup
+        elif current_role == 'manager':
+            is_supervisor_by_config = tg_id in settings.supervisor_tg_ids
+            if is_supervisor_by_config:
+                await db.update_user_role(str(user['id']), 'supervisor')
+                user['role'] = 'supervisor'
 
     # Get user stats
     stats = await db.get_user_stats(str(user['id']))
@@ -259,7 +297,8 @@ async def dev_login(request: DevLoginRequest):
 
 @router.post("/admin-login")
 async def admin_login(request: AdminLoginRequest, x_telegram_init_data: str = Header(None)):
-    """Admin login with password verification."""
+    """Supervisor login with password verification.
+    Note: Password alone does NOT grant admin access - user must be assigned role by owner/director."""
     # First verify the user via Telegram
     if not x_telegram_init_data:
         raise HTTPException(status_code=401, detail="Missing init data")
@@ -277,19 +316,16 @@ async def admin_login(request: AdminLoginRequest, x_telegram_init_data: str = He
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
-    # Debug logging
-    print(f"[DEBUG] admin-login: tg_id={tg_id}, admin_ids={settings.admin_tg_ids}, user_role={user.get('role')}")
-
-    is_admin_by_config = tg_id in settings.admin_tg_ids
-    is_admin_by_role = user.get('role') == 'admin'
-
-    # Verify password first - if password correct, allow admin access
+    # Verify password
     if request.password != settings.ADMIN_PASSWORD:
         raise HTTPException(status_code=401, detail="Invalid password")
 
-    # If password is correct but user not admin yet, make them admin
-    if not is_admin_by_role:
-        await db.update_user_role(str(user['id']), 'admin')
-        user['role'] = 'admin'
+    # Check if user has supervisor role or higher
+    role = user.get('role')
+    if role not in ('supervisor', 'director', 'owner'):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. You must be assigned supervisor role by owner or director."
+        )
 
-    return {"success": True, "role": "admin"}
+    return {"success": True, "role": role}

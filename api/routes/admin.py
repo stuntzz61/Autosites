@@ -8,9 +8,10 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from psycopg.rows import dict_row
 
 from config import settings
-from routes.auth import get_admin_user
+from routes.auth import get_supervisor_user, get_director_user, get_owner_user
 import db
 
 log = logging.getLogger(__name__)
@@ -68,15 +69,15 @@ class UpdateInviteCodeRequest(BaseModel):
 # ==================== Dashboard ====================
 
 @router.get("/dashboard")
-async def get_dashboard(user: dict = Depends(get_admin_user)):
-    """Get admin dashboard data."""
+async def get_dashboard(user: dict = Depends(get_supervisor_user)):
+    """Get supervisor dashboard data."""
     return await db.get_dashboard_stats()
 
 
 # ==================== Managers ====================
 
 @router.get("/managers")
-async def list_managers(user: dict = Depends(get_admin_user)):
+async def list_managers(user: dict = Depends(get_supervisor_user)):
     """List managers. If admin is in a group, show only group members."""
     # Try to get group-based managers first
     managers = await db.list_managers_by_admin(str(user['id']))
@@ -87,37 +88,37 @@ async def list_managers(user: dict = Depends(get_admin_user)):
 
 
 @router.get("/managers/{manager_id}")
-async def get_manager(manager_id: str, user: dict = Depends(get_admin_user)):
-    """Get manager details. Only accessible if manager belongs to admin's groups."""
+async def get_manager(manager_id: str, user: dict = Depends(get_supervisor_user)):
+    """Get manager details. Only accessible if user can manage this manager."""
     manager = await db.get_user_by_id(manager_id)
     if not manager:
         raise HTTPException(status_code=404, detail="Manager not found")
 
-    # Check access
-    if not await db.is_manager_accessible_by_admin(manager_id, str(user['id'])):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете просматривать только своих менеджеров")
+    # Check access using new permission system
+    if not await db.can_manage_user(str(user['id']), manager_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
 
     stats = await db.get_user_stats(manager_id)
     return {**manager, "id": str(manager["id"]), "stats": stats}
 
 
 @router.post("/managers/{manager_id}/block")
-async def block_manager(manager_id: str, user: dict = Depends(get_admin_user)):
-    """Block a manager. Only accessible if manager belongs to admin's groups."""
-    # Check access
-    if not await db.is_manager_accessible_by_admin(manager_id, str(user['id'])):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете блокировать только своих менеджеров")
+async def block_manager(manager_id: str, user: dict = Depends(get_supervisor_user)):
+    """Block a manager. Only accessible if user can manage this manager."""
+    # Check access using new permission system
+    if not await db.can_manage_user(str(user['id']), manager_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
 
     await db.block_user(manager_id)
     return {"success": True}
 
 
 @router.post("/managers/{manager_id}/unblock")
-async def unblock_manager(manager_id: str, user: dict = Depends(get_admin_user)):
-    """Unblock a manager. Only accessible if manager belongs to admin's groups."""
-    # Check access
-    if not await db.is_manager_accessible_by_admin(manager_id, str(user['id'])):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете разблокировать только своих менеджеров")
+async def unblock_manager(manager_id: str, user: dict = Depends(get_supervisor_user)):
+    """Unblock a manager. Only accessible if user can manage this manager."""
+    # Check access using new permission system
+    if not await db.can_manage_user(str(user['id']), manager_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
 
     await db.unblock_user(manager_id)
     return {"success": True}
@@ -126,15 +127,15 @@ async def unblock_manager(manager_id: str, user: dict = Depends(get_admin_user))
 @router.delete("/managers/{manager_id}")
 async def delete_manager(
     manager_id: str,
-    user: dict = Depends(get_admin_user),
+    user: dict = Depends(get_supervisor_user),
     confirmation: Optional[str] = None
 ):
-    """Delete a manager with anti-nuke protection. Only accessible if manager belongs to admin's groups."""
+    """Delete a manager with anti-nuke protection. Only accessible if user can manage this manager."""
     admin_id = str(user['id'])
 
-    # Check access
-    if not await db.is_manager_accessible_by_admin(manager_id, admin_id):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете удалять только своих менеджеров")
+    # Check access using new permission system
+    if not await db.can_manage_user(admin_id, manager_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
 
     # Anti-nuke check
     can_delete, error_msg = await db.can_delete_manager(admin_id, manager_id)
@@ -154,10 +155,18 @@ async def delete_manager(
     return {"success": True}
 
 
-@router.post("/managers/{manager_id}/make-admin")
-async def make_manager_admin(manager_id: str, user: dict = Depends(get_admin_user)):
-    """Promote manager to admin role."""
-    await db.update_user_role(manager_id, 'admin')
+@router.post("/managers/{manager_id}/make-supervisor")
+async def make_manager_supervisor(manager_id: str, user: dict = Depends(get_director_user)):
+    """Promote manager to supervisor role. Only owner/director can do this."""
+    # Check if user can assign supervisor role
+    if not await db.can_assign_role(str(user['id']), 'supervisor'):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Только owner/director могут назначать supervisor")
+
+    # Check if can manage the target user
+    if not await db.can_manage_user(str(user['id']), manager_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
+
+    await db.update_user_role(manager_id, 'supervisor')
     return {"success": True}
 
 
@@ -165,20 +174,16 @@ async def make_manager_admin(manager_id: str, user: dict = Depends(get_admin_use
 async def move_manager_to_group(
     manager_id: str,
     data: MoveManagerRequest,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
-    """Move manager to another group. Only accessible if both manager and group belong to admin."""
-    # Check if manager is accessible
-    if not await db.is_manager_accessible_by_admin(manager_id, str(user['id'])):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете перемещать только своих менеджеров")
+    """Move manager to another group. Only accessible if user can manage both manager and group."""
+    # Check if user can manage the manager
+    if not await db.can_manage_user(str(user['id']), manager_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
 
-    # Check if target group belongs to admin
-    group = await db.get_admin_group(data.group_id)
-    if not group:
-        raise HTTPException(status_code=404, detail="Группа не найдена")
-
-    if str(group['created_by']) != str(user['id']):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете перемещать только в свои группы")
+    # Check if user can manage the target group
+    if not await db.can_manage_group(str(user['id']), data.group_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
 
     # Remove from old groups and add to new group
     async with await db.get_conn() as conn:
@@ -213,13 +218,19 @@ async def move_manager_to_group(
 # ==================== Pending Registrations ====================
 
 @router.get("/pending")
-async def list_pending(user: dict = Depends(get_admin_user)):
-    """List pending registrations from admin's groups."""
-    return await db.list_pending_registrations(admin_id=str(user['id']))
+async def list_pending(user: dict = Depends(get_supervisor_user)):
+    """List pending registrations. Supervisor sees only from their groups. Director/Owner see all."""
+    user_role = user.get('role')
+    if user_role in ('owner', 'director'):
+        # Owner and Director see all pending registrations
+        return await db.list_pending_registrations(admin_id=None)
+    else:
+        # Supervisor sees only from their groups
+        return await db.list_pending_registrations(admin_id=str(user['id']))
 
 
 @router.post("/pending/{user_id}/approve")
-async def approve_registration(user_id: str, user: dict = Depends(get_admin_user)):
+async def approve_registration(user_id: str, user: dict = Depends(get_supervisor_user)):
     """Approve a pending registration."""
     # Check current status first
     current_status = await db.get_user_approval_status(user_id)
@@ -243,7 +254,7 @@ async def approve_registration(user_id: str, user: dict = Depends(get_admin_user
 async def reject_registration(
     user_id: str,
     data: RejectRequest,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
     """Reject a pending registration. Only accessible if user belongs to admin's groups."""
     # Check current status first
@@ -284,7 +295,7 @@ async def reject_registration(
 
 
 @router.post("/pending/{user_id}/reset")
-async def reset_registration(user_id: str, user: dict = Depends(get_admin_user)):
+async def reset_registration(user_id: str, user: dict = Depends(get_supervisor_user)):
     """Reset a rejected user's status to pending (allow re-application)."""
     current_status = await db.get_user_approval_status(user_id)
     if not current_status:
@@ -304,7 +315,7 @@ async def list_all_requests(
     status: Optional[str] = None,
     page: int = 1,
     limit: int = 50,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
     """List all requests (admin view)."""
     offset = (page - 1) * limit
@@ -378,13 +389,19 @@ async def mass_delete(data: MassActionRequest, user: dict = Depends(get_admin_us
 # ==================== Admin Groups ====================
 
 @router.get("/groups")
-async def list_groups(user: dict = Depends(get_admin_user)):
-    """List admin groups created by the current admin."""
-    return await db.list_admin_groups(created_by=str(user['id']))
+async def list_groups(user: dict = Depends(get_supervisor_user)):
+    """List admin groups. Supervisor sees only their groups. Director/Owner see all."""
+    user_role = user.get('role')
+    if user_role in ('owner', 'director'):
+        # Owner and Director see all groups
+        return await db.list_admin_groups(created_by=None)
+    else:
+        # Supervisor sees only groups they created
+        return await db.list_admin_groups(created_by=str(user['id']))
 
 
 @router.post("/groups")
-async def create_group(data: CreateGroupRequest, user: dict = Depends(get_admin_user)):
+async def create_group(data: CreateGroupRequest, user: dict = Depends(get_supervisor_user)):
     """Create a new admin group."""
     group = await db.create_admin_group(
         name=data.name,
@@ -395,11 +412,16 @@ async def create_group(data: CreateGroupRequest, user: dict = Depends(get_admin_
 
 
 @router.get("/groups/{group_id}")
-async def get_group(group_id: str, user: dict = Depends(get_admin_user)):
-    """Get admin group details with members."""
+async def get_group(group_id: str, user: dict = Depends(get_supervisor_user)):
+    """Get admin group details with members. Only accessible if user can manage the group."""
     group = await db.get_admin_group(group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
+
+    # Check if user can manage this group
+    if not await db.can_manage_group(str(user['id']), group_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
+
     return group
 
 
@@ -407,19 +429,20 @@ async def get_group(group_id: str, user: dict = Depends(get_admin_user)):
 async def add_group_member(
     group_id: str,
     data: AddToGroupRequest,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
-    """Add a user to an admin group. Only accessible if group was created by admin."""
+    """Add a user to an admin group. Only accessible if user can manage both the group and the target user."""
     group = await db.get_admin_group(group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    if str(group['created_by']) != str(user['id']):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете добавлять пользователей только в свои группы")
+    # Check if user can manage the group
+    if not await db.can_manage_group(str(user['id']), group_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
 
-    # Check if manager is accessible (belongs to admin's groups)
-    if not await db.is_manager_accessible_by_admin(data.user_id, str(user['id'])):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете перемещать только своих менеджеров")
+    # Check if user can manage the target user
+    if not await db.can_manage_user(str(user['id']), data.user_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
 
     membership = await db.add_user_to_group(
         user_id=data.user_id,
@@ -434,22 +457,23 @@ async def add_group_member(
 async def remove_group_member(
     group_id: str,
     user_id: str,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
-    """Remove a user from an admin group. Only accessible if group was created by admin."""
+    """Remove a user from an admin group. Only accessible if user can manage the group."""
     group = await db.get_admin_group(group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    if str(group['created_by']) != str(user['id']):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете удалять пользователей только из своих групп")
+    # Check if user can manage the group
+    if not await db.can_manage_group(str(user['id']), group_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
 
     await db.remove_user_from_group(user_id, group_id)
     return {"success": True}
 
 
 @router.get("/my-groups")
-async def get_my_groups(user: dict = Depends(get_admin_user)):
+async def get_my_groups(user: dict = Depends(get_supervisor_user)):
     """Get groups the current admin belongs to."""
     return await db.get_user_groups(str(user['id']))
 
@@ -464,15 +488,16 @@ class UpdateGroupRequest(BaseModel):
 async def update_group(
     group_id: str,
     data: UpdateGroupRequest,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
-    """Update an admin group. Only accessible if group was created by admin."""
+    """Update an admin group. Only accessible if user can manage the group."""
     group = await db.get_admin_group(group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    if str(group['created_by']) != str(user['id']):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете редактировать только свои группы")
+    # Check if user can manage the group
+    if not await db.can_manage_group(str(user['id']), group_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
 
     update_data = data.model_dump(exclude_none=True)
     if not update_data:
@@ -494,14 +519,15 @@ async def update_group(
 
 
 @router.delete("/groups/{group_id}")
-async def delete_group(group_id: str, user: dict = Depends(get_admin_user)):
-    """Delete an admin group. Only accessible if group was created by admin."""
+async def delete_group(group_id: str, user: dict = Depends(get_supervisor_user)):
+    """Delete an admin group. Only accessible if user can manage the group."""
     group = await db.get_admin_group(group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    if str(group['created_by']) != str(user['id']):
-        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете удалять только свои группы")
+    # Check if user can manage the group
+    if not await db.can_manage_group(str(user['id']), group_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
 
     # Check if group has members
     async with await db.get_conn() as conn:
@@ -530,7 +556,7 @@ async def delete_group(group_id: str, user: dict = Depends(get_admin_user)):
 @router.get("/invite-codes")
 async def list_invite_codes(
     group_id: Optional[str] = None,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
     """List invite codes created by this admin or for their groups."""
     codes = await db.list_invite_codes(created_by=str(user['id']), group_id=group_id)
@@ -541,7 +567,7 @@ async def list_invite_codes(
 
 
 @router.post("/invite-codes")
-async def create_invite_code(data: CreateInviteCodeRequest, user: dict = Depends(get_admin_user)):
+async def create_invite_code(data: CreateInviteCodeRequest, user: dict = Depends(get_supervisor_user)):
     """Create a new invite code. Group is required."""
     from datetime import timedelta
 
@@ -549,13 +575,13 @@ async def create_invite_code(data: CreateInviteCodeRequest, user: dict = Depends
     if not data.group_id:
         raise HTTPException(status_code=400, detail="Группа обязательна для создания инвайт-кода")
 
-    # Verify that the group belongs to this admin
+    # Verify that the user can manage the group
     group = await db.get_admin_group(data.group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Группа не найдена")
 
-    if str(group['created_by']) != str(user['id']):
-        raise HTTPException(status_code=403, detail="Вы можете создавать инвайт-коды только для своих групп")
+    if not await db.can_manage_group(str(user['id']), data.group_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
 
     expires_at = None
     if data.expires_in_days:
@@ -579,15 +605,19 @@ async def create_invite_code(data: CreateInviteCodeRequest, user: dict = Depends
 
 
 @router.get("/invite-codes/{code_id}")
-async def get_invite_code_details(code_id: str, user: dict = Depends(get_admin_user)):
+async def get_invite_code_details(code_id: str, user: dict = Depends(get_supervisor_user)):
     """Get invite code details with usage info."""
     code = await db.get_invite_code_by_id(code_id)
     if not code:
         raise HTTPException(status_code=404, detail="Invite code not found")
 
-    # Check if user owns this code or is superadmin
-    if str(code['created_by']) != str(user['id']):
-        raise HTTPException(status_code=403, detail="Access denied")
+    # Check if user can manage the group this invite code belongs to
+    if code.get('group_id'):
+        if not await db.can_manage_group(str(user['id']), code['group_id']):
+            raise HTTPException(status_code=403, detail="Доступ запрещен")
+    elif str(code['created_by']) != str(user['id']):
+        # If no group, check if user created the code
+        raise HTTPException(status_code=403, detail="Доступ запрещен")
 
     usage = await db.get_invite_code_usage(code_id)
 
@@ -606,14 +636,18 @@ async def get_invite_code_details(code_id: str, user: dict = Depends(get_admin_u
 async def update_invite_code(
     code_id: str,
     data: UpdateInviteCodeRequest,
-    user: dict = Depends(get_admin_user)
+    user: dict = Depends(get_supervisor_user)
 ):
     """Update an invite code. Only accessible if code belongs to admin."""
     code = await db.get_invite_code_by_id(code_id)
     if not code:
         raise HTTPException(status_code=404, detail="Invite code not found")
 
-    if str(code['created_by']) != str(user['id']):
+    # Check if user can manage the group this invite code belongs to
+    if code.get('group_id'):
+        if not await db.can_manage_group(str(user['id']), code['group_id']):
+            raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
+    elif str(code['created_by']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете редактировать только свои инвайт-коды")
 
     # If updating group_id, verify it belongs to admin
@@ -635,16 +669,101 @@ async def update_invite_code(
 
 
 @router.delete("/invite-codes/{code_id}")
-async def delete_invite_code(code_id: str, user: dict = Depends(get_admin_user)):
-    """Delete an invite code. Only accessible if code belongs to admin."""
+async def delete_invite_code(code_id: str, user: dict = Depends(get_supervisor_user)):
+    """Delete an invite code. Only accessible if user can manage the group."""
     code = await db.get_invite_code_by_id(code_id)
     if not code:
         raise HTTPException(status_code=404, detail="Invite code not found")
 
-    if str(code['created_by']) != str(user['id']):
+    # Check if user can manage the group this invite code belongs to
+    if code.get('group_id'):
+        if not await db.can_manage_group(str(user['id']), code['group_id']):
+            raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этой группой")
+    elif str(code['created_by']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете удалять только свои инвайт-коды")
 
     await db.delete_invite_code(code_id)
+    return {"success": True}
+
+
+# ==================== Supervisor/Director Management (Owner/Director only) ====================
+
+class AssignRoleRequest(BaseModel):
+    role: str  # 'supervisor', 'director', or 'manager'
+
+@router.get("/supervisors")
+async def list_supervisors(user: dict = Depends(get_director_user)):
+    """List all supervisors. Only owner/director can access."""
+    supervisors = await db.list_admins()  # This will need to be updated to filter by role
+    # Filter to only supervisors
+    supervisors = [s for s in supervisors if s.get('role') == 'supervisor']
+    return supervisors
+
+@router.get("/directors")
+async def list_directors(user: dict = Depends(get_owner_user)):
+    """List all directors. Only owner can access."""
+    directors = await db.list_admins()  # This will need to be updated to filter by role
+    # Filter to only directors
+    directors = [d for d in directors if d.get('role') == 'director']
+    return directors
+
+@router.post("/users/{user_id}/assign-role")
+async def assign_role(
+    user_id: str,
+    data: AssignRoleRequest,
+    user: dict = Depends(get_owner_user)
+):
+    """Assign role to a user. Only owner can do this."""
+    # Validate role
+    if data.role not in ('manager', 'supervisor', 'director'):
+        raise HTTPException(status_code=400, detail=f"Недопустимая роль: {data.role}")
+
+    # Check if user can manage the target user
+    if not await db.can_manage_user(str(user['id']), user_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
+
+    # Prevent assigning owner role (only through config)
+    if data.role == 'owner':
+        raise HTTPException(status_code=403, detail="Роль owner может быть назначена только через конфигурацию")
+
+    # Get target user to check current role
+    target_user = await db.get_user_by_id(user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    # Prevent downgrading owner
+    if target_user.get('role') == 'owner' and data.role != 'owner':
+        raise HTTPException(status_code=403, detail="Нельзя понизить роль owner")
+
+    await db.update_user_role(user_id, data.role)
+    return {"success": True, "role": data.role}
+
+@router.delete("/supervisors/{supervisor_id}")
+async def delete_supervisor(supervisor_id: str, user: dict = Depends(get_director_user)):
+    """Delete a supervisor. Only owner/director can do this."""
+    # Check if user can manage the target user
+    if not await db.can_manage_user(str(user['id']), supervisor_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
+
+    target_user = await db.get_user_by_id(supervisor_id)
+    if not target_user or target_user.get('role') != 'supervisor':
+        raise HTTPException(status_code=404, detail="Supervisor not found")
+
+    await db.delete_user(supervisor_id)
+    return {"success": True}
+
+@router.delete("/directors/{director_id}")
+async def delete_director(director_id: str, user: dict = Depends(get_owner_user)):
+    """Delete a director. Only owner can do this."""
+    # Check if user can manage the target user
+    if not await db.can_manage_user(str(user['id']), director_id):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
+
+    target_user = await db.get_user_by_id(director_id)
+    if not target_user or target_user.get('role') != 'director':
+        raise HTTPException(status_code=404, detail="Director not found")
+
+    await db.delete_user(director_id)
     return {"success": True}
 
 
@@ -804,25 +923,25 @@ async def send_broadcast(data: BroadcastRequest, user: dict = Depends(get_admin_
 # ==================== Stats ====================
 
 @router.get("/stats/overview")
-async def get_stats_overview(user: dict = Depends(get_admin_user)):
+async def get_stats_overview(user: dict = Depends(get_supervisor_user)):
     """Get overview statistics."""
     return await db.get_overview_stats()
 
 
 @router.get("/stats/by-status")
-async def get_stats_by_status(user: dict = Depends(get_admin_user)):
+async def get_stats_by_status(user: dict = Depends(get_supervisor_user)):
     """Get statistics by status."""
     return await db.get_stats_by_status()
 
 
 @router.get("/stats/by-day")
-async def get_stats_by_day(days: int = 7, user: dict = Depends(get_admin_user)):
+async def get_stats_by_day(days: int = 7, user: dict = Depends(get_supervisor_user)):
     """Get statistics by day."""
     return await db.get_stats_by_day(days)
 
 
 @router.get("/stats/managers")
-async def get_manager_stats(user: dict = Depends(get_admin_user)):
+async def get_manager_stats(user: dict = Depends(get_supervisor_user)):
     """Get manager statistics."""
     return await db.get_manager_stats()
 
@@ -830,7 +949,7 @@ async def get_manager_stats(user: dict = Depends(get_admin_user)):
 # ==================== Export ====================
 
 @router.get("/export/excel")
-async def export_excel(user: dict = Depends(get_admin_user)):
+async def export_excel(user: dict = Depends(get_supervisor_user)):
     """Export statistics to Excel."""
     try:
         import openpyxl
@@ -898,7 +1017,7 @@ async def export_excel(user: dict = Depends(get_admin_user)):
 
 
 @router.get("/export/pdf")
-async def export_pdf(user: dict = Depends(get_admin_user)):
+async def export_pdf(user: dict = Depends(get_supervisor_user)):
     """Export statistics to PDF."""
     try:
         from reportlab.lib.pagesizes import A4

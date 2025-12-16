@@ -1,11 +1,13 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Users, FileText, BarChart3, Radio, ChevronLeft, MessageSquare, Globe, Link2, Users2 } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, BarChart3, Radio, ChevronLeft, MessageSquare, Globe, Link2, Users2, Shield, Crown } from 'lucide-react'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useEffect } from 'react'
 import clsx from 'clsx'
+import { useAuthStore, isOwnerRole, isDirectorRole } from '@/stores/authStore'
 
-const adminNavItems = [
+// Base nav items available to all supervisors
+const baseNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Панель', exact: true },
   { path: '/admin/managers', icon: Users, label: 'Менеджеры' },
   { path: '/admin/groups', icon: Users2, label: 'Группы' },
@@ -17,10 +19,27 @@ const adminNavItems = [
   { path: '/admin/broadcast', icon: Radio, label: 'Рассылка' },
 ]
 
+// Additional nav items for owner
+const ownerNavItems = [
+  { path: '/admin/directors', icon: Crown, label: 'Директоры' },
+]
+
 export default function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { backButton, haptic } = useTelegram()
+  const { user } = useAuthStore()
+
+  // Get nav items based on role
+  const getNavItems = () => {
+    const items = [...baseNavItems]
+    if (user && isOwnerRole(user.role)) {
+      items.push(...ownerNavItems)
+    }
+    return items
+  }
+
+  const adminNavItems = getNavItems()
 
   useEffect(() => {
     if (!backButton) return

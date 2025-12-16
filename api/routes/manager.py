@@ -578,6 +578,10 @@ async def get_manager_profile(user: dict = Depends(get_current_user)):
             "full_name": user.get('full_name'),
             "phone": user.get('phone'),
             "email": user.get('email'),
+            "username": user.get('username'),
+            "first_name": user.get('first_name'),
+            "last_name": user.get('last_name'),
+            "tg_id": user.get('tg_id'),
             "registration_completed": user.get('registration_completed_at') is not None
         },
         "workspace": workspace

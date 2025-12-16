@@ -15,7 +15,19 @@ class Settings(BaseSettings):
     # Telegram
     BOT_TOKEN: str = ""
 
-    # Admin IDs (comma-separated list of Telegram IDs)
+    # Owner IDs (comma-separated list of Telegram IDs for Owner role)
+    # Note: Owner role can only be set via config, not via UI
+    OWNER_IDS: str = ""
+
+    # Director IDs (comma-separated list of Telegram IDs for Director role)
+    # Note: Used only for initial setup. After setup, directors are managed by owner via UI
+    DIRECTOR_IDS: str = ""
+
+    # Supervisor IDs (comma-separated list of Telegram IDs for Supervisor role)
+    # Note: Used only for initial setup. After setup, supervisors are managed by owner/director via UI
+    SUPERVISOR_IDS: str = ""
+
+    # Legacy: Admin IDs (for backward compatibility, maps to supervisor)
     ADMIN_IDS: str = ""
 
     # S3
@@ -63,11 +75,29 @@ class Settings(BaseSettings):
         return self.DATABASE_URL or self.DB_URL or ""
 
     @property
-    def admin_tg_ids(self) -> List[int]:
-        """Parse ADMIN_IDS into list of integers"""
-        if not self.ADMIN_IDS:
+    def owner_tg_ids(self) -> List[int]:
+        """Parse OWNER_IDS into list of integers"""
+        if not self.OWNER_IDS:
             return []
-        return [int(x.strip()) for x in self.ADMIN_IDS.split(',') if x.strip().isdigit()]
+        return [int(x.strip()) for x in self.OWNER_IDS.split(',') if x.strip().isdigit()]
+
+    @property
+    def director_tg_ids(self) -> List[int]:
+        """Parse DIRECTOR_IDS into list of integers"""
+        if not self.DIRECTOR_IDS:
+            return []
+        return [int(x.strip()) for x in self.DIRECTOR_IDS.split(',') if x.strip().isdigit()]
+
+    @property
+    def supervisor_tg_ids(self) -> List[int]:
+        """Parse SUPERVISOR_IDS into list of integers"""
+        ids = []
+        if self.SUPERVISOR_IDS:
+            ids.extend([int(x.strip()) for x in self.SUPERVISOR_IDS.split(',') if x.strip().isdigit()])
+        # Legacy: also include ADMIN_IDS for backward compatibility
+        if self.ADMIN_IDS:
+            ids.extend([int(x.strip()) for x in self.ADMIN_IDS.split(',') if x.strip().isdigit()])
+        return ids
 
     class Config:
         env_file = ".env"
