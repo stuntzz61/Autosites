@@ -1382,7 +1382,7 @@ export default function NewRequestPage() {
 
       {/* Bottom Actions - Full width centered layout */}
       <div className="sticky bottom-0 backdrop-blur-xl border-t safe-bottom z-20 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.3)]" style={{ background: 'rgba(26, 29, 38, 0.98)', borderColor: 'rgba(148, 163, 184, 0.15)' }}>
-        <div className="px-4 pb-4 pt-4">
+        <div className="p-4">
           {/* Validation status message - placed directly above button, centered */}
           {Object.keys(errors).length > 0 && (
             <div className="mb-4">
@@ -1401,13 +1401,14 @@ export default function NewRequestPage() {
             </div>
           )}
 
-          {/* Back button - separate row if exists */}
-          {currentStep > 0 && (
-            <div className="mb-3">
+          {/* Action buttons row */}
+          <div className="flex items-center gap-3">
+            {/* Back button - fixed width */}
+            {currentStep > 0 && (
               <Tooltip content="Вернуться назад" position="top">
                 <button
                   onClick={goBack}
-                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-all active:scale-95 border"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-all active:scale-95 border flex-shrink-0"
                   style={{
                     background: 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)',
                     borderColor: 'rgba(148, 163, 184, 0.25)',
@@ -1417,54 +1418,59 @@ export default function NewRequestPage() {
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               </Tooltip>
-            </div>
-          )}
+            )}
 
-          {/* Main CTA Button - Full Width, Bright and Prominent */}
-          <div className="w-full">
-            <Tooltip
-              content={
-                createMutation.isPending
-                  ? 'Подождите...'
-                  : !canGoNext()
-                    ? 'Заполните обязательные поля'
-                    : currentStep === steps.length - 1
-                      ? 'Создать заявку'
-                      : 'Перейти к следующему шагу'
-              }
-              position="top"
-            >
-              <button
-                onClick={goNext}
-                disabled={createMutation.isPending || !canGoNext()}
-                className={clsx(
-                  "w-full flex items-center justify-center gap-2.5 h-14 rounded-xl font-bold text-base transition-all active:scale-[0.98] shadow-lg text-white border-0",
-                  (!canGoNext() || createMutation.isPending) && "opacity-60 cursor-not-allowed"
-                )}
-                style={{
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-                  boxShadow: '0 4px 24px -4px rgba(59, 130, 246, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.15)'
-                }}
+            {/* Spacer to push main button to the right */}
+            {currentStep > 0 && <div className="flex-1" />}
+
+            {/* Main CTA Button - Takes remaining space */}
+            <div className={currentStep > 0 ? "flex-1" : "w-full"}>
+              <Tooltip
+                content={
+                  createMutation.isPending
+                    ? 'Подождите...'
+                    : !canGoNext()
+                      ? 'Заполните обязательные поля'
+                      : currentStep === steps.length - 1
+                        ? 'Создать заявку'
+                        : 'Перейти к следующему шагу'
+                }
+                position="top"
               >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
-                  </>
-                ) : currentStep === steps.length - 1 ? (
-                  <>
-                    <Check className="w-5 h-5 flex-shrink-0" />
-                    <span className="truncate">Создать заявку</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="truncate">Далее</span>
-                    <ArrowRight className="w-5 h-5 flex-shrink-0" />
-                  </>
-                )}
-              </button>
-            </Tooltip>
+                <button
+                  onClick={goNext}
+                  disabled={createMutation.isPending || !canGoNext()}
+                  className={clsx(
+                    "w-full flex items-center justify-center gap-2.5 h-16 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-xl text-white border-0",
+                    (!canGoNext() || createMutation.isPending) && "opacity-60 cursor-not-allowed"
+                  )}
+                  style={{
+                    width: '100% !important',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+                    boxShadow: '0 6px 32px -4px rgba(59, 130, 246, 0.8), 0 0 0 1px rgba(59, 130, 246, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
+                    fontWeight: '700',
+                    letterSpacing: '0.025em'
+                  }}
+                >
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
+                    </>
+                  ) : currentStep === steps.length - 1 ? (
+                    <>
+                      <Check className="w-5 h-5 flex-shrink-0" />
+                      <span className="truncate">Создать заявку</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="truncate">Далее</span>
+                      <ArrowRight className="w-5 h-5 flex-shrink-0" />
+                    </>
+                  )}
+                </button>
+              </Tooltip>
+            </div>
           </div>
         </div>
       </div>
