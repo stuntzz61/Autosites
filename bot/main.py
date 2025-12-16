@@ -163,6 +163,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
         if is_valid:
             invite = result
             # Update user's invite code and potentially reset status
+            from psycopg.rows import dict_row
             async with db.get_conn() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
                     # Check if user already used this invite
@@ -434,6 +435,7 @@ async def cb_register_with_invite(callback: types.CallbackQuery, state: FSMConte
 
     if user:
         # User exists - update invite code and group
+        from psycopg.rows import dict_row
         async with db.get_conn() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
                 # Check if user already used this invite
