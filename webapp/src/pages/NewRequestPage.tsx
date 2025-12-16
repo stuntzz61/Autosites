@@ -558,7 +558,7 @@ export default function NewRequestPage() {
   }, [currentStep, selectedCategory, selectedServiceIndexForPhoto])
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#0F1115' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: '#1a1d26' }}>
       {/* Draft Restoration Prompt */}
       <AnimatePresence>
         {showDraftPrompt && (
@@ -616,8 +616,8 @@ export default function NewRequestPage() {
 
       {/* Header */}
       <div className="sticky top-0 z-10 backdrop-blur-xl border-b px-4 py-3" style={{
-        background: 'rgba(15, 20, 25, 0.95)',
-        borderColor: 'rgba(100, 116, 139, 0.15)'
+        background: 'rgba(26, 29, 38, 0.95)',
+        borderColor: 'rgba(148, 163, 184, 0.15)'
       }}>
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -650,7 +650,7 @@ export default function NewRequestPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-4 pb-6">
+      <div className="flex-1 p-4 pb-24">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -672,13 +672,13 @@ export default function NewRequestPage() {
                       className={clsx(
                         'w-full p-4 rounded-2xl border transition-all text-left',
                         formData.tariff === 'standard'
-                          ? 'border-slate-500'
-                          : 'border-slate-700/50'
+                          ? 'border-slate-500/50'
+                          : 'border-slate-700/30'
                       )}
                       style={{
                         background: formData.tariff === 'standard'
-                          ? 'linear-gradient(145deg, #334155 0%, #1e293b 100%)'
-                          : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                          ? 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)'
+                          : 'linear-gradient(145deg, #1e232f 0%, #1a1d26 100%)'
                       }}
                     >
                       <div className="flex items-start gap-3">
@@ -703,37 +703,35 @@ export default function NewRequestPage() {
                     <button
                       type="button"
                       onClick={() => updateField('tariff', 'premium')}
-                      className={clsx(
-                        'w-full p-4 rounded-2xl border transition-all text-left relative overflow-hidden',
-                        formData.tariff === 'premium'
-                          ? 'border-purple-500/40'
-                          : 'border-slate-700/50'
-                      )}
-                      style={formData.tariff === 'premium' ? {
-                        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.15) 50%, rgba(139, 92, 246, 0.2) 100%)',
-                        backgroundSize: '200% 200%',
-                        animation: 'gradientShift 3s ease infinite',
-                        boxShadow: '0 8px 32px -8px rgba(139, 92, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
-                      } : {
-                        background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                      className="w-full p-4 rounded-2xl transition-all text-left relative overflow-hidden"
+                      style={{
+                        background: formData.tariff === 'premium'
+                          ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(59, 130, 246, 0.2) 50%, rgba(139, 92, 246, 0.25) 100%)'
+                          : 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)',
+                        backgroundSize: formData.tariff === 'premium' ? '200% 200%' : '100% 100%',
+                        animation: formData.tariff === 'premium' ? 'gradientShift 3s ease infinite' : 'none',
+                        boxShadow: formData.tariff === 'premium'
+                          ? '0 0 0 2px rgba(139, 92, 246, 0.4), 0 0 0 4px rgba(59, 130, 246, 0.2), 0 8px 32px -8px rgba(139, 92, 246, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.15)'
+                          : '0 0 0 2px rgba(139, 92, 246, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
                       }}
                     >
                       {/* Shine effect when selected */}
                       {formData.tariff === 'premium' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none rounded-2xl" style={{
                           backgroundSize: '200% 100%',
-                          animation: 'shimmer 2s ease-in-out infinite'
+                          animation: 'shimmer 2s ease-in-out infinite',
+                          zIndex: 1
                         }} />
                       )}
                       <div className="flex items-start gap-3 relative z-10">
                         <div className={clsx(
                           'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                           formData.tariff === 'premium'
-                            ? 'border-purple-400'
-                            : 'border-slate-600'
+                            ? 'border-purple-400 shadow-[0_0_8px_rgba(139,92,246,0.5)]'
+                            : 'border-slate-500'
                         )}>
                           {formData.tariff === 'premium' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-blue-400" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -746,11 +744,15 @@ export default function NewRequestPage() {
                             )}>
                               Премиум лендинг
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white ml-auto whitespace-nowrap" style={{
-                              background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
-                              boxShadow: '0 2px 8px -2px rgba(139, 92, 246, 0.4)'
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide text-white ml-auto whitespace-nowrap" style={{
+                              background: formData.tariff === 'premium'
+                                ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)'
+                                : 'linear-gradient(135deg, rgba(251, 191, 36, 0.5) 0%, rgba(245, 158, 11, 0.5) 50%, rgba(217, 119, 6, 0.5) 100%)',
+                              boxShadow: formData.tariff === 'premium'
+                                ? '0 2px 12px -2px rgba(251, 191, 36, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                                : '0 2px 8px -2px rgba(251, 191, 36, 0.3)'
                             }}>
-                              PRO
+                              PREMIUM
                             </span>
                           </div>
                           <p className="text-xs text-slate-300 mt-1">Профессиональный дизайн и качество</p>
@@ -969,7 +971,7 @@ export default function NewRequestPage() {
                   </div>
                 )}
                 {formData.services.map((service, i) => (
-                  <div key={i} className="rounded-xl p-4 space-y-3 border border-blue-500/10" style={{ background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)' }}>
+                  <div key={i} className="rounded-xl p-4 space-y-3 border border-blue-500/10" style={{ background: 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)' }}>
                     <div className="flex justify-between mb-3">
                       <span className="text-sm font-medium text-slate-200">Услуга/Товар {i + 1}</span>
                       {formData.services.length > 1 && (
@@ -1304,7 +1306,7 @@ export default function NewRequestPage() {
                   />
                 </div>
 
-                <div className="rounded-xl p-4 border border-blue-500/20" style={{ background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)' }}>
+                <div className="rounded-xl p-4 border border-blue-500/20" style={{ background: 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)' }}>
                   <p className="font-medium mb-3 text-slate-100">Итого</p>
                   <div className="space-y-2 text-sm">
                     <p className="flex justify-between"><span className="text-slate-400">Компания:</span> <span className="text-slate-200 font-medium">{formData.company || '—'}</span></p>
@@ -1347,20 +1349,20 @@ export default function NewRequestPage() {
       </div>
 
       {/* Bottom Actions - Full width centered layout */}
-      <div className="sticky bottom-0 backdrop-blur-lg border-t safe-bottom z-20" style={{ background: 'rgba(15, 23, 42, 0.95)', borderColor: 'rgba(148, 163, 184, 0.1)' }}>
-        {/* Validation status message */}
+      <div className="sticky bottom-0 backdrop-blur-xl border-t safe-bottom z-20 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.3)]" style={{ background: 'rgba(26, 29, 38, 0.98)', borderColor: 'rgba(148, 163, 184, 0.15)' }}>
+        {/* Validation status message - placed directly above button */}
         {Object.keys(errors).length > 0 && (
-          <div className="px-4 pt-3 pb-2">
-            <p className="text-xs text-red-400 text-center flex items-center justify-center gap-1.5 animate-fade-in-up">
-              <AlertCircle className="w-3.5 h-3.5" />
+          <div className="px-4 pt-4 pb-3">
+            <p className="text-sm text-red-400 text-center flex items-center justify-center gap-2 animate-fade-in-up font-medium">
+              <AlertCircle className="w-4 h-4" />
               Исправьте ошибки в форме выше
             </p>
           </div>
         )}
         {!canGoNext() && Object.keys(errors).length === 0 && (
-          <div className="px-4 pt-3 pb-2">
-            <p className="text-xs text-slate-400 text-center flex items-center justify-center gap-1.5">
-              <AlertCircle className="w-3.5 h-3.5" />
+          <div className="px-4 pt-4 pb-3">
+            <p className="text-sm text-slate-400 text-center flex items-center justify-center gap-2 font-medium">
+              <AlertCircle className="w-4 h-4" />
               Заполните обязательные поля для продолжения
             </p>
           </div>
@@ -1374,8 +1376,8 @@ export default function NewRequestPage() {
                   onClick={goBack}
                   className="flex items-center justify-center w-12 h-12 rounded-xl transition-all active:scale-95 border"
                   style={{
-                    background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    background: 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)',
+                    borderColor: 'rgba(148, 163, 184, 0.25)',
                     color: '#cbd5e1'
                   }}
                 >
@@ -1399,17 +1401,17 @@ export default function NewRequestPage() {
                 onClick={goNext}
                 disabled={createMutation.isPending || !canGoNext()}
                 className={clsx(
-                  "flex-1 flex items-center justify-center gap-2.5 h-12 rounded-xl font-semibold text-base transition-all active:scale-[0.98] min-w-0",
+                  "flex-1 flex items-center justify-center gap-2.5 h-14 rounded-xl font-bold text-base transition-all active:scale-[0.98] min-w-0 shadow-lg",
                   (canGoNext() && !createMutation.isPending)
-                    ? "text-white border"
-                    : "text-slate-500 cursor-not-allowed border"
+                    ? "text-white border-0"
+                    : "text-slate-500 cursor-not-allowed border border-slate-700/50"
                 )}
                 style={canGoNext() && !createMutation.isPending ? {
-                  background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
-                  borderColor: 'rgba(148, 163, 184, 0.3)'
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+                  boxShadow: '0 4px 20px -4px rgba(59, 130, 246, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
                 } : {
-                  background: 'linear-gradient(145deg, #0f172a 0%, #0a0f1e 100%)',
-                  borderColor: 'rgba(100, 116, 139, 0.2)'
+                  background: 'linear-gradient(145deg, #1a1d26 0%, #151820 100%)',
+                  boxShadow: 'none'
                 }}
               >
                 {createMutation.isPending ? (

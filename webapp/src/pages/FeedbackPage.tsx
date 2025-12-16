@@ -86,9 +86,12 @@ export default function FeedbackPage() {
   const items = feedbackList?.items || []
 
   return (
-    <div className="min-h-screen bg-tg-bg pb-24">
+    <div className="min-h-screen pb-24" style={{ background: '#1a1d26' }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-tg-bg border-b border-tg-separator px-4 py-3">
+      <div className="sticky top-0 z-10 backdrop-blur-xl border-b px-4 py-3" style={{
+        background: 'rgba(26, 29, 38, 0.95)',
+        borderColor: 'rgba(148, 163, 184, 0.15)'
+      }}>
         <h1 className="text-lg font-semibold text-tg-text">Обратная связь</h1>
         <p className="text-sm text-tg-hint">Связь с администратором</p>
       </div>
@@ -169,7 +172,8 @@ export default function FeedbackPage() {
               onClick={() => !createMutation.isPending && setShowNewFeedback(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[85vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl p-4 z-50 safe-bottom max-h-[85vh] overflow-y-auto"
+              style={{ background: '#2a2f3e' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -288,7 +292,8 @@ export default function FeedbackPage() {
               onClick={() => setSelectedFeedback(null)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[85vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl p-4 z-50 safe-bottom max-h-[85vh] overflow-y-auto"
+              style={{ background: '#2a2f3e' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}

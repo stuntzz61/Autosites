@@ -7,7 +7,7 @@ SERVER="root@194.147.115.160"
 SSH_PASS="wakfis-suFzug-jasge1" 
 # ==========================================
 
-# Определяем цвета для локального вывода
+# Определяем цвета
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -20,7 +20,7 @@ clear
 
 echo ""
 echo " \033[1;36m=======================================================\033[0m"
-echo " \033[1;37m   🚀  FULL DEPLOYMENT PIPELINE (GIT + SERVER)        \033[0m"
+echo " \033[1;37m   🚀  FULL DEPLOYMENT PIPELINE (CLEAN LOGS)          \033[0m"
 echo " \033[1;36m=======================================================\033[0m"
 echo ""
 
@@ -30,20 +30,18 @@ echo ""
 
 echo -e "${CYAN}📦 [STEP 1/2] Local Git Operations${NC}"
 
-# Проверка репозитория
 if [ ! -d ".git" ]; then
     echo -e "${RED}❌ Ошибка: Текущая папка не является git репозиторием!${NC}"
     exit 1
 fi
 
-# Получение сообщения коммита (из аргументов или ввод вручную)
+# Получение сообщения коммита
 if [ -n "$1" ]; then
     COMMIT_MSG="$1"
 else
-    # Если изменений нет, пропускаем коммит
     if [ -z "$(git status --porcelain)" ]; then
         echo -e "${YELLOW}⚠️  Нет локальных изменений для коммита.${NC}"
-        echo -e "${YELLOW}⏩ Пропускаем шаг Git Push и переходим к деплою...${NC}"
+        echo -e "${YELLOW}⏩ Пропускаем Git Push...${NC}"
         SKIP_GIT=true
     else
         echo -e "${YELLOW}📝 Введите сообщение коммита:${NC}"
@@ -56,34 +54,21 @@ else
 fi
 
 if [ "$SKIP_GIT" != "true" ]; then
-    # 1. Add
     printf "   %-30s" "git add ."
     git add .
     echo -e "${GREEN}✅ OK${NC}"
 
-    # 2. Commit
     printf "   %-30s" "git commit"
     git commit -m "$COMMIT_MSG" > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✅ OK${NC}"
-    else
-        echo -e "${RED}❌ Ошибка (возможно, нет изменений)${NC}"
-    fi
+    if [ $? -eq 0 ]; then echo -e "${GREEN}✅ OK${NC}"; else echo -e "${RED}❌ (Нет изменений)${NC}"; fi
 
-    # 3. Push
     BRANCH=$(git branch --show-current)
     printf "   %-30s" "git push origin $BRANCH"
-    
     if git push origin "$BRANCH" > /dev/null 2>&1; then
         echo -e "${GREEN}✅ OK${NC}"
     else
-        echo -e "${YELLOW}⚠️  Обычный push не прошел. Пробую set-upstream...${NC}"
-        if git push -u origin "$BRANCH"; then
-             echo -e "${GREEN}✅ OK${NC}"
-        else
-             echo -e "${RED}❌ Критическая ошибка Git Push. Останавливаем деплой.${NC}"
-             exit 1
-        fi
+        echo -e "${YELLOW}⚠️  Пробую push -u...${NC}"
+        if git push -u origin "$BRANCH" > /dev/null 2>&1; then echo -e "${GREEN}✅ OK${NC}"; else echo -e "${RED}❌ Ошибка Git Push${NC}"; exit 1; fi
     fi
 fi
 
@@ -97,15 +82,25 @@ echo ""
 
 echo -e "${CYAN}🚀 [STEP 2/2] Remote Server Deployment ($SERVER)${NC}"
 
-# Проверка наличия sshpass
+# Проверка sshpass
 if ! command -v sshpass &> /dev/null; then
-    echo -e "${RED}❌ Ошибка: 'sshpass' не установлен. Выполните: sudo apt install sshpass${NC}"
+    echo -e "${RED}❌ Ошибка: нужен 'sshpass' (sudo apt install sshpass)${NC}"
     exit 1
 fi
 
+# ------------------------------------------------------------------
+# ХАК ДЛЯ ТИШИНЫ: Создаем .hushlogin на сервере (без -t, чтобы не видеть баннер сейчас)
+# ------------------------------------------------------------------
+sshpass -p "$SSH_PASS" ssh -o StrictHostKeyChecking=no -q $SERVER "touch ~/.hushlogin" 2>/dev/null
+
 # Подключение и выполнение
-sshpass -p "$SSH_PASS" ssh -t -o StrictHostKeyChecking=no $SERVER << 'ENDSSH'
-    # --- НАСТРОЙКИ ЦВЕТОВ ВНУТРИ СЕССИИ (REMOTE) ---
+# Добавлен флаг -q (quiet) для подавления системных сообщений SSH
+sshpass -p "$SSH_PASS" ssh -t -q -o StrictHostKeyChecking=no $SERVER << 'ENDSSH'
+    
+    # Сброс настроек терминала для корректного отображения цветов после подавления баннера
+    export TERM=xterm-256color
+
+    # --- НАСТРОЙКИ ЦВЕТОВ ВНУТРИ СЕССИИ ---
     BOLD='\033[1m'
     RED='\033[1;31m'
     GREEN='\033[1;32m'
@@ -134,13 +129,13 @@ sshpass -p "$SSH_PASS" ssh -t -o StrictHostKeyChecking=no $SERVER << 'ENDSSH'
             cat "$LOG_FILE"
             echo "${RED}================= REMOTE LOG END ===================${NC}"
             echo ""
-            echo "${RED}❌ Деплой прерван из-за ошибки на сервере.${NC}"
+            echo "${RED}❌ Деплой прерван.${NC}"
             rm -f "$LOG_FILE"
             exit 1
         fi
     }
 
-    # --- НАЧАЛО РАБОТЫ НА СЕРВЕРЕ ---
+    # --- НАЧАЛО РАБОТЫ ---
     cd /opt/n8n || { echo "❌ Папка /opt/n8n не найдена"; exit 1; }
 
     # 1. PULL

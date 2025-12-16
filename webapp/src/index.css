@@ -9,16 +9,16 @@
   --tg-viewport-height: 100vh;
   --tg-viewport-stable-height: 100vh;
 
-  /* Deep Dark Mode Color Palette */
-  --tg-theme-bg-color: #0F1115; /* Deep dark background */
+  /* Deep Dark Mode Color Palette - Updated with Charcoal/Dark Grey tones */
+  --tg-theme-bg-color: #1a1d26; /* Charcoal dark background (was #0F1115) */
   --tg-theme-text-color: #FFFFFF; /* White headings */
   --tg-theme-hint-color: #9CA3AF; /* Light gray secondary text */
   --tg-theme-link-color: #3B82F6; /* Electric Blue accent */
-  --tg-theme-button-color: #1E222B; /* Card color */
+  --tg-theme-button-color: #2a2f3e; /* Card color - lighter than background */
   --tg-theme-button-text-color: #FFFFFF;
-  --tg-theme-secondary-bg-color: #1E222B; /* Card background */
-  --tg-theme-header-bg-color: #0F1115;
-  --tg-theme-section-bg-color: #1E222B;
+  --tg-theme-secondary-bg-color: #2a2f3e; /* Card background - lighter than main bg */
+  --tg-theme-header-bg-color: #1a1d26;
+  --tg-theme-section-bg-color: #2a2f3e;
   --tg-theme-section-header-text-color: #9CA3AF;
   --tg-theme-accent-text-color: #3B82F6; /* Electric Blue */
   --tg-theme-destructive-text-color: #EF4444;
@@ -33,15 +33,15 @@
 
 /* Dark theme variant */
 .dark, [data-theme="dark"] {
-  --tg-theme-bg-color: #0F1115;
+  --tg-theme-bg-color: #1a1d26;
   --tg-theme-text-color: #FFFFFF;
   --tg-theme-hint-color: #9CA3AF;
   --tg-theme-link-color: #3B82F6;
-  --tg-theme-button-color: #1E222B;
+  --tg-theme-button-color: #2a2f3e;
   --tg-theme-button-text-color: #FFFFFF;
-  --tg-theme-secondary-bg-color: #1E222B;
-  --tg-theme-header-bg-color: #0F1115;
-  --tg-theme-section-bg-color: #1E222B;
+  --tg-theme-secondary-bg-color: #2a2f3e;
+  --tg-theme-header-bg-color: #1a1d26;
+  --tg-theme-section-bg-color: #2a2f3e;
   --tg-theme-section-header-text-color: #9CA3AF;
   --tg-theme-accent-text-color: #3B82F6;
   --tg-theme-destructive-text-color: #EF4444;
@@ -239,9 +239,9 @@ body {
 @layer components {
   .card {
     @apply rounded-3xl p-6 border;
-    background: #1E222B;
-    border-color: rgba(156, 163, 175, 0.1);
-    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+    background: #2a2f3e;
+    border-color: rgba(148, 163, 184, 0.15);
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
   }
 
   .card-premium {
@@ -306,8 +306,8 @@ body {
 
   .input {
     @apply w-full rounded-2xl px-5 py-4 text-white outline-none transition-all duration-200 border;
-    background: #1E222B;
-    border-color: rgba(156, 163, 175, 0.1);
+    background: #2a2f3e;
+    border-color: rgba(148, 163, 184, 0.15);
   }
 
   .input::placeholder {
@@ -326,11 +326,11 @@ body {
 
   .list-item {
     @apply flex items-center gap-4 px-5 py-4 transition-all duration-200;
-    background: linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%);
+    background: linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%);
   }
 
   .list-item:active {
-    background: linear-gradient(145deg, #334155 0%, #1e293b 100%);
+    background: linear-gradient(145deg, #32384a 0%, #2a2f3e 100%);
   }
 
   .divider {
@@ -340,9 +340,9 @@ body {
 
   /* Premium glass effect */
   .glass {
-    background: rgba(30, 41, 59, 0.85);
+    background: rgba(42, 47, 62, 0.85);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(100, 116, 139, 0.15);
+    border: 1px solid rgba(148, 163, 184, 0.15);
   }
 
   /* Glow effect */
