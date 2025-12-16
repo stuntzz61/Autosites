@@ -78,12 +78,14 @@ async def get_dashboard(user: dict = Depends(get_supervisor_user)):
 
 @router.get("/managers")
 async def list_managers(user: dict = Depends(get_supervisor_user)):
-    """List managers. If admin is in a group, show only group members."""
-    # Try to get group-based managers first
-    managers = await db.list_managers_by_admin(str(user['id']))
-    if not managers:
-        # Fallback to all managers
+    """List managers. Supervisor sees only managers from their groups. Director/Owner see all managers."""
+    user_role = user.get('role')
+    if user_role in ('owner', 'director'):
+        # Owner and Director see all managers
         managers = await db.list_managers()
+    else:
+        # Supervisor sees only managers from their groups
+        managers = await db.list_managers_by_admin(str(user['id']))
     return managers
 
 

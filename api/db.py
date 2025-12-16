@@ -76,8 +76,8 @@ async def list_managers() -> List[Dict]:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name, u.contact,
-                          u.role, u.approval_status, u.created_at,
+                """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name, u.full_name,
+                          u.phone, u.email, u.contact, u.role, u.approval_status, u.created_at,
                           COALESCE(u.is_blocked, FALSE) as is_blocked,
                           COUNT(r.id) as request_count
                    FROM users u
@@ -98,7 +98,7 @@ async def list_admins() -> List[Dict]:
                 """SELECT id, tg_id, username, first_name, last_name, contact, role, created_at
                    FROM users
                    WHERE role IN ('supervisor', 'director', 'owner')
-                   ORDER BY 
+                   ORDER BY
                      CASE role
                        WHEN 'owner' THEN 1
                        WHEN 'director' THEN 2
@@ -2471,24 +2471,24 @@ async def can_manage_user(manager_id: str, target_user_id: str) -> bool:
     """
     manager_role = await get_user_role(manager_id)
     target_role = await get_user_role(target_user_id)
-    
+
     if not manager_role or not target_role:
         return False
-    
+
     # Owner can manage everyone
     if manager_role == 'owner':
         return True
-    
+
     # Director can manage director, supervisor, manager (but not owner)
     if manager_role == 'director':
         return target_role in ('director', 'supervisor', 'manager')
-    
+
     # Supervisor can manage only managers from their groups
     if manager_role == 'supervisor':
         if target_role != 'manager':
             return False
         return await is_manager_accessible_by_admin(target_user_id, manager_id)
-    
+
     # Manager cannot manage anyone
     return False
 
@@ -2503,21 +2503,21 @@ async def can_manage_group(manager_id: str, group_id: str) -> bool:
     - Manager cannot manage groups
     """
     manager_role = await get_user_role(manager_id)
-    
+
     if not manager_role:
         return False
-    
+
     # Owner and Director can manage all groups
     if manager_role in ('owner', 'director'):
         return True
-    
+
     # Supervisor can manage only groups they created
     if manager_role == 'supervisor':
         group = await get_admin_group(group_id)
         if not group:
             return False
         return str(group.get('created_by')) == str(manager_id)
-    
+
     # Manager cannot manage groups
     return False
 
@@ -2532,22 +2532,22 @@ async def can_assign_role(manager_id: str, target_role: str) -> bool:
     - Manager cannot assign roles
     """
     manager_role = await get_user_role(manager_id)
-    
+
     if not manager_role:
         return False
-    
+
     # Owner can assign any role
     if manager_role == 'owner':
         return target_role in ('owner', 'director', 'supervisor', 'manager')
-    
+
     # Director can assign director, supervisor, manager (but not owner)
     if manager_role == 'director':
         return target_role in ('director', 'supervisor', 'manager')
-    
+
     # Supervisor can assign only manager role
     if manager_role == 'supervisor':
         return target_role == 'manager'
-    
+
     # Manager cannot assign roles
     return False
 

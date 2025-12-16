@@ -217,22 +217,27 @@ async def verify_init_data(request: VerifyRequest):
     # Assign roles based on config (only for initial setup, owner can manage roles later via UI)
     current_role = user.get('role', 'manager')
 
-    # Check if user should be Owner (from OWNER_IDS env) - only for initial setup
+    # Check if user should be Owner (from OWNER_IDS env) - highest priority
     # Owner role can only be set via config, not via UI
+    # If user is in OWNER_IDS, always set to owner regardless of current role
     is_owner_by_config = tg_id in settings.owner_tg_ids
-    if is_owner_by_config and current_role != 'owner':
-        await db.update_user_role(str(user['id']), 'owner')
-        user['role'] = 'owner'
-    # Check if user should be Director (from DIRECTOR_IDS env) - only for initial setup
+    if is_owner_by_config:
+        if current_role != 'owner':
+            print(f"[DEBUG] Setting user {tg_id} to owner role (was {current_role})")
+            await db.update_user_role(str(user['id']), 'owner')
+            user['role'] = 'owner'
+        else:
+            print(f"[DEBUG] User {tg_id} already has owner role")
+    # Check if user should be Director (from DIRECTOR_IDS env) - only if not owner
     # After initial setup, directors are managed by owner via UI
-    elif not is_owner_by_config and current_role == 'manager':
-        # Only assign director from config if user is still a manager (not manually assigned)
+    elif not is_owner_by_config:
         is_director_by_config = tg_id in settings.director_tg_ids
-        if is_director_by_config:
+        # Only assign director from config if user is still a manager (not manually assigned to supervisor/director)
+        if is_director_by_config and current_role == 'manager':
             await db.update_user_role(str(user['id']), 'director')
             user['role'] = 'director'
         # Check if user should be Supervisor (from SUPERVISOR_IDS or ADMIN_IDS env) - only for initial setup
-        elif current_role == 'manager':
+        elif not is_director_by_config and current_role == 'manager':
             is_supervisor_by_config = tg_id in settings.supervisor_tg_ids
             if is_supervisor_by_config:
                 await db.update_user_role(str(user['id']), 'supervisor')
