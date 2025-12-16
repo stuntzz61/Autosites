@@ -1615,22 +1615,26 @@ export default function RequestDetailPage() {
       </div>
 
       {/* Bottom Actions - positioned above bottom nav */}
-      <div className="fixed bottom-16 left-0 right-0 backdrop-blur-lg border-t z-20" style={{
-        background: 'rgba(15, 20, 25, 0.95)',
-        borderColor: 'rgba(100, 116, 139, 0.15)'
-      }}>
+      <div
+        className="fixed bottom-16 left-0 right-0 z-20"
+        style={{
+          background: 'linear-gradient(to top, rgba(11, 17, 32, 0.98) 0%, rgba(11, 17, 32, 0.95) 50%, rgba(11, 17, 32, 0.9) 100%)',
+          backdropFilter: 'blur(20px)',
+          borderTop: '1px solid var(--border-subtle)'
+        }}
+      >
         <div className="p-4 max-w-2xl mx-auto">
-          <div className="flex items-center justify-center gap-2 sm:gap-3">
+          <div className="flex items-center justify-center gap-3">
             {/* Edit button - show for editable statuses */}
             {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
               <Tooltip content="Редактировать заявку" position="top">
                 <button
                   onClick={handleEdit}
-                  className="flex items-center justify-center w-12 h-12 sm:h-14 rounded-xl transition-all active:scale-95 border"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-all active:scale-95"
                   style={{
-                    background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                    borderColor: 'rgba(148, 163, 184, 0.2)',
-                    color: '#cbd5e1'
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-muted)'
                   }}
                   aria-label="Редактировать"
                 >
@@ -1645,10 +1649,10 @@ export default function RequestDetailPage() {
                 <button
                   onClick={handleGenerate}
                   disabled={generateMutation.isPending}
-                  className="flex-1 flex items-center justify-center gap-2 h-12 sm:h-14 px-4 sm:px-6 rounded-xl text-white font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-w-0 border"
+                  className="flex-1 flex items-center justify-center gap-2 h-12 px-5 rounded-xl text-white font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
-                    borderColor: 'rgba(148, 163, 184, 0.3)'
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+                    boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
                   }}
                   aria-label="Отправить в разработку"
                 >
@@ -1657,7 +1661,7 @@ export default function RequestDetailPage() {
                   ) : (
                     <>
                       <Send className="w-5 h-5 flex-shrink-0" />
-                      <span className="truncate text-sm sm:text-base">В разработку</span>
+                      <span className="truncate">В разработку</span>
                     </>
                   )}
                 </button>
@@ -1671,15 +1675,15 @@ export default function RequestDetailPage() {
                   href={resultUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 h-12 sm:h-14 px-4 sm:px-6 rounded-xl text-white font-semibold transition-all active:scale-[0.98] border"
+                  className="flex-1 flex items-center justify-center gap-2 h-12 px-5 rounded-xl text-white font-semibold transition-all active:scale-[0.98]"
                   style={{
-                    background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
-                    borderColor: 'rgba(148, 163, 184, 0.3)'
+                    background: 'linear-gradient(135deg, var(--success) 0%, #059669 100%)',
+                    boxShadow: '0 4px 16px -4px rgba(16, 185, 129, 0.5)'
                   }}
                   aria-label="Открыть сайт"
                 >
                   <ExternalLink className="w-5 h-5 flex-shrink-0" />
-                  <span className="truncate text-sm sm:text-base">Открыть сайт</span>
+                  <span className="truncate">Открыть сайт</span>
                 </a>
               </Tooltip>
             )}
@@ -1688,11 +1692,11 @@ export default function RequestDetailPage() {
             <Tooltip content="Переместить в архив" position="top">
               <button
                 onClick={handleArchive}
-                className="flex items-center justify-center w-12 h-12 sm:h-14 rounded-xl transition-all active:scale-95 disabled:opacity-50 border"
+                className="flex items-center justify-center w-12 h-12 rounded-xl transition-all active:scale-95 disabled:opacity-50"
                 style={{
-                  background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                  borderColor: 'rgba(148, 163, 184, 0.2)',
-                  color: '#cbd5e1'
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-muted)'
                 }}
                 disabled={archiveMutation.isPending}
                 aria-label="Архивировать"
@@ -1707,11 +1711,11 @@ export default function RequestDetailPage() {
                 <button
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
-                  className="flex items-center justify-center w-12 h-12 sm:h-14 rounded-xl transition-all active:scale-95 disabled:opacity-50 border"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-all active:scale-95 disabled:opacity-50"
                   style={{
-                    background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-                    borderColor: 'rgba(239, 68, 68, 0.3)',
-                    color: '#f87171'
+                    background: 'var(--error-bg)',
+                    border: '1px solid var(--error-border)',
+                    color: 'var(--error-light)'
                   }}
                   aria-label="Удалить"
                 >

@@ -28,10 +28,10 @@ const steps = [
 const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты']
 
 const photoCategories = [
-  { id: 'hero', label: 'Баннер', icon: '' },
-  { id: 'services', label: 'Услуги/Товары', icon: '' },
-  { id: 'portfolio', label: 'Портфолио', icon: '' },
-  { id: 'gallery', label: 'Галерея', icon: '' },
+  { id: 'hero', label: 'Баннер', icon: '🖼️' },
+  { id: 'services', label: 'Услуги/Товары', icon: '🛠️' },
+  { id: 'portfolio', label: 'Портфолио', icon: '📂' },
+  { id: 'gallery', label: 'Галерея', icon: '📷' },
 ]
 
 interface ServiceItem {
@@ -202,17 +202,15 @@ const clearDraft = (): void => {
   }
 }
 
-// DropZone Component for drag-and-drop file uploads
+// DropZone Component for drag-and-drop file uploads with category selection
 function DropZone({
-  onFilesAdded,
-  categoryLabel,
   fileInputRef,
-  onFileSelect
+  onFileSelect,
+  onDragDrop
 }: {
-  onFilesAdded: (files: FileList | File[]) => void
-  categoryLabel: string
   fileInputRef: React.RefObject<HTMLInputElement>
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onDragDrop: (files: File[]) => void
 }) {
   const [isDragging, setIsDragging] = useState(false)
   const dragCounter = useRef(0)
@@ -247,7 +245,11 @@ function DropZone({
     dragCounter.current = 0
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onFilesAdded(e.dataTransfer.files)
+      // Convert FileList to array and trigger category selection modal
+      const filesArray = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+      if (filesArray.length > 0) {
+        onDragDrop(filesArray)
+      }
       e.dataTransfer.clearData()
     }
   }
@@ -255,16 +257,16 @@ function DropZone({
   return (
     <label
       className={clsx(
-        "relative flex flex-col items-center justify-center w-full min-h-[140px] p-6 border-2 border-dashed rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden",
+        "relative flex flex-col items-center justify-center w-full min-h-[160px] p-6 border-2 border-dashed rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden",
         isDragging
-          ? "scale-[1.02]"
-          : "hover:scale-[1.01]"
+          ? "scale-[1.01]"
+          : "hover:border-blue-400/50"
       )}
       style={{
-        borderColor: isDragging ? 'var(--accent-blue)' : 'var(--border-subtle)',
+        borderColor: isDragging ? 'var(--accent-primary)' : 'var(--border-default)',
         background: isDragging
           ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)'
-          : 'var(--surface-secondary)',
+          : 'var(--bg-surface)',
         boxShadow: isDragging
           ? '0 0 30px -5px rgba(59, 130, 246, 0.3), inset 0 0 20px -10px rgba(59, 130, 246, 0.2)'
           : 'none'
@@ -304,9 +306,9 @@ function DropZone({
           )}
           style={{
             background: isDragging
-              ? 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%)'
-              : 'rgba(59, 130, 246, 0.1)',
-            border: `1px solid ${isDragging ? 'var(--accent-blue)' : 'var(--border-accent)'}`,
+              ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)'
+              : 'rgba(59, 130, 246, 0.12)',
+            border: `1px solid ${isDragging ? 'var(--accent-primary)' : 'var(--border-accent)'}`,
             boxShadow: isDragging ? '0 4px 20px -4px rgba(59, 130, 246, 0.5)' : 'none'
           }}
         >
@@ -316,7 +318,7 @@ function DropZone({
               isDragging && "animate-bounce"
             )}
             style={{
-              color: isDragging ? 'white' : 'var(--accent-blue-light)'
+              color: isDragging ? 'white' : 'var(--accent-primary-light)'
             }}
           />
         </div>
@@ -324,19 +326,19 @@ function DropZone({
         <span
           className="text-center font-semibold mb-1 transition-colors duration-300"
           style={{
-            color: isDragging ? 'var(--accent-blue-light)' : 'var(--tg-theme-text-color)'
+            color: isDragging ? 'var(--accent-primary-light)' : 'var(--text-primary)'
           }}
         >
-          {isDragging ? 'Отпустите для загрузки' : `Добавить фото в «${categoryLabel}»`}
+          {isDragging ? 'Отпустите для загрузки' : 'Перетащите фото сюда'}
         </span>
 
         <span
           className="text-center text-xs transition-colors duration-300"
-          style={{ color: 'var(--tg-theme-hint-color)' }}
+          style={{ color: 'var(--text-subtle)' }}
         >
           {isDragging
-            ? 'Перетащите изображения сюда'
-            : 'Нажмите, перетащите файлы или вставьте из буфера (Ctrl+V)'
+            ? 'Выберите категорию после загрузки'
+            : 'Или нажмите для выбора файлов'
           }
         </span>
       </div>
@@ -358,6 +360,10 @@ export default function NewRequestPage() {
   const [formData, setFormData] = useState<FormData>(getInitialFormData())
   const [showDraftPrompt, setShowDraftPrompt] = useState(false)
   const [draftData, setDraftData] = useState<{ formData: Partial<FormData>; currentStep: number } | null>(null)
+
+  // State for drag-and-drop category selection
+  const [pendingDragFiles, setPendingDragFiles] = useState<File[]>([])
+  const [showCategorySelectModal, setShowCategorySelectModal] = useState(false)
 
   useEffect(() => {
     const draft = loadDraft()
@@ -535,6 +541,34 @@ export default function NewRequestPage() {
       ...prev,
       photos: [...prev.photos, ...newPhotos],
     }))
+  }
+
+  // Handle drag-drop - show category selection modal
+  const handleDragDropFiles = (files: File[]) => {
+    setPendingDragFiles(files)
+    setShowCategorySelectModal(true)
+    haptic?.impactOccurred('light')
+  }
+
+  // Add photos from drag-drop with selected category
+  const addPhotosWithCategory = (category: string) => {
+    const newPhotos: PhotoItem[] = pendingDragFiles.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      category,
+      serviceIndex: selectedServiceIndexForPhoto ?? undefined,
+    }))
+
+    setFormData(prev => ({
+      ...prev,
+      photos: [...prev.photos, ...newPhotos],
+    }))
+
+    setPendingDragFiles([])
+    setShowCategorySelectModal(false)
+    setSelectedCategory(category)
+    toast.success(`Добавлено ${newPhotos.length} фото в категорию "${photoCategories.find(c => c.id === category)?.label}"`)
+    haptic?.notificationOccurred('success')
   }
 
   const removePhoto = (index: number) => {
@@ -770,6 +804,91 @@ export default function NewRequestPage() {
         )}
       </AnimatePresence>
 
+      {/* Category Selection Modal for Drag & Drop */}
+      <AnimatePresence>
+        {showCategorySelectModal && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-50"
+              style={{ background: 'rgba(0, 0, 0, 0.7)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setPendingDragFiles([])
+                setShowCategorySelectModal(false)
+              }}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-[60] safe-bottom"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderBottom: 'none'
+              }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+            >
+              <div className="p-5">
+                <div
+                  className="w-10 h-1 rounded-full mx-auto mb-5"
+                  style={{ background: 'var(--bg-tertiary)' }}
+                />
+
+                <div className="text-center mb-5">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+                      boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
+                    }}
+                  >
+                    <Camera className="w-7 h-7 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                    Выберите категорию
+                  </h3>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Добавление {pendingDragFiles.length} {pendingDragFiles.length === 1 ? 'фото' : 'фото'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {photoCategories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => addPhotosWithCategory(cat.id)}
+                      className="p-4 rounded-xl text-left transition-all active:scale-[0.98] hover:scale-[1.01]"
+                      style={{
+                        background: 'var(--bg-surface)',
+                        border: '1px solid var(--border-default)'
+                      }}
+                    >
+                      <span className="text-2xl mb-2 block">{cat.icon}</span>
+                      <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                        {cat.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setPendingDragFiles([])
+                    setShowCategorySelectModal(false)
+                  }}
+                  className="btn btn-secondary w-full"
+                >
+                  Отмена
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="sticky top-0 z-10 backdrop-blur-xl border-b px-4 py-3" style={{
         background: 'rgba(10, 14, 23, 0.95)',
@@ -817,33 +936,33 @@ export default function NewRequestPage() {
           >
             {currentStep === 0 && (
               <div className="space-y-5">
-                {/* Tariff Selection - Premium Design */}
+                {/* Tariff Selection - Premium Design with Base Highlighting */}
                 <div>
                   <label className="text-sm font-medium mb-3 block" style={{ color: 'var(--text-muted)' }}>
                     Тариф генерации
                   </label>
                   <div className="space-y-3">
-                    {/* Standard tariff */}
+                    {/* Standard tariff - always has visual distinction */}
                     <button
                       type="button"
                       onClick={() => updateField('tariff', 'standard')}
                       className="w-full p-4 rounded-2xl transition-all text-left active:scale-[0.99]"
                       style={{
                         background: formData.tariff === 'standard'
-                          ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, var(--bg-surface) 100%)'
-                          : 'var(--bg-surface)',
-                        border: `1px solid ${formData.tariff === 'standard' ? 'var(--border-accent)' : 'var(--border-default)'}`,
+                          ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(59, 130, 246, 0.08) 100%)'
+                          : 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, var(--bg-surface) 100%)',
+                        border: `1px solid ${formData.tariff === 'standard' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)'}`,
                         boxShadow: formData.tariff === 'standard'
-                          ? '0 4px 20px -4px rgba(59, 130, 246, 0.25)'
-                          : '0 4px 16px rgba(0, 0, 0, 0.15)'
+                          ? '0 4px 20px -4px rgba(59, 130, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
+                          : '0 2px 12px rgba(0, 0, 0, 0.1)'
                       }}
                     >
                       <div className="flex items-center gap-3">
                         <div
                           className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
                           style={{
-                            borderColor: formData.tariff === 'standard' ? 'var(--accent-primary)' : 'var(--text-subtle)',
-                            boxShadow: formData.tariff === 'standard' ? '0 0 8px var(--accent-primary-glow)' : 'none'
+                            borderColor: formData.tariff === 'standard' ? 'var(--accent-primary)' : 'rgba(59, 130, 246, 0.5)',
+                            boxShadow: formData.tariff === 'standard' ? '0 0 10px var(--accent-primary-glow)' : 'none'
                           }}
                         >
                           {formData.tariff === 'standard' && (
@@ -856,13 +975,13 @@ export default function NewRequestPage() {
                         <div className="flex-1 min-w-0">
                           <span
                             className="font-semibold"
-                            style={{ color: formData.tariff === 'standard' ? 'var(--accent-primary-light)' : 'var(--text-secondary)' }}
+                            style={{ color: formData.tariff === 'standard' ? 'var(--accent-primary-light)' : 'var(--accent-primary)' }}
                           >
                             Стандарт
                           </span>
                           <p
                             className="text-xs mt-0.5"
-                            style={{ color: formData.tariff === 'standard' ? 'var(--text-muted)' : 'var(--text-subtle)' }}
+                            style={{ color: 'var(--text-muted)' }}
                           >
                             Базовая генерация лендинга
                           </p>
@@ -870,39 +989,38 @@ export default function NewRequestPage() {
                       </div>
                     </button>
 
-                    {/* Premium tariff - Gold Gradient */}
+                    {/* Premium tariff - Gold Gradient with base highlighting */}
                     <button
                       type="button"
                       onClick={() => updateField('tariff', 'premium')}
                       className="w-full p-4 rounded-2xl transition-all text-left relative overflow-hidden active:scale-[0.99]"
                       style={{
                         background: formData.tariff === 'premium'
-                          ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, var(--bg-surface) 50%, rgba(245, 158, 11, 0.08) 100%)'
-                          : 'var(--bg-surface)',
-                        border: `1px solid ${formData.tariff === 'premium' ? 'var(--border-gold)' : 'var(--border-default)'}`,
+                          ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)'
+                          : 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bg-surface) 100%)',
+                        border: `1px solid ${formData.tariff === 'premium' ? 'rgba(245, 158, 11, 0.5)' : 'rgba(245, 158, 11, 0.25)'}`,
                         boxShadow: formData.tariff === 'premium'
-                          ? '0 4px 24px -4px var(--gold-glow), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
-                          : '0 4px 16px rgba(0, 0, 0, 0.15)'
+                          ? '0 4px 24px -4px var(--gold-glow), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)'
+                          : '0 2px 12px rgba(0, 0, 0, 0.1)'
                       }}
                     >
-                      {/* Shine effect */}
-                      {formData.tariff === 'premium' && (
-                        <div
-                          className="absolute inset-0 pointer-events-none rounded-2xl opacity-30"
-                          style={{
-                            background: 'linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.2) 50%, transparent 100%)',
-                            backgroundSize: '200% 100%',
-                            animation: 'shimmer 3s ease-in-out infinite'
-                          }}
-                        />
-                      )}
+                      {/* Shine effect - always visible but stronger when selected */}
+                      <div
+                        className="absolute inset-0 pointer-events-none rounded-2xl"
+                        style={{
+                          opacity: formData.tariff === 'premium' ? 0.4 : 0.15,
+                          background: 'linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.2) 50%, transparent 100%)',
+                          backgroundSize: '200% 100%',
+                          animation: 'shimmer 3s ease-in-out infinite'
+                        }}
+                      />
 
                       <div className="flex items-center gap-3 relative z-10">
                         <div
                           className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
                           style={{
-                            borderColor: formData.tariff === 'premium' ? 'var(--gold-primary)' : 'var(--text-subtle)',
-                            boxShadow: formData.tariff === 'premium' ? '0 0 10px var(--gold-glow)' : 'none'
+                            borderColor: formData.tariff === 'premium' ? 'var(--gold-primary)' : 'rgba(245, 158, 11, 0.5)',
+                            boxShadow: formData.tariff === 'premium' ? '0 0 12px var(--gold-glow)' : 'none'
                           }}
                         >
                           {formData.tariff === 'premium' && (
@@ -916,19 +1034,19 @@ export default function NewRequestPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
                               className="font-semibold"
-                              style={{ color: formData.tariff === 'premium' ? 'var(--gold-light)' : 'var(--text-secondary)' }}
+                              style={{ color: formData.tariff === 'premium' ? 'var(--gold-light)' : 'var(--gold-primary)' }}
                             >
                               Премиум лендинг
                             </span>
-                            {/* Premium badge with gold gradient */}
-                            <span className={`badge-premium ml-auto ${formData.tariff !== 'premium' ? 'opacity-60' : ''}`}>
+                            {/* Premium badge with gold gradient - always visible */}
+                            <span className={`badge-premium ml-auto ${formData.tariff !== 'premium' ? 'opacity-70' : ''}`}>
                               <Crown className="w-3 h-3" />
                               PREMIUM
                             </span>
                           </div>
                           <p
                             className="text-xs mt-0.5"
-                            style={{ color: formData.tariff === 'premium' ? 'var(--text-muted)' : 'var(--text-subtle)' }}
+                            style={{ color: 'var(--text-muted)' }}
                           >
                             Профессиональный дизайн и качество
                           </p>
@@ -1393,12 +1511,11 @@ export default function NewRequestPage() {
                   </ScrollContainer>
                 </div>
 
-                {/* Photo upload button with label for better mobile support + drag & drop */}
+                {/* Photo upload area with drag & drop */}
                 <DropZone
-                  onFilesAdded={addPhotosFromFileList}
-                  categoryLabel={photoCategories.find(c => c.id === selectedCategory)?.label || ''}
                   fileInputRef={fileInputRef}
                   onFileSelect={handlePhotoSelect}
+                  onDragDrop={handleDragDropFiles}
                 />
 
                 {/* Photos grid with category labels */}

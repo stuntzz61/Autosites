@@ -165,13 +165,13 @@ export default function RequestsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-5 relative z-10"
+          className="flex items-center justify-between mb-6 relative z-10"
         >
           <div>
             <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
               Заявки
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: 'var(--text-subtle)' }}>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-subtle)' }}>
               {requests.length} {requests.length === 1 ? 'заявка' : requests.length < 5 ? 'заявки' : 'заявок'}
             </p>
           </div>
@@ -181,7 +181,11 @@ export default function RequestsPage() {
                 haptic?.impactOccurred('medium')
                 navigate('/requests/new')
               }}
-              className="btn btn-primary btn-sm"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white ml-4"
+              style={{
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+                boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
+              }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -228,10 +232,14 @@ export default function RequestsPage() {
         </motion.div>
       </div>
 
-      {/* Filters */}
-      <div className="px-4 mb-4 relative z-10">
+      {/* Filters - Horizontal Scroll */}
+      <div className="px-4 mb-4 relative z-10 -mx-4">
         <motion.div
-          className="flex gap-2 pb-2 scroll-x-container"
+          className="flex gap-2 px-4 pb-2 overflow-x-auto scrollbar-hide"
+          style={{
+            scrollSnapType: 'x proximity',
+            WebkitOverflowScrolling: 'touch'
+          }}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -243,7 +251,7 @@ export default function RequestsPage() {
                 haptic?.selectionChanged()
                 setSearchParams(filter.value === 'all' ? {} : { status: filter.value })
               }}
-              className="px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200"
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 flex-shrink-0"
               style={{
                 background: statusFilter === filter.value
                   ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)'
@@ -394,9 +402,9 @@ export default function RequestsPage() {
                                 {request.company_name || 'Без названия'}
                               </h3>
                               {isPremium && (
-                                <span className="badge-pro inline-flex items-center gap-1">
+                                <span className="badge-premium inline-flex items-center gap-1 text-[9px] px-2 py-1">
                                   <Crown className="w-2.5 h-2.5" />
-                                  PRO
+                                  PREMIUM
                                 </span>
                               )}
                             </div>
