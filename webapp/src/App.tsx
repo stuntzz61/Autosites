@@ -31,6 +31,7 @@ import DevLoginPage from './pages/DevLoginPage'
 import FeedbackPage from './pages/FeedbackPage'
 import PaymentPage from './pages/PaymentPage'
 import InvitePage from './pages/InvitePage'
+import ManagerRegistrationPage from './pages/ManagerRegistrationPage'
 
 // Admin Pages
 import AdminSites from './pages/admin/AdminSites'
@@ -113,8 +114,9 @@ function App() {
   }
 
   // Check if approved manager needs to complete registration
-  if (user && user.approval_status === 'approved' && user.role === 'manager' && !user.registration_completed_at) {
-    return <ManagerRegistrationPage />
+  // Only redirect if not already on registration page
+  if (user && user.approval_status === 'approved' && user.role === 'manager' && !user.registration_completed_at && location.pathname !== '/register') {
+    return <Navigate to="/register" replace />
   }
 
   // Check if user is rejected
@@ -202,6 +204,9 @@ function App() {
 
         {/* Manager Invite Registration */}
         <Route path="/invite/:token" element={<InvitePage />} />
+
+        {/* Manager Registration (for approved managers) */}
+        <Route path="/register" element={<ManagerRegistrationPage />} />
 
         {/* Admin Routes */}
         {isAdmin ? (
