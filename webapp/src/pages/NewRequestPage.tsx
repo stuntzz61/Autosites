@@ -5,7 +5,7 @@ import {
   Building2, User, Briefcase, Phone, Mail, MapPin,
   ArrowRight, ArrowLeft, Check, Loader2, Plus, X,
   Clock, Palette, Camera, Upload, Image, AlertCircle,
-  RotateCcw
+  RotateCcw, Info
 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -29,7 +29,7 @@ const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'По�
 
 const photoCategories = [
   { id: 'hero', label: 'Баннер', icon: '' },
-  { id: 'services', label: 'Услуги', icon: '' },
+  { id: 'services', label: 'Услуги/Товары', icon: '' },
   { id: 'portfolio', label: 'Портфолио', icon: '' },
   { id: 'gallery', label: 'Галерея', icon: '' },
 ]
@@ -564,7 +564,7 @@ export default function NewRequestPage() {
         {showDraftPrompt && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-50"
+              className="fixed inset-0 bg-black/70 z-50"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -577,17 +577,17 @@ export default function NewRequestPage() {
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-zinc-200 dark:border-zinc-800">
+              <div className="rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-blue-500/20" style={{ background: 'linear-gradient(145deg, #0f172a 0%, #0d1424 100%)' }}>
                 <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <RotateCcw className="w-8 h-8 text-blue-500" />
+                  <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <RotateCcw className="w-8 h-8 text-blue-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-tg-text mb-2">Найден черновик</h3>
-                  <p className="text-tg-hint text-sm leading-relaxed mb-3">
+                  <h3 className="text-xl font-bold text-slate-100 mb-2">Найден черновик</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed mb-3">
                     У вас есть незаконченная заявка. Хотите продолжить заполнение?
                   </p>
                   {draftData?.formData.company && (
-                    <p className="text-sm text-tg-text font-medium">
+                    <p className="text-sm text-blue-300 font-medium">
                       "{draftData.formData.company}"
                     </p>
                   )}
@@ -595,13 +595,15 @@ export default function NewRequestPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={handleDiscardDraft}
-                    className="flex-1 px-4 py-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-tg-text font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                    className="flex-1 px-4 py-3.5 rounded-xl font-semibold transition-colors border border-slate-600/50 text-slate-300 hover:bg-slate-700/50"
+                    style={{ background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)' }}
                   >
                     Начать заново
                   </button>
                   <button
                     onClick={handleRestoreDraft}
-                    className="flex-1 px-4 py-3.5 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
+                    className="flex-1 px-4 py-3.5 rounded-xl text-white font-semibold transition-colors border border-blue-500/30"
+                    style={{ background: 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)' }}
                   >
                     Продолжить
                   </button>
@@ -613,15 +615,15 @@ export default function NewRequestPage() {
       </AnimatePresence>
 
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-tg-bg/80 backdrop-blur-xl border-b border-tg-separator px-4 py-3">
+      <div className="sticky top-0 z-10 backdrop-blur-xl border-b border-blue-500/10 px-4 py-3" style={{ background: 'rgba(10, 15, 30, 0.9)' }}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-lg font-bold text-tg-text">Новая заявка</h1>
-            <p className="text-xs text-tg-hint">{steps[currentStep].title}</p>
+            <h1 className="text-lg font-bold text-slate-100">Новая заявка</h1>
+            <p className="text-xs text-blue-300/70">{steps[currentStep].title}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-tg-text">{currentStep + 1}</span>
-            <span className="text-sm text-tg-hint">/ {steps.length}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30">
+            <span className="text-sm font-semibold text-blue-300">{currentStep + 1}</span>
+            <span className="text-sm text-blue-400/70">/ {steps.length}</span>
           </div>
         </div>
         <div className="flex gap-1.5">
@@ -633,8 +635,8 @@ export default function NewRequestPage() {
                 i < currentStep
                   ? 'bg-blue-500'
                   : i === currentStep
-                    ? 'bg-sky-400'
-                    : 'bg-zinc-700'
+                    ? 'bg-blue-400 shadow-lg shadow-blue-400/50'
+                    : 'bg-slate-700'
               )}
             />
           ))}
@@ -668,9 +670,9 @@ export default function NewRequestPage() {
                           : 'border-zinc-200 dark:border-zinc-700'
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-3">
                         <div className={clsx(
-                          'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0',
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5',
                           formData.tariff === 'standard' ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'
                         )}>
                           {formData.tariff === 'standard' && (
@@ -678,11 +680,11 @@ export default function NewRequestPage() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-tg-text">Стандарт</span>
-                    <span className="text-sm font-bold text-sky-400 flex-shrink-0">Бесплатно</span>
+                            <span className="text-sm font-bold text-sky-400 ml-auto">Бесплатно</span>
                           </div>
-                          <p className="text-xs text-tg-hint mt-0.5">Базовая генерация лендинга</p>
+                          <p className="text-xs text-tg-hint mt-1">Базовая генерация лендинга</p>
                         </div>
                       </div>
                     </button>
@@ -706,9 +708,9 @@ export default function NewRequestPage() {
                         }} />
                       )}
 
-                      <div className="flex items-center gap-3 relative z-10">
+                      <div className="flex items-start gap-3 relative z-10">
                         <div className={clsx(
-                          'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                           formData.tariff === 'premium'
                             ? 'border-purple-500 bg-purple-500/20'
                             : 'border-zinc-300 dark:border-zinc-600'
@@ -718,20 +720,20 @@ export default function NewRequestPage() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className={clsx(
                               'font-semibold',
                               formData.tariff === 'premium'
                                 ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
                                 : 'text-tg-text'
                             )}>
-                              Премиум
+                              Премиум лендинг
                             </span>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white flex-shrink-0">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white ml-auto whitespace-nowrap">
                               PRO
                             </span>
                           </div>
-                          <p className="text-xs text-tg-hint mt-0.5">Профессиональный дизайн и качество</p>
+                          <p className="text-xs text-tg-hint mt-1">Профессиональный дизайн и качество</p>
                         </div>
                       </div>
                     </button>
@@ -739,33 +741,49 @@ export default function NewRequestPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">Название компании *</label>
-                  <input
-                    type="text"
-                    value={formData.company}
-                    onChange={(e) => updateField('company', e.target.value)}
-                    placeholder="Webly"
-                    className={clsx('input', errors.company && 'input-error field-error-shake')}
-                  />
+                  <label className="text-sm text-tg-hint mb-1.5 block">
+                    Название компании <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint pointer-events-none" />
+                    <input
+                      type="text"
+                      value={formData.company}
+                      onChange={(e) => updateField('company', e.target.value)}
+                      placeholder="Webly"
+                      className={clsx('input pl-12', errors.company && 'input-error field-error-shake')}
+                    />
+                    {formData.company.trim() && (
+                      <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                    )}
+                  </div>
                   {errors.company && (
                     <p className="error-message">
-                      <AlertCircle className="w-3 h-3" />
+                      <AlertCircle className="w-3.5 h-3.5" />
                       {errors.company}
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">Сфера деятельности *</label>
-                  <input
-                    type="text"
-                    value={formData.business_type}
-                    onChange={(e) => updateField('business_type', e.target.value)}
-                    placeholder="Создание сайтов"
-                    className={clsx('input', errors.business_type && 'input-error field-error-shake')}
-                  />
+                  <label className="text-sm text-tg-hint mb-1.5 block">
+                    Сфера деятельности <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint pointer-events-none" />
+                    <input
+                      type="text"
+                      value={formData.business_type}
+                      onChange={(e) => updateField('business_type', e.target.value)}
+                      placeholder="Создание сайтов"
+                      className={clsx('input pl-12', errors.business_type && 'input-error field-error-shake')}
+                    />
+                    {formData.business_type.trim() && (
+                      <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                    )}
+                  </div>
                   {errors.business_type && (
                     <p className="error-message">
-                      <AlertCircle className="w-3 h-3" />
+                      <AlertCircle className="w-3.5 h-3.5" />
                       {errors.business_type}
                     </p>
                   )}
@@ -785,41 +803,56 @@ export default function NewRequestPage() {
             {currentStep === 1 && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">ФИО клиента *</label>
-                  <input
-                    type="text"
-                    value={formData.client_name}
-                    onChange={(e) => updateField('client_name', e.target.value)}
-                    placeholder="Иванов Иван"
-                    className={clsx('input', errors.client_name && 'input-error field-error-shake')}
-                    autoFocus
-                  />
+                  <label className="text-sm text-tg-hint mb-1.5 block">
+                    ФИО клиента <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint pointer-events-none" />
+                    <input
+                      type="text"
+                      value={formData.client_name}
+                      onChange={(e) => updateField('client_name', e.target.value)}
+                      placeholder="Иванов Иван"
+                      className={clsx('input pl-12', errors.client_name && 'input-error field-error-shake')}
+                      autoFocus
+                    />
+                    {formData.client_name.trim() && (
+                      <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                    )}
+                  </div>
                   {errors.client_name && (
                     <p className="error-message">
-                      <AlertCircle className="w-3 h-3" />
+                      <AlertCircle className="w-3.5 h-3.5" />
                       {errors.client_name}
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">Компания</label>
-                  <input
-                    type="text"
-                    value={formData.client_company}
-                    onChange={(e) => updateField('client_company', e.target.value)}
-                    placeholder="ООО «Компания»"
-                    className="input"
-                  />
+                  <label className="text-sm text-tg-hint mb-1.5 block">Компания клиента</label>
+                  <div className="relative">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint pointer-events-none" />
+                    <input
+                      type="text"
+                      value={formData.client_company}
+                      onChange={(e) => updateField('client_company', e.target.value)}
+                      placeholder="ООО «Компания»"
+                      className="input pl-12"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">Контакт</label>
-                  <input
-                    type="text"
-                    value={formData.client_contact}
-                    onChange={(e) => updateField('client_contact', e.target.value)}
-                    placeholder="+7... или @telegram"
-                    className="input"
-                  />
+                  <label className="text-sm text-tg-hint mb-1.5 block">Контакт для связи</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint pointer-events-none" />
+                    <input
+                      type="text"
+                      value={formData.client_contact}
+                      onChange={(e) => updateField('client_contact', e.target.value)}
+                      placeholder="+7... или @telegram"
+                      className="input pl-12"
+                    />
+                  </div>
+                  <p className="text-xs text-tg-hint/70 mt-1.5">Телефон или ник в Telegram</p>
                 </div>
               </div>
             )}
@@ -827,37 +860,54 @@ export default function NewRequestPage() {
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">Телефон для сайта *</label>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    value={formData.phone}
-                    onChange={handlePhoneChange}
-                    placeholder="+7 (XXX) XXX-XX-XX"
-                    maxLength={18}
-                    className={clsx('input', errors.phone && 'input-error field-error-shake')}
-                    autoFocus
-                  />
-                  {errors.phone && (
+                  <label className="text-sm text-tg-hint mb-1.5 block">
+                    Телефон для сайта <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint pointer-events-none" />
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={formData.phone}
+                      onChange={handlePhoneChange}
+                      placeholder="+7 (XXX) XXX-XX-XX"
+                      maxLength={18}
+                      className={clsx('input pl-12', errors.phone && 'input-error field-error-shake')}
+                      autoFocus
+                    />
+                    {formData.phone && validatePhone(formData.phone).valid && (
+                      <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                    )}
+                  </div>
+                  {errors.phone ? (
                     <p className="error-message">
-                      <AlertCircle className="w-3 h-3" />
+                      <AlertCircle className="w-3.5 h-3.5" />
                       {errors.phone}
                     </p>
+                  ) : (
+                    <p className="text-xs text-tg-hint/70 mt-1.5">Формат: +7 (XXX) XXX-XX-XX</p>
                   )}
-                  <p className="text-xs text-tg-hint/70 mt-1">Формат: +7 (XXX) XXX-XX-XX</p>
                 </div>
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">Email *</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => updateField('email', e.target.value)}
-                    placeholder="info@company.ru"
-                    className={clsx('input', errors.email && 'input-error field-error-shake')}
-                  />
+                  <label className="text-sm text-tg-hint mb-1.5 block">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint pointer-events-none" />
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => updateField('email', e.target.value)}
+                      placeholder="info@company.ru"
+                      className={clsx('input pl-12', errors.email && 'input-error field-error-shake')}
+                    />
+                    {formData.email && validateEmail(formData.email).valid && (
+                      <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                    )}
+                  </div>
                   {errors.email && (
                     <p className="error-message">
-                      <AlertCircle className="w-3 h-3" />
+                      <AlertCircle className="w-3.5 h-3.5" />
                       {errors.email}
                     </p>
                   )}
@@ -888,15 +938,20 @@ export default function NewRequestPage() {
             {currentStep === 3 && (
               <div className="space-y-4">
                 {errors.services && (
-                  <p className="text-xs text-red-500 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    {errors.services}
-                  </p>
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl flex items-center gap-3 animate-fade-in-up">
+                    <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-red-600 dark:text-red-400">{errors.services}</p>
+                      <p className="text-xs text-red-500/70 mt-0.5">Укажите название хотя бы одной услуги или товара</p>
+                    </div>
+                  </div>
                 )}
                 {formData.services.map((service, i) => (
-                  <div key={i} className="bg-tg-secondary-bg rounded-xl p-4 space-y-3">
+                  <div key={i} className="rounded-xl p-4 space-y-3 border border-blue-500/10" style={{ background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)' }}>
                     <div className="flex justify-between mb-3">
-                      <span className="text-sm font-medium">Услуга/Товар {i + 1}</span>
+                      <span className="text-sm font-medium text-slate-200">Услуга/Товар {i + 1}</span>
                       {formData.services.length > 1 && (
                         <button onClick={() => removeService(i)} className="text-red-500">
                           <X className="w-4 h-4" />
@@ -1118,14 +1173,25 @@ export default function NewRequestPage() {
 
                 {/* Photo upload button with label for better mobile support + drag & drop */}
                 <label
-                  className="block w-full p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-tg-accent hover:text-tg-accent transition-colors cursor-pointer active:bg-tg-secondary-bg"
+                  className="flex flex-col items-center justify-center w-full min-h-[120px] p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-blue-400 hover:text-blue-400 hover:bg-blue-500/5 transition-all cursor-pointer active:bg-tg-secondary-bg"
                   onDragOver={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
                   }}
+                  onDragEnter={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.currentTarget.classList.add('border-blue-400', 'bg-blue-500/10')
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.currentTarget.classList.remove('border-blue-400', 'bg-blue-500/10')
+                  }}
                   onDrop={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
+                    e.currentTarget.classList.remove('border-blue-400', 'bg-blue-500/10')
                     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                       addPhotosFromFileList(e.dataTransfer.files)
                       e.dataTransfer.clearData()
@@ -1139,12 +1205,17 @@ export default function NewRequestPage() {
                     multiple
                     onChange={handlePhotoSelect}
                     className="sr-only"
+                    aria-label="Загрузить фотографии"
                   />
-                  <Upload className="w-5 h-5 mx-auto mb-2" />
-                  <span className="block text-center">Добавить фото в «{photoCategories.find(c => c.id === selectedCategory)?.label}»</span>
-                  <span className="block text-center text-[11px] text-tg-hint mt-1">
-                    Можно перетащить файлы сюда или вставить из буфера (Ctrl+V)
-                  </span>
+                  <div className="flex flex-col items-center pointer-events-none">
+                    <div className="w-12 h-12 rounded-full bg-tg-secondary-bg flex items-center justify-center mb-3">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <span className="text-center font-medium">Добавить фото в «{photoCategories.find(c => c.id === selectedCategory)?.label}»</span>
+                    <span className="text-center text-[11px] text-tg-hint mt-1">
+                      Нажмите, перетащите файлы или вставьте из буфера (Ctrl+V)
+                    </span>
+                  </div>
                 </label>
 
                 {/* Photos grid with category labels */}
@@ -1213,13 +1284,13 @@ export default function NewRequestPage() {
                   />
                 </div>
 
-                <div className="bg-tg-secondary-bg rounded-xl p-4">
-                  <p className="font-medium mb-2">Итого</p>
-                  <div className="space-y-1 text-sm text-tg-hint">
-                    <p>Компания: <span className="text-tg-text">{formData.company || '—'}</span></p>
-                    <p>Клиент: <span className="text-tg-text">{formData.client_name || '—'}</span></p>
-                    <p>Услуга/Товаров: <span className="text-tg-text">{formData.services.filter(s => s.name.trim()).length}</span></p>
-                    <p>Фото: <span className="text-tg-text">{formData.photos.length}</span></p>
+                <div className="rounded-xl p-4 border border-blue-500/20" style={{ background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)' }}>
+                  <p className="font-medium mb-3 text-slate-100">Итого</p>
+                  <div className="space-y-2 text-sm">
+                    <p className="flex justify-between"><span className="text-slate-400">Компания:</span> <span className="text-slate-200 font-medium">{formData.company || '—'}</span></p>
+                    <p className="flex justify-between"><span className="text-slate-400">Клиент:</span> <span className="text-slate-200 font-medium">{formData.client_name || '—'}</span></p>
+                    <p className="flex justify-between"><span className="text-slate-400">Услуг/Товаров:</span> <span className="text-slate-200 font-medium">{formData.services.filter(s => s.name.trim()).length}</span></p>
+                    <p className="flex justify-between"><span className="text-slate-400">Фото:</span> <span className="text-slate-200 font-medium">{formData.photos.length}</span></p>
                   </div>
 
                   {/* Price summary with add-ons */}
@@ -1255,57 +1326,79 @@ export default function NewRequestPage() {
         </AnimatePresence>
       </div>
 
-      {/* Bottom Actions */}
-      <div className="sticky bottom-0 bg-tg-bg border-t border-tg-separator p-4 safe-bottom">
-        {/* Show validation hint when button is disabled */}
-        {!canGoNext() && Object.keys(errors).length === 0 && (
-          <p className="text-xs text-amber-500 text-center mb-2 flex items-center justify-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Заполните обязательные поля для продолжения
-          </p>
+      {/* Bottom Actions - Full width centered layout */}
+      <div className="sticky bottom-0 bg-tg-bg/95 backdrop-blur-lg border-t border-tg-separator safe-bottom z-20">
+        {/* Validation status message */}
+        {Object.keys(errors).length > 0 && (
+          <div className="px-4 pt-3 pb-1">
+            <p className="text-xs text-red-500 text-center flex items-center justify-center gap-1.5 animate-fade-in-up">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Исправьте ошибки в форме выше
+            </p>
+          </div>
         )}
-        <div className="flex gap-3">
-          {currentStep > 0 && (
-            <Tooltip content="Вернуться назад" position="top">
-              <button onClick={goBack} className="btn btn-secondary">
-                <ArrowLeft className="w-5 h-5" />
+        {!canGoNext() && Object.keys(errors).length === 0 && (
+          <div className="px-4 pt-3 pb-1">
+            <p className="text-xs text-amber-500 text-center flex items-center justify-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Заполните обязательные поля для продолжения
+            </p>
+          </div>
+        )}
+
+        <div className="p-4 pt-3">
+          <div className="flex gap-3 max-w-lg mx-auto">
+            {currentStep > 0 && (
+              <Tooltip content="Вернуться назад" position="top">
+                <button
+                  onClick={goBack}
+                  className="flex items-center justify-center w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              </Tooltip>
+            )}
+            <Tooltip
+              content={
+                createMutation.isPending
+                  ? 'Подождите...'
+                  : !canGoNext()
+                    ? 'Заполните обязательные поля'
+                    : currentStep === steps.length - 1
+                      ? 'Создать заявку'
+                      : 'Перейти к следующему шагу'
+              }
+              position="top"
+            >
+              <button
+                onClick={goNext}
+                disabled={createMutation.isPending}
+                className={clsx(
+                  "flex-1 flex items-center justify-center gap-2.5 h-14 rounded-2xl font-semibold text-base transition-all active:scale-[0.98]",
+                  canGoNext() || createMutation.isPending
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40"
+                    : "bg-zinc-200 dark:bg-zinc-700 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                )}
+              >
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
+                  </>
+                ) : currentStep === steps.length - 1 ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    <span>Создать заявку</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Далее</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
             </Tooltip>
-          )}
-          <Tooltip
-            content={
-              createMutation.isPending
-                ? 'Подождите...'
-                : currentStep === steps.length - 1
-                  ? 'Создать заявку'
-                  : 'Перейти к следующему шагу'
-            }
-            position="top"
-          >
-            <button
-              onClick={goNext}
-              disabled={createMutation.isPending}
-              className={clsx(
-                "btn btn-primary flex-1",
-                !canGoNext() && !createMutation.isPending && "opacity-50"
-              )}
-            >
-              {createMutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  {uploadingPhotos ? 'Загрузка...' : 'Создание...'}
-                </>
-              ) : currentStep === steps.length - 1 ? (
-                <>
-                  <Check className="w-5 h-5" /> Создать
-                </>
-              ) : (
-                <>
-                  Далее <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
-          </Tooltip>
+          </div>
         </div>
       </div>
     </div>

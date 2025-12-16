@@ -41,9 +41,9 @@ export default function MainLayout() {
   }, [location.pathname, backButton, navigate, haptic])
 
   return (
-    <div className="flex flex-col min-h-screen min-h-[100dvh] bg-tg-secondary-bg">
+    <div className="flex flex-col min-h-screen min-h-[100dvh] bg-tg-secondary-bg relative">
       {/* Content */}
-      <main className="flex-1 overflow-auto main-content-with-nav">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden main-content-with-nav">
         <motion.div
           key={location.pathname}
           initial={{ opacity: 0, y: 10 }}
@@ -56,7 +56,7 @@ export default function MainLayout() {
       </main>
 
       {/* Bottom Navigation - Fixed with proper z-index and safe area */}
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0 }}>
         <div className="flex items-center justify-around px-2 py-2 w-full">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path ||

@@ -67,7 +67,7 @@ export default function AdminBroadcast() {
       }
 
       if (failed > 0) {
-        toast(`${failed} сообщений не доставлено`, { icon: '⚠️' })
+        toast.error(`${failed} сообщений не доставлено`)
       }
 
       // Reset form

@@ -34,7 +34,7 @@ const statusConfig: Record<string, { icon: React.ReactNode; label: string }> = {
 
 const photoCategories = [
   { id: 'hero', label: 'Баннер' },
-  { id: 'services', label: 'Услуги' },
+  { id: 'services', label: 'Услуги/Товары' },
   { id: 'portfolio', label: 'Портфолио' },
   { id: 'team', label: 'Команда' },
   { id: 'gallery', label: 'Галерея' },
@@ -447,36 +447,41 @@ export default function RequestDetailPage() {
   return (
     <div className="min-h-screen pb-48 bg-tg-bg">
       {/* Header */}
-      <div className="m-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-white/20 dark:bg-black/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+      <div className="m-4 rounded-2xl p-6 relative overflow-hidden border border-blue-500/20" style={{ background: 'linear-gradient(145deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%)' }}>
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-cyan-400/10 rounded-full blur-2xl" />
+
+        <div className="flex items-start justify-between mb-4 relative z-10">
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl font-bold flex-shrink-0 text-white border border-white/20">
             {companyName[0]?.toUpperCase() || '?'}
           </div>
           <button
             onClick={() => setShowStatusMenu(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-white/20 dark:bg-black/20 flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-white/20 backdrop-blur-sm flex-shrink-0 text-white border border-white/10"
           >
             {config.icon}
             {config.label}
             <ChevronDown className="w-4 h-4" />
           </button>
         </div>
-        <div className="flex items-center gap-2 flex-wrap mb-1">
-          <h1 className="text-2xl font-bold">{companyName}</h1>
+        <div className="flex items-center gap-2 flex-wrap mb-1 relative z-10">
+          <h1 className="text-2xl font-bold text-white">{companyName}</h1>
           {/* Tariff Badge */}
           {tariff === 'premium' && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gradient-to-r from-purple-500/40 to-blue-500/40 text-sky-100 border border-purple-400/50">
-              PREMIUM
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-sm whitespace-nowrap flex-shrink-0">
+              <Sparkles className="w-3 h-3" />
+              Premium
             </span>
           )}
         </div>
-        {businessType && <p className="opacity-70 text-sm">{businessType}</p>}
+        {businessType && <p className="text-blue-100/80 text-sm relative z-10">{businessType}</p>}
         {resultUrl && (
           <a
             href={resultUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-white/20 dark:bg-black/20 rounded-xl text-sm"
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl text-sm text-white border border-white/20 hover:bg-white/30 transition-colors relative z-10"
           >
             <ExternalLink className="w-4 h-4" /> Открыть сайт
           </a>
@@ -652,11 +657,11 @@ export default function RequestDetailPage() {
                     <span className="text-xl">{service.icon || '✨'}</span>
                     <div>
                       <p className="font-medium text-tg-text">{service.name}</p>
-                      <p className="text-xs text-tg-hint">
-                        {service.status === 'pending' && '⏳ Ожидает'}
-                        {service.status === 'in_progress' && '🔄 В работе'}
-                        {service.status === 'completed' && '✅ Выполнено'}
-                        {service.status === 'cancelled' && '❌ Отменено'}
+                      <p className="text-xs text-tg-hint flex items-center gap-1">
+                        {service.status === 'pending' && <><Clock className="w-3 h-3 text-amber-400" /> Ожидает</>}
+                        {service.status === 'in_progress' && <><Loader2 className="w-3 h-3 text-blue-400 animate-spin" /> В работе</>}
+                        {service.status === 'completed' && <><CheckCircle2 className="w-3 h-3 text-blue-400" /> Выполнено</>}
+                        {service.status === 'cancelled' && <><X className="w-3 h-3 text-red-400" /> Отменено</>}
                       </p>
                     </div>
                   </div>
@@ -687,9 +692,11 @@ export default function RequestDetailPage() {
             {/* Upload button */}
             <button
               onClick={() => setShowPhotoUpload(true)}
-              className="w-full p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-tg-link hover:text-tg-link transition-colors"
+              className="flex flex-col items-center justify-center w-full min-h-[100px] p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-blue-400 hover:text-blue-400 hover:bg-blue-500/5 transition-all active:bg-tg-secondary-bg"
             >
-              <Camera className="w-6 h-6 mx-auto mb-2" />
+              <div className="w-10 h-10 rounded-full bg-tg-secondary-bg flex items-center justify-center mb-2">
+                <Camera className="w-5 h-5" />
+              </div>
               <span className="text-sm font-medium">Добавить фото</span>
             </button>
 
@@ -821,15 +828,17 @@ export default function RequestDetailPage() {
                   <Globe className="w-5 h-5 text-blue-500" />
                   <div>
                     <p className="font-medium text-tg-text">Статус деплоя</p>
-                    <p className="text-sm text-tg-hint">
-                      {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running') && '✅ Активен'}
-                      {(clientSite.deploy_status === 'deploying' || clientSite.deploy_status === 'building' || clientSite.deploy_status === 'uploading') && '🔄 Деплоится...'}
-                      {clientSite.deploy_status === 'pending' && '⏳ Ожидает деплоя'}
-                      {(clientSite.deploy_status === 'failed' || clientSite.deploy_status === 'error') && '❌ Ошибка'}
-                      {clientSite.deploy_status === 'stopped' && '⏸ Остановлен'}
+                    <p className="text-sm text-tg-hint flex items-center gap-1.5">
+                      {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running') && <><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Активен</>}
+                      {(clientSite.deploy_status === 'deploying' || clientSite.deploy_status === 'building' || clientSite.deploy_status === 'uploading') && <><Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" /> Деплоится...</>}
+                      {clientSite.deploy_status === 'pending' && <><Clock className="w-3.5 h-3.5 text-amber-400" /> Ожидает деплоя</>}
+                      {(clientSite.deploy_status === 'failed' || clientSite.deploy_status === 'error') && <><AlertCircle className="w-3.5 h-3.5 text-red-400" /> Ошибка</>}
+                      {clientSite.deploy_status === 'stopped' && <><Square className="w-3.5 h-3.5 text-slate-400" /> Остановлен</>}
                       {/* If deploy_id exists but status unknown -> show "unknown" instead of "not deployed" */}
                       {(!clientSite.deploy_status || clientSite.deploy_status === 'none') && (
-                        clientSite.deploy_id ? '❓ Статус неизвестен' : '⏸ Не задеплоен'
+                        clientSite.deploy_id
+                          ? <><AlertCircle className="w-3.5 h-3.5 text-slate-400" /> Статус неизвестен</>
+                          : <><Square className="w-3.5 h-3.5 text-slate-400" /> Не задеплоен</>
                       )}
                     </p>
                     {clientSite.deploy_id && (
@@ -959,12 +968,12 @@ export default function RequestDetailPage() {
               <div className="p-3 bg-tg-secondary-bg rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-tg-hint">Тариф:</span>
-                  <span className="font-medium text-tg-text capitalize">
-                    {clientSite.hosting_plan === 'trial' ? '🆓 Пробный' :
-                     clientSite.hosting_plan === 'basic' ? '📦 Базовый' :
-                     clientSite.hosting_plan === 'pro' ? '⭐ Профессиональный' :
-                     clientSite.hosting_plan === 'enterprise' ? '🏢 Корпоративный' :
-                     clientSite.hosting_plan || 'trial'}
+                  <span className="font-medium text-tg-text capitalize flex items-center gap-1.5">
+                    {clientSite.hosting_plan === 'trial' && <><Clock className="w-3.5 h-3.5 text-slate-400" /> Пробный</>}
+                    {clientSite.hosting_plan === 'basic' && <><Globe className="w-3.5 h-3.5 text-blue-400" /> Базовый</>}
+                    {clientSite.hosting_plan === 'pro' && <><Sparkles className="w-3.5 h-3.5 text-blue-300" /> Профессиональный</>}
+                    {clientSite.hosting_plan === 'enterprise' && <><Building2 className="w-3.5 h-3.5 text-blue-200" /> Корпоративный</>}
+                    {!clientSite.hosting_plan && <><Clock className="w-3.5 h-3.5 text-slate-400" /> Пробный</>}
                   </span>
                 </div>
                 {clientSite.hosting_expires_at && (
@@ -999,10 +1008,10 @@ export default function RequestDetailPage() {
                       new Date(clientSite.hosting_expires_at) < new Date() ? 'text-red-500' : 'text-orange-500'
                     }`} />
                     <div>
-                      <p className="font-semibold text-tg-text">
+                      <p className="font-semibold text-tg-text flex items-center gap-1.5">
                         {new Date(clientSite.hosting_expires_at) < new Date()
-                          ? '⚠️ Хостинг истёк!'
-                          : '⏰ Хостинг скоро истекает'}
+                          ? <><AlertCircle className="w-4 h-4 text-red-500" /> Хостинг истёк!</>
+                          : <><Clock className="w-4 h-4 text-amber-500" /> Хостинг скоро истекает</>}
                       </p>
                       <p className="text-sm text-tg-hint">
                         {new Date(clientSite.hosting_expires_at) < new Date()
@@ -1236,7 +1245,7 @@ export default function RequestDetailPage() {
                           <option value="header">Навигация</option>
                           <option value="footer">Подвал</option>
                           <option value="about">О компании</option>
-                          <option value="services">Услуги</option>
+                          <option value="services">Услуги/Товары</option>
                           <option value="portfolio">Портфолио</option>
                           <option value="contacts">Контакты</option>
                           <option value="other">Другое</option>
@@ -1489,57 +1498,85 @@ export default function RequestDetailPage() {
       </div>
 
       {/* Bottom Actions - positioned above bottom nav */}
-      <div className="fixed bottom-16 left-0 right-0 bg-tg-bg border-t border-tg-separator p-4 z-20">
-        <div className="flex gap-3">
-          {/* Edit button - show for editable statuses */}
-          {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
-            <Tooltip content="Редактировать заявку" position="top">
-              <button onClick={handleEdit} className="btn btn-secondary">
-                <Edit3 className="w-5 h-5" />
+      <div className="fixed bottom-16 left-0 right-0 bg-tg-bg/95 backdrop-blur-lg border-t border-tg-separator z-20">
+        <div className="p-4 max-w-2xl mx-auto">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Edit button - show for editable statuses */}
+            {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
+              <Tooltip content="Редактировать заявку" position="top">
+                <button
+                  onClick={handleEdit}
+                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                  aria-label="Редактировать"
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+              </Tooltip>
+            )}
+
+            {/* Generate button - show for statuses that can be sent to generation */}
+            {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
+              <Tooltip content="Отправить заявку в разработку" position="top">
+                <button
+                  onClick={handleGenerate}
+                  disabled={generateMutation.isPending}
+                  className="flex-1 flex items-center justify-center gap-2 h-12 sm:h-14 px-4 sm:px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-w-0"
+                  aria-label="Отправить в разработку"
+                >
+                  {generateMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5 flex-shrink-0" />
+                      <span className="truncate text-sm sm:text-base">В разработку</span>
+                    </>
+                  )}
+                </button>
+              </Tooltip>
+            )}
+
+            {/* Open result button */}
+            {resultUrl && (
+              <Tooltip content="Открыть готовый сайт" position="top">
+                <a
+                  href={resultUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 h-12 sm:h-14 px-4 sm:px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all active:scale-[0.98]"
+                  aria-label="Открыть сайт"
+                >
+                  <ExternalLink className="w-5 h-5 flex-shrink-0" />
+                  <span className="truncate text-sm sm:text-base">Открыть сайт</span>
+                </a>
+              </Tooltip>
+            )}
+
+            {/* Archive button */}
+            <Tooltip content="Переместить в архив" position="top">
+              <button
+                onClick={handleArchive}
+                className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
+                disabled={archiveMutation.isPending}
+                aria-label="Архивировать"
+              >
+                {archiveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Archive className="w-5 h-5" />}
               </button>
             </Tooltip>
-          )}
 
-          {/* Generate button - show for statuses that can be sent to generation */}
-          {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
-            <Tooltip content="Отправить заявку в разработку" position="top">
-              <button onClick={handleGenerate} disabled={generateMutation.isPending} className="btn btn-primary flex-1 min-w-0">
-                {generateMutation.isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="w-5 h-5 flex-shrink-0" />
-                    <span className="truncate text-sm">В разработку</span>
-                  </>
-                )}
-              </button>
-            </Tooltip>
-          )}
-
-          {/* Open result button */}
-          {resultUrl && (
-            <Tooltip content="Открыть готовый сайт" position="top">
-              <a href={resultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex-1">
-                <ExternalLink className="w-5 h-5" /> Открыть
-              </a>
-            </Tooltip>
-          )}
-
-          {/* Archive button */}
-          <Tooltip content="Переместить в архив" position="top">
-            <button onClick={handleArchive} className="btn btn-secondary" disabled={archiveMutation.isPending}>
-              {archiveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Archive className="w-5 h-5" />}
-            </button>
-          </Tooltip>
-
-          {/* Delete button (available for all users on drafts/errors, or always for admins) */}
-          {(isAdmin || ['draft', 'error', 'generated_error'].includes(status)) && (
-            <Tooltip content="Удалить заявку" position="top">
-              <button onClick={handleDelete} disabled={deleteMutation.isPending} className="btn btn-destructive">
-                {deleteMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
-              </button>
-            </Tooltip>
-          )}
+            {/* Delete button (available for all users on drafts/errors, or always for admins) */}
+            {(isAdmin || ['draft', 'error', 'generated_error'].includes(status)) && (
+              <Tooltip content="Удалить заявку" position="top">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-95 disabled:opacity-50"
+                  aria-label="Удалить"
+                >
+                  {deleteMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                </button>
+              </Tooltip>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1802,7 +1839,7 @@ function EditRequestForm({
             activeTab === 'services' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-tg-hint'
           }`}
         >
-          Услуги ({formData.services.filter((s: ServiceItem) => s.name.trim()).length})
+          Товары ({formData.services.filter((s: ServiceItem) => s.name.trim()).length})
         </button>
         <button
           onClick={() => setActiveTab('details')}
@@ -2098,9 +2135,9 @@ function EditRequestForm({
                     : 'border-zinc-200 dark:border-zinc-700'
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <div className={clsx(
-                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0',
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5',
                     formData.tariff === 'standard' ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'
                   )}>
                     {formData.tariff === 'standard' && (
@@ -2108,11 +2145,11 @@ function EditRequestForm({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-tg-text">Стандарт</span>
-                      <span className="text-sm font-bold text-green-500 flex-shrink-0">Бесплатно</span>
+                      <span className="text-sm font-bold text-sky-400 ml-auto">Бесплатно</span>
                     </div>
-                    <p className="text-xs text-tg-hint mt-0.5">Базовая генерация лендинга</p>
+                    <p className="text-xs text-tg-hint mt-1">Базовая генерация лендинга</p>
                   </div>
                 </div>
               </button>
@@ -2136,9 +2173,9 @@ function EditRequestForm({
                   }} />
                 )}
 
-                <div className="flex items-center gap-3 relative z-10">
+                <div className="flex items-start gap-3 relative z-10">
                   <div className={clsx(
-                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                     formData.tariff === 'premium'
                       ? 'border-purple-500 bg-purple-500/20'
                       : 'border-zinc-300 dark:border-zinc-600'
@@ -2148,20 +2185,20 @@ function EditRequestForm({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className={clsx(
                         'font-semibold',
                         formData.tariff === 'premium'
                           ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
                           : 'text-tg-text'
                       )}>
-                        Премиум
+                        Премиум лендинг
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white flex-shrink-0">
-                        ⭐ PRO
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white ml-auto whitespace-nowrap">
+                        PRO
                       </span>
                     </div>
-                    <p className="text-xs text-tg-hint mt-0.5">Профессиональный дизайн и качество</p>
+                    <p className="text-xs text-tg-hint mt-1">Профессиональный дизайн и качество</p>
                   </div>
                 </div>
               </button>

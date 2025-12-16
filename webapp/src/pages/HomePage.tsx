@@ -29,21 +29,26 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-tg-bg">
       {/* Premium Header */}
-      <div className="bg-zinc-900 dark:bg-zinc-100 px-5 pt-10 pb-24">
+      <div className="relative overflow-hidden px-5 pt-10 pb-24" style={{ background: 'linear-gradient(145deg, #0f172a 0%, #0a0f1e 100%)' }}>
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl" />
+
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
+          className="relative z-10"
         >
-          <p className="text-zinc-400 text-sm font-medium mb-1">
+          <p className="text-blue-300/70 text-sm font-medium mb-1">
             {getGreeting()}
           </p>
-          <h1 className="text-3xl font-bold text-white dark:text-zinc-900 mb-2">
+          <h1 className="text-3xl font-bold text-white mb-2">
             {user?.first_name}
           </h1>
           {user?.role === 'admin' && (
             <motion.span
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-400 bg-amber-500/20 px-2.5 py-1 rounded-lg"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-300 bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/30"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
@@ -70,21 +75,21 @@ export default function HomePage() {
             }}
             className="w-full group"
           >
-            <div className="relative overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 dark:from-white dark:to-zinc-100 rounded-3xl p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
+            <div className="relative overflow-hidden rounded-3xl p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(145deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%)' }}>
               {/* Glow effect */}
-              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-500/30 to-purple-500/30 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-blue-600/30 via-sky-500/30 to-cyan-400/30 rounded-full blur-3xl" />
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/30 to-cyan-400/20 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-blue-300/20 via-sky-400/20 to-cyan-300/20 rounded-full blur-3xl" />
 
               <div className="relative flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-white/10 dark:bg-black/5 backdrop-blur-sm flex items-center justify-center border border-white/20 dark:border-black/10">
-                  <Plus className="w-8 h-8 text-white dark:text-zinc-900" />
+                <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                  <Plus className="w-8 h-8 text-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-bold text-xl text-white dark:text-zinc-900 mb-0.5">Новая заявка</p>
-                  <p className="text-sm text-zinc-400 dark:text-zinc-600">Создать сайт для клиента</p>
+                  <p className="font-bold text-xl text-white mb-0.5">Новая заявка</p>
+                  <p className="text-sm text-blue-200/80">Создать сайт для клиента</p>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-white/10 dark:bg-black/5 flex items-center justify-center group-hover:bg-white/20 dark:group-hover:bg-black/10 transition-colors">
-                  <ArrowRight className="w-5 h-5 text-white dark:text-zinc-900 group-hover:translate-x-0.5 transition-transform" />
+                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-colors">
+                  <ArrowRight className="w-5 h-5 text-white group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </div>
             </div>
@@ -132,29 +137,29 @@ export default function HomePage() {
           transition={{ delay: 0.3 }}
         >
           <p className="section-header">Быстрые действия</p>
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden border border-zinc-100 dark:border-zinc-800 shadow-lg">
+          <div className="rounded-3xl overflow-hidden border border-blue-500/10" style={{ background: 'linear-gradient(145deg, #0f172a 0%, #0d1424 100%)' }}>
             <QuickAction
               icon={<FileText className="w-5 h-5" />}
-              iconBg="bg-blue-100 dark:bg-blue-900/30"
-              iconColor="text-blue-600 dark:text-blue-400"
+              iconBg="bg-blue-500/20"
+              iconColor="text-blue-400"
               title="Все заявки"
               subtitle={`${stats?.total_requests || 0} заявок`}
               onClick={() => navigate('/requests')}
             />
-            <div className="h-px bg-zinc-100 dark:bg-zinc-800 ml-[68px]" />
+            <div className="h-px ml-[68px]" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.2) 50%, transparent 100%)' }} />
             <QuickAction
               icon={<Zap className="w-5 h-5" />}
-              iconBg="bg-amber-100 dark:bg-amber-900/30"
-              iconColor="text-amber-600 dark:text-amber-400"
+              iconBg="bg-cyan-500/20"
+              iconColor="text-cyan-400"
               title="Активные"
               subtitle={`${stats?.pending_requests || 0} в работе`}
               onClick={() => navigate('/requests?status=generating')}
             />
-            <div className="h-px bg-zinc-100 dark:bg-zinc-800 ml-[68px]" />
+            <div className="h-px ml-[68px]" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.2) 50%, transparent 100%)' }} />
             <QuickAction
               icon={<Archive className="w-5 h-5" />}
-              iconBg="bg-zinc-100 dark:bg-zinc-800"
-              iconColor="text-zinc-600 dark:text-zinc-400"
+              iconBg="bg-slate-600/30"
+              iconColor="text-slate-400"
               title="Архив"
               subtitle="Завершённые проекты"
               onClick={() => navigate('/archive')}
@@ -164,18 +169,19 @@ export default function HomePage() {
 
         {/* Tip Card */}
         <motion.div
-          className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30"
+          className="rounded-2xl p-4 border border-blue-500/20"
+          style={{ background: 'linear-gradient(145deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 58, 138, 0.1) 100%)' }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-blue-500" />
+            <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-blue-400" />
             </div>
             <div>
-              <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 mb-0.5">Совет дня</p>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              <p className="font-semibold text-sm text-slate-100 mb-0.5">Совет дня</p>
+              <p className="text-xs text-slate-400 leading-relaxed">
                 Добавляйте качественные фото для лучшего результата генерации сайта
               </p>
             </div>
@@ -201,32 +207,40 @@ function StatsCard({
 }) {
   const colors = {
     blue: {
-      bg: 'bg-blue-50 dark:bg-blue-900/20',
-      text: 'text-blue-600 dark:text-blue-400',
-      value: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-500/15',
+      text: 'text-blue-400',
+      value: 'text-blue-300',
+      border: 'border-blue-500/20',
     },
     amber: {
-      bg: 'bg-amber-50 dark:bg-amber-900/20',
-      text: 'text-amber-600 dark:text-amber-400',
-      value: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-500/15',
+      text: 'text-amber-400',
+      value: 'text-amber-300',
+      border: 'border-amber-500/20',
     },
   }
 
-  const color = accent ? colors[accent] : null
+  const color = accent ? colors[accent] : {
+    bg: 'bg-slate-700/50',
+    text: 'text-slate-400',
+    value: 'text-slate-200',
+    border: 'border-slate-700/50',
+  }
 
   return (
     <motion.button
       onClick={onClick}
-      className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-4 text-left shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 active:scale-[0.98]"
+      className={`rounded-2xl p-4 text-left transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] border ${color.border}`}
+      style={{ background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)' }}
       whileTap={{ scale: 0.98 }}
     >
-      <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3 ${color?.bg || 'bg-zinc-100 dark:bg-zinc-800'} ${color?.text || 'text-zinc-500'}`}>
+      <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3 ${color.bg} ${color.text}`}>
         {icon}
       </div>
-      <p className={`text-3xl font-bold mb-0.5 ${color?.value || 'text-tg-text'}`}>
+      <p className={`text-3xl font-bold mb-0.5 ${color.value}`}>
         {value}
       </p>
-      <p className="text-xs text-tg-hint font-medium">{label}</p>
+      <p className="text-xs text-slate-400 font-medium">{label}</p>
     </motion.button>
   )
 }
@@ -247,15 +261,15 @@ function QuickAction({
   onClick: () => void
 }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-4 p-4 w-full text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group">
+    <button onClick={onClick} className="flex items-center gap-4 p-4 w-full text-left hover:bg-blue-500/5 transition-colors group">
       <div className={`w-12 h-12 rounded-2xl ${iconBg} ${iconColor} flex items-center justify-center transition-transform group-hover:scale-105`}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-tg-text">{title}</p>
-        <p className="text-sm text-tg-hint">{subtitle}</p>
+        <p className="font-semibold text-slate-100">{title}</p>
+        <p className="text-sm text-slate-400">{subtitle}</p>
       </div>
-      <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:translate-x-0.5 transition-transform" />
+      <ChevronRight className="w-5 h-5 text-slate-600 group-hover:translate-x-0.5 group-hover:text-blue-400 transition-all" />
     </button>
   )
 }

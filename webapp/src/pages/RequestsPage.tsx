@@ -30,58 +30,58 @@ const statusConfig: Record<string, {
   draft: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Черновик',
-    bg: 'bg-zinc-100 dark:bg-zinc-800',
-    text: 'text-zinc-600 dark:text-zinc-400'
+    bg: 'bg-slate-700/50',
+    text: 'text-slate-400'
   },
   collecting_info: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Сбор данных',
-    bg: 'bg-zinc-100 dark:bg-zinc-800',
-    text: 'text-zinc-600 dark:text-zinc-400'
+    bg: 'bg-slate-700/50',
+    text: 'text-slate-400'
   },
   collecting_photos: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Сбор фото',
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
-    text: 'text-amber-600 dark:text-amber-400'
+    bg: 'bg-amber-500/15',
+    text: 'text-amber-400'
   },
   awaiting_photos: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Ожидание фото',
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
-    text: 'text-amber-600 dark:text-amber-400'
+    bg: 'bg-amber-500/15',
+    text: 'text-amber-400'
   },
   ready_to_generate: {
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     label: 'Готов',
-    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-    text: 'text-emerald-600 dark:text-emerald-400'
+    bg: 'bg-blue-500/20',
+    text: 'text-blue-300'
   },
   generating: {
     icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
     label: 'Генерация...',
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    text: 'text-blue-600 dark:text-blue-400',
-    glow: 'shadow-blue-500/20'
+    bg: 'bg-cyan-500/20',
+    text: 'text-cyan-300',
+    glow: 'shadow-cyan-500/30'
   },
   in_queue: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'В очереди',
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    text: 'text-blue-600 dark:text-blue-400'
+    bg: 'bg-blue-500/15',
+    text: 'text-blue-400'
   },
   success: {
     icon: <Sparkles className="w-3.5 h-3.5" />,
     label: 'Готов!',
-    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    glow: 'shadow-emerald-500/20'
+    bg: 'bg-blue-500/25',
+    text: 'text-blue-200',
+    glow: 'shadow-blue-500/30'
   },
   error: {
     icon: <AlertCircle className="w-3.5 h-3.5" />,
     label: 'Ошибка',
-    bg: 'bg-red-50 dark:bg-red-900/20',
-    text: 'text-red-600 dark:text-red-400'
+    bg: 'bg-red-500/20',
+    text: 'text-red-400'
   },
 }
 
@@ -151,15 +151,19 @@ export default function RequestsPage() {
   return (
     <div className="min-h-screen bg-tg-bg">
       {/* Premium Header */}
-      <div className="bg-zinc-900 dark:bg-zinc-100 pt-8 pb-20 px-5">
+      <div className="relative overflow-hidden pt-8 pb-20 px-5" style={{ background: 'linear-gradient(145deg, #0f172a 0%, #0a0f1e 100%)' }}>
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl" />
+
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
+          className="flex items-center justify-between mb-6 relative z-10"
         >
           <div>
-            <h1 className="text-2xl font-bold text-white dark:text-zinc-900">Заявки</h1>
-            <p className="text-zinc-400 dark:text-zinc-600 text-sm mt-0.5">
+            <h1 className="text-2xl font-bold text-white">Заявки</h1>
+            <p className="text-blue-300/70 text-sm mt-0.5">
               {requests.length} {requests.length === 1 ? 'заявка' : requests.length < 5 ? 'заявки' : 'заявок'}
             </p>
           </div>
@@ -169,7 +173,8 @@ export default function RequestsPage() {
                 haptic?.impactOccurred('medium')
                 navigate('/requests/new')
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white font-semibold text-sm shadow-lg"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm shadow-lg text-white border border-blue-500/30"
+              style={{ background: 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)' }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -181,14 +186,14 @@ export default function RequestsPage() {
 
         {/* Search in header */}
         <motion.div
-          className="relative"
+          className="relative z-10"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
           <Search className={clsx(
             "absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-200",
-            isSearchFocused ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'
+            isSearchFocused ? 'text-blue-400' : 'text-slate-500'
           )} />
           <input
             type="text"
@@ -197,7 +202,11 @@ export default function RequestsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
-            className="w-full pl-12 pr-12 py-3.5 rounded-2xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none border-2 border-transparent focus:border-zinc-300 dark:focus:border-zinc-700 transition-all shadow-lg"
+            className="w-full pl-12 pr-12 py-3.5 rounded-2xl text-slate-100 placeholder:text-slate-500 outline-none border-2 transition-all shadow-lg"
+            style={{
+              background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+              borderColor: isSearchFocused ? 'rgba(59, 130, 246, 0.5)' : 'rgba(148, 163, 184, 0.1)'
+            }}
           />
           <AnimatePresence>
             {searchQuery && (
@@ -206,7 +215,7 @@ export default function RequestsPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-700 text-slate-400"
               >
                 <X className="w-3.5 h-3.5" />
               </motion.button>
@@ -218,7 +227,7 @@ export default function RequestsPage() {
       {/* Filters - Floating */}
       <div className="px-4 -mt-8 mb-4 relative z-10">
         <motion.div
-          className="flex gap-2 overflow-x-auto pb-2 scroll-x-container"
+          className="flex gap-2 pb-2 scroll-x-container"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -231,11 +240,16 @@ export default function RequestsPage() {
                 setSearchParams(filter.value === 'all' ? {} : { status: filter.value })
               }}
               className={clsx(
-                'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-300 shadow-lg',
+                'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-300 shadow-lg border',
                 statusFilter === filter.value
-                  ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 scale-105'
-                  : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+                  ? 'text-white border-blue-500/50 scale-105'
+                  : 'text-slate-300 border-slate-700/50 hover:border-blue-500/30'
               )}
+              style={{
+                background: statusFilter === filter.value
+                  ? 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)'
+                  : 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)'
+              }}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 + idx * 0.05 }}
@@ -266,22 +280,24 @@ export default function RequestsPage() {
             animate={{ opacity: 1, y: 0 }}
           >
             <motion.div
-              className="w-24 h-24 rounded-3xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700 mx-auto mb-6 flex items-center justify-center shadow-xl"
+              className="w-24 h-24 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-xl border border-blue-500/20"
+              style={{ background: 'linear-gradient(145deg, #1e3a8a 0%, #1e40af 100%)' }}
               animate={{ y: [0, -8, 0] }}
               transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
             >
-              <Globe className="w-12 h-12 text-zinc-400 dark:text-zinc-500" />
+              <Globe className="w-12 h-12 text-blue-200" />
             </motion.div>
-            <h3 className="text-xl font-bold text-tg-text mb-2">
+            <h3 className="text-xl font-bold text-slate-100 mb-2">
               {searchQuery ? 'Ничего не найдено' : 'Пока нет заявок'}
             </h3>
-            <p className="text-tg-hint mb-6 max-w-xs mx-auto">
+            <p className="text-slate-400 mb-6 max-w-xs mx-auto">
               {searchQuery ? 'Попробуйте изменить поисковый запрос' : 'Создайте первую заявку и начните работу с клиентами'}
             </p>
             {!searchQuery && (
               <motion.button
                 onClick={() => navigate('/requests/new')}
-                className="inline-flex items-center gap-2 px-6 py-3.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-semibold shadow-xl"
+                className="inline-flex items-center gap-2 px-6 py-3.5 text-white rounded-2xl font-semibold shadow-xl border border-blue-500/30"
+                style={{ background: 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)' }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -311,19 +327,25 @@ export default function RequestsPage() {
                     transition={{ delay: index * 0.04, duration: 0.3 }}
                     layout
                   >
-                    <div className={clsx(
-                      "bg-white dark:bg-zinc-900 rounded-3xl p-4 border border-zinc-100 dark:border-zinc-800 transition-all duration-300",
-                      "hover:shadow-xl hover:-translate-y-1 hover:border-zinc-200 dark:hover:border-zinc-700",
-                      config.glow && `shadow-lg ${config.glow}`
-                    )}>
+                    <div
+                      className={clsx(
+                        "rounded-3xl p-4 border transition-all duration-300",
+                        "hover:shadow-xl hover:-translate-y-1",
+                        config.glow && `shadow-lg ${config.glow}`
+                      )}
+                      style={{
+                        background: 'linear-gradient(145deg, #0f172a 0%, #0d1424 100%)',
+                        borderColor: 'rgba(59, 130, 246, 0.1)'
+                      }}
+                    >
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
                         <div className="relative flex-shrink-0">
-                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-700 dark:from-zinc-200 dark:to-zinc-400 flex items-center justify-center text-white dark:text-zinc-900 font-bold text-xl shadow-lg">
+                          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg" style={{ background: 'linear-gradient(145deg, #1e3a8a 0%, #1d4ed8 100%)' }}>
                             {request.company_name?.[0]?.toUpperCase() || '?'}
                           </div>
                           {status === 'success' && (
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg">
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg">
                               <CheckCircle2 className="w-3 h-3 text-white" />
                             </div>
                           )}
@@ -332,13 +354,13 @@ export default function RequestsPage() {
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h3 className="font-bold text-tg-text truncate text-[15px]">
+                            <h3 className="font-bold text-slate-100 truncate text-[15px]">
                               {request.company_name || 'Без названия'}
                             </h3>
-                            <ArrowUpRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <ArrowUpRight className="w-4 h-4 text-slate-600 flex-shrink-0 opacity-0 group-hover:opacity-100 group-hover:text-blue-400 transition-all" />
                           </div>
 
-                          <div className="flex items-center gap-3 text-sm text-tg-hint mb-3">
+                          <div className="flex items-center gap-3 text-sm text-slate-400 mb-3">
                             <span className="flex items-center gap-1 truncate">
                               <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
                               {request.client_name || 'Без клиента'}
