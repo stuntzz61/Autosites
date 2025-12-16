@@ -157,6 +157,58 @@ async def cmd_start(message: types.Message, state: FSMContext):
     if len(args) > 1 and args[1].startswith("invite_"):
         invite_code = args[1].replace("invite_", "").strip().upper()
 
+    # If user exists and has invite code, update their invite and status first
+    if user and invite_code:
+        is_valid, result = await db.validate_invite_code(invite_code)
+        if is_valid:
+            invite = result
+            # Update user's invite code and potentially reset status
+            async with db.get_conn() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    # Check if user already used this invite
+                    await cur.execute(
+                        "SELECT id FROM invite_code_usage WHERE invite_code_id = %s AND user_id = %s",
+                        (invite['id'], str(user['id']))
+                    )
+                    if not await cur.fetchone():
+                        # Record usage
+                        await cur.execute(
+                            """INSERT INTO invite_code_usage (invite_code_id, user_id)
+                               VALUES (%s, %s)""",
+                            (invite['id'], str(user['id']))
+                        )
+                        # Increment usage count
+                        await cur.execute(
+                            "UPDATE invite_codes SET uses_count = uses_count + 1 WHERE id = %s",
+                            (invite['id'],)
+                        )
+
+                    # Update user's registered_via_code, group, and reset status if auto_approve
+                    new_status = 'approved' if invite.get('auto_approve') else 'pending'
+                    await cur.execute(
+                        """UPDATE users
+                           SET registered_via_code = %s, admin_group_id = %s,
+                               approval_status = %s
+                           WHERE id = %s
+                           RETURNING *""",
+                        (invite['id'], invite.get('group_id'), new_status, str(user['id']))
+                    )
+                    user = await cur.fetchone()
+
+                    # Add to group if specified
+                    if invite.get('group_id'):
+                        await cur.execute(
+                            """INSERT INTO user_group_membership (user_id, group_id, role, added_by)
+                               VALUES (%s, %s, 'member', %s)
+                               ON CONFLICT (user_id, group_id) DO UPDATE SET role = 'member'""",
+                            (str(user['id']), invite['group_id'], invite['created_by'])
+                        )
+
+                    await conn.commit()
+
+            # Refresh user data
+            user = await db.get_user_by_tg_id(tg_id)
+
     if not user:
         # New user - check for invite code
         if invite_code:
@@ -216,10 +268,21 @@ async def cmd_start(message: types.Message, state: FSMContext):
         return
 
     if approval_status == "rejected":
-        await message.answer(
-            "❌ К сожалению, ваша заявка была отклонена.\n\n"
-            "Если вы считаете это ошибкой, свяжитесь с администратором."
-        )
+        # If user came with invite code, they should have been updated above
+        # If still rejected, show message but also offer to use new invite
+        if invite_code:
+            await message.answer(
+                "❌ Ваша предыдущая заявка была отклонена.\n\n"
+                "Вы можете использовать новый инвайт-код для повторной регистрации.",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="📝 Зарегистрироваться с новым инвайтом", callback_data=f"register_invite_{invite_code}")]
+                ])
+            )
+        else:
+            await message.answer(
+                "❌ К сожалению, ваша заявка была отклонена.\n\n"
+                "Если вы считаете это ошибкой, свяжитесь с администратором."
+            )
         return
 
     if user.get("is_blocked"):
@@ -391,17 +454,16 @@ async def cb_register_with_invite(callback: types.CallbackQuery, state: FSMConte
                         (invite['id'],)
                     )
 
-                # Update user's registered_via_code and group
+                # Update user's registered_via_code, group, and status
+                # Reset status to pending or approved based on invite
+                new_status = 'approved' if invite.get('auto_approve') else 'pending'
                 await cur.execute(
                     """UPDATE users
                        SET registered_via_code = %s, admin_group_id = %s,
-                           approval_status = CASE
-                               WHEN %s THEN 'approved'
-                               ELSE approval_status
-                           END
+                           approval_status = %s
                        WHERE id = %s
                        RETURNING *""",
-                    (invite['id'], invite.get('group_id'), invite.get('auto_approve'), str(user['id']))
+                    (invite['id'], invite.get('group_id'), new_status, str(user['id']))
                 )
                 new_user = await cur.fetchone()
 
