@@ -43,6 +43,10 @@ class AddToGroupRequest(BaseModel):
     role: Optional[str] = "member"
 
 
+class MoveManagerRequest(BaseModel):
+    group_id: str
+
+
 class CreateInviteCodeRequest(BaseModel):
     group_id: Optional[str] = None
     name: Optional[str] = None
