@@ -370,7 +370,7 @@ export default function RequestDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-        <p className="text-tg-text font-medium mb-4">Заявка не найдена</p>
+        <p className="text-slate-100 font-medium mb-4">Заявка не найдена</p>
         <button onClick={() => navigate('/requests')} className="btn btn-primary">
           К списку
         </button>
@@ -447,18 +447,24 @@ export default function RequestDetailPage() {
   return (
     <div className="min-h-screen pb-48 bg-tg-bg">
       {/* Header */}
-      <div className="m-4 rounded-2xl p-6 relative overflow-hidden border border-blue-500/20" style={{ background: 'linear-gradient(145deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%)' }}>
-        {/* Decorative gradient orbs */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-cyan-400/10 rounded-full blur-2xl" />
-
+      <div className="m-4 rounded-2xl p-6 relative overflow-hidden border" style={{
+        background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
+        borderColor: 'rgba(148, 163, 184, 0.2)'
+      }}>
         <div className="flex items-start justify-between mb-4 relative z-10">
-          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl font-bold flex-shrink-0 text-white border border-white/20">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0 text-slate-100 border" style={{
+            background: 'rgba(100, 116, 139, 0.15)',
+            borderColor: 'rgba(148, 163, 184, 0.25)'
+          }}>
             {companyName[0]?.toUpperCase() || '?'}
           </div>
           <button
             onClick={() => setShowStatusMenu(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-white/20 backdrop-blur-sm flex-shrink-0 text-white border border-white/10"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 text-slate-200 border"
+            style={{
+              background: 'rgba(100, 116, 139, 0.1)',
+              borderColor: 'rgba(148, 163, 184, 0.2)'
+            }}
           >
             {config.icon}
             {config.label}
@@ -466,22 +472,29 @@ export default function RequestDetailPage() {
           </button>
         </div>
         <div className="flex items-center gap-2 flex-wrap mb-1 relative z-10">
-          <h1 className="text-2xl font-bold text-white">{companyName}</h1>
+          <h1 className="text-2xl font-bold text-slate-100">{companyName}</h1>
           {/* Tariff Badge */}
           {tariff === 'premium' && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-sm whitespace-nowrap flex-shrink-0">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide text-slate-100 border shadow-sm whitespace-nowrap flex-shrink-0" style={{
+              background: 'rgba(226, 232, 240, 0.12)',
+              borderColor: 'rgba(226, 232, 240, 0.25)'
+            }}>
               <Sparkles className="w-3 h-3" />
               Premium
             </span>
           )}
         </div>
-        {businessType && <p className="text-blue-100/80 text-sm relative z-10">{businessType}</p>}
+        {businessType && <p className="text-slate-400 text-sm relative z-10">{businessType}</p>}
         {resultUrl && (
           <a
             href={resultUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl text-sm text-white border border-white/20 hover:bg-white/30 transition-colors relative z-10"
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl text-sm text-slate-200 border transition-colors relative z-10"
+            style={{
+              background: 'rgba(100, 116, 139, 0.1)',
+              borderColor: 'rgba(148, 163, 184, 0.2)'
+            }}
           >
             <ExternalLink className="w-4 h-4" /> Открыть сайт
           </a>
@@ -514,8 +527,12 @@ export default function RequestDetailPage() {
                     onClick={() => statusMutation.mutate(key)}
                     className={clsx(
                       'w-full flex items-center gap-3 p-3 rounded-xl',
-                      status === key ? 'bg-tg-secondary-bg' : ''
+                      status === key ? '' : ''
                     )}
+                    style={status === key ? {
+                      background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
+                      borderColor: 'rgba(148, 163, 184, 0.2)'
+                    } : {}}
                   >
                     {cfg.icon}
                     <span>{cfg.label}</span>
@@ -533,28 +550,31 @@ export default function RequestDetailPage() {
         {showPhotoUpload && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 bg-black/70 z-[10000]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !uploadingPhoto && setShowPhotoUpload(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom"
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-[10001] safe-bottom max-h-[80vh] overflow-y-auto"
+              style={{ paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0) + 80px)` }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
             >
               <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
-              <p className="text-lg font-semibold mb-4">Загрузить фото</p>
+              <p className="text-lg font-semibold mb-4 text-slate-100">Загрузить фото</p>
               <div className="space-y-2 mb-4">
                 {photoCategories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
                     className={clsx(
-                      'w-full p-3 rounded-xl text-left',
-                      selectedCategory === cat.id ? 'bg-tg-secondary-bg border-2 border-black dark:border-white' : 'bg-tg-secondary-bg'
+                      'w-full p-3 rounded-xl text-left transition-all',
+                      selectedCategory === cat.id
+                        ? 'bg-slate-700 border-2 border-slate-500 text-slate-100'
+                        : 'bg-slate-800/50 text-slate-300 border border-slate-700/50'
                     )}
                   >
                     {cat.label}
@@ -562,7 +582,7 @@ export default function RequestDetailPage() {
                 ))}
               </div>
               <label className={clsx(
-                "btn btn-primary w-full cursor-pointer",
+                "btn btn-primary w-full cursor-pointer mb-4",
                 uploadingPhoto && "opacity-50 pointer-events-none"
               )}>
                 <input
@@ -601,24 +621,24 @@ export default function RequestDetailPage() {
         {summary && (
           <Section title="О компании">
             <div className="p-4">
-              <p className="text-tg-text whitespace-pre-wrap">{summary}</p>
+              <p className="text-slate-200 whitespace-pre-wrap">{summary}</p>
             </div>
           </Section>
         )}
 
         {services.length > 0 && (
           <Section title="Услуга/Товар">
-            <div className="divide-y divide-tg-separator">
+            <div className="divide-y" style={{ borderColor: 'rgba(100, 116, 139, 0.15)' }}>
               {services.map((service: any, i: number) => (
                 <div key={i} className="p-4">
                   <p className="font-medium">{service.name}</p>
-                  {service.summary && <p className="text-sm text-tg-hint mt-1">{service.summary}</p>}
-                  {service.priceFrom && <p className="text-sm text-sky-400 mt-1">{service.priceFrom}</p>}
+                  {service.summary && <p className="text-sm text-slate-400 mt-1">{service.summary}</p>}
+                  {service.priceFrom && <p className="text-sm text-slate-300 mt-1">{service.priceFrom}</p>}
                   {Array.isArray(service.addons) && service.addons.length > 0 && (
                     <div className="mt-2 space-y-1">
-                      <p className="text-xs text-tg-hint font-semibold">Доп. услуги / опции:</p>
+                      <p className="text-xs text-slate-400 font-semibold">Доп. услуги / опции:</p>
                       {service.addons.map((addon: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between text-xs text-tg-hint">
+                        <div key={idx} className="flex items-center justify-between text-xs text-slate-400">
                           <span>{addon.name || 'Без названия'}</span>
                           {addon.price && <span className="text-sky-400 font-medium">{addon.price}</span>}
                         </div>
@@ -635,7 +655,11 @@ export default function RequestDetailPage() {
           <Section title="Структура">
             <div className="p-4 flex flex-wrap gap-2">
               {structure.map((s: string, i: number) => (
-                <span key={i} className="px-3 py-1.5 bg-tg-secondary-bg rounded-full text-sm">{s}</span>
+                <span key={i} className="px-3 py-1.5 rounded-full text-sm border" style={{
+                  background: 'rgba(100, 116, 139, 0.1)',
+                  borderColor: 'rgba(148, 163, 184, 0.2)',
+                  color: '#cbd5e1'
+                }}>{s}</span>
               ))}
             </div>
           </Section>
@@ -652,12 +676,15 @@ export default function RequestDetailPage() {
           <div className="p-4 space-y-3">
             {requestServices.length > 0 ? (
               requestServices.map((service: any) => (
-                <div key={service.id} className="flex items-center justify-between p-3 bg-tg-secondary-bg rounded-xl">
+                <div key={service.id} className="flex items-center justify-between p-3 rounded-xl border" style={{
+                  background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                  borderColor: 'rgba(100, 116, 139, 0.15)'
+                }}>
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{service.icon || '✨'}</span>
                     <div>
-                      <p className="font-medium text-tg-text">{service.name}</p>
-                      <p className="text-xs text-tg-hint flex items-center gap-1">
+                      <p className="font-medium text-slate-100">{service.name}</p>
+                      <p className="text-xs text-slate-400 flex items-center gap-1">
                         {service.status === 'pending' && <><Clock className="w-3 h-3 text-amber-400" /> Ожидает</>}
                         {service.status === 'in_progress' && <><Loader2 className="w-3 h-3 text-blue-400 animate-spin" /> В работе</>}
                         {service.status === 'completed' && <><CheckCircle2 className="w-3 h-3 text-blue-400" /> Выполнено</>}
@@ -674,12 +701,13 @@ export default function RequestDetailPage() {
                 </div>
               ))
             ) : (
-              <p className="text-center text-tg-hint py-2">Нет доп. услуг</p>
+              <p className="text-center text-slate-400 py-2">Нет доп. услуг</p>
             )}
 
             <button
               onClick={() => setShowServicesModal(true)}
-              className="w-full p-3 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint flex items-center justify-center gap-2"
+              className="w-full p-3 border-2 border-dashed rounded-xl text-slate-400 flex items-center justify-center gap-2"
+              style={{ borderColor: 'rgba(100, 116, 139, 0.2)' }}
             >
               <Plus className="w-4 h-4" />
               Добавить услугу
@@ -692,9 +720,16 @@ export default function RequestDetailPage() {
             {/* Upload button */}
             <button
               onClick={() => setShowPhotoUpload(true)}
-              className="flex flex-col items-center justify-center w-full min-h-[100px] p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-blue-400 hover:text-blue-400 hover:bg-blue-500/5 transition-all active:bg-tg-secondary-bg"
+              className="flex flex-col items-center justify-center w-full min-h-[100px] p-4 border-2 border-dashed rounded-xl text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-all border"
+              style={{
+                borderColor: 'rgba(100, 116, 139, 0.2)',
+                background: 'rgba(100, 116, 139, 0.03)'
+              }}
             >
-              <div className="w-10 h-10 rounded-full bg-tg-secondary-bg flex items-center justify-center mb-2">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2 border" style={{
+                background: 'rgba(100, 116, 139, 0.1)',
+                borderColor: 'rgba(148, 163, 184, 0.2)'
+              }}>
                 <Camera className="w-5 h-5" />
               </div>
               <span className="text-sm font-medium">Добавить фото</span>
@@ -713,7 +748,8 @@ export default function RequestDetailPage() {
                       <img
                         src={img.url}
                         alt={img.category || 'Фото'}
-                        className="w-full h-full rounded-2xl object-cover bg-tg-secondary-bg cursor-pointer"
+                        className="w-full h-full rounded-2xl object-cover cursor-pointer"
+                        style={{ background: 'rgba(100, 116, 139, 0.1)' }}
                         onClick={() => {
                           haptic?.impactOccurred('light')
                           setViewingPhotoIndex(i)
@@ -757,9 +793,9 @@ export default function RequestDetailPage() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <ImageIcon className="w-12 h-12 text-tg-hint/50 mx-auto mb-3" />
-                <p className="text-tg-hint">Нет фото</p>
-                <p className="text-xs text-tg-hint/70 mt-1">Добавьте фото для заявки</p>
+                <ImageIcon className="w-12 h-12 text-slate-500 mx-auto mb-3" />
+                <p className="text-slate-400">Нет фото</p>
+                <p className="text-xs text-slate-500 mt-1">Добавьте фото для заявки</p>
               </div>
             )}
           </div>
@@ -776,7 +812,7 @@ export default function RequestDetailPage() {
                     Не удалось загрузить данные хостинга
                   </p>
                 </div>
-                <p className="text-sm text-tg-hint mb-3">
+                <p className="text-sm text-slate-400 mb-3">
                   Попробуйте обновить страницу или повторите попытку позже.
                 </p>
                 <button
@@ -796,8 +832,8 @@ export default function RequestDetailPage() {
           <Section title="Сайт">
             <div className="p-4">
               <div className="text-center py-6">
-                <Globe className="w-12 h-12 text-tg-hint/50 mx-auto mb-3" />
-                <p className="text-tg-hint mb-4">Сайт ещё не создан для этой заявки</p>
+                <Globe className="w-12 h-12 text-slate-500 mx-auto mb-3" />
+                <p className="text-slate-400 mb-4">Сайт ещё не создан для этой заявки</p>
                 <button
                   onClick={() => createSiteMutation.mutate()}
                   disabled={createSiteMutation.isPending}
@@ -823,7 +859,10 @@ export default function RequestDetailPage() {
           <Section title="Хостинг сайта">
             <div className="p-4 space-y-3">
               {/* Site Status */}
-              <div className="flex items-center justify-between p-3 bg-tg-secondary-bg rounded-xl">
+              <div className="flex items-center justify-between p-3 rounded-xl border" style={{
+                background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                borderColor: 'rgba(100, 116, 139, 0.15)'
+              }}>
                 <div className="flex items-center gap-3">
                   <Globe className="w-5 h-5 text-blue-500" />
                   <div>
@@ -918,7 +957,11 @@ export default function RequestDetailPage() {
                   href={clientSite.preview_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 bg-tg-secondary-bg rounded-xl hover:bg-tg-hint/5 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl transition-colors border"
+                  style={{
+                    background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                    borderColor: 'rgba(100, 116, 139, 0.15)'
+                  }}
                 >
                   <ExternalLink className="w-5 h-5 text-blue-500" />
                   <div className="flex-1">
@@ -965,7 +1008,10 @@ export default function RequestDetailPage() {
               </div>
 
               {/* Hosting Info */}
-              <div className="p-3 bg-tg-secondary-bg rounded-xl space-y-2">
+              <div className="p-3 rounded-xl space-y-2 border" style={{
+                background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                borderColor: 'rgba(100, 116, 139, 0.15)'
+              }}>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-tg-hint">Тариф:</span>
                   <span className="font-medium text-tg-text capitalize flex items-center gap-1.5">
@@ -1074,7 +1120,11 @@ export default function RequestDetailPage() {
                   {revisionsData.items.slice(0, 3).map((revision: any) => (
                     <div
                       key={revision.id}
-                      className="flex items-center justify-between p-3 bg-tg-secondary-bg rounded-xl"
+                      className="flex items-center justify-between p-3 rounded-xl border"
+                      style={{
+                        background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                        borderColor: 'rgba(100, 116, 139, 0.15)'
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -1198,7 +1248,10 @@ export default function RequestDetailPage() {
 
                   {/* Changes List */}
                   {newRevisionChanges.map((change, index) => (
-                    <div key={index} className="bg-tg-secondary-bg rounded-xl p-4 space-y-3">
+                    <div key={index} className="rounded-xl p-4 space-y-3 border" style={{
+                      background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                      borderColor: 'rgba(100, 116, 139, 0.15)'
+                    }}>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-tg-text">Правка {index + 1}</span>
                         {newRevisionChanges.length > 1 && (
@@ -1506,7 +1559,12 @@ export default function RequestDetailPage() {
               <Tooltip content="Редактировать заявку" position="top">
                 <button
                   onClick={handleEdit}
-                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                  className="flex items-center justify-center w-12 h-12 sm:h-14 rounded-xl transition-all active:scale-95 border"
+                  style={{
+                    background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    color: '#cbd5e1'
+                  }}
                   aria-label="Редактировать"
                 >
                   <Edit3 className="w-5 h-5" />
@@ -1520,7 +1578,11 @@ export default function RequestDetailPage() {
                 <button
                   onClick={handleGenerate}
                   disabled={generateMutation.isPending}
-                  className="flex-1 flex items-center justify-center gap-2 h-12 sm:h-14 px-4 sm:px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-w-0"
+                  className="flex-1 flex items-center justify-center gap-2 h-12 sm:h-14 px-4 sm:px-6 rounded-xl text-white font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-w-0 border"
+                  style={{
+                    background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
+                    borderColor: 'rgba(148, 163, 184, 0.3)'
+                  }}
                   aria-label="Отправить в разработку"
                 >
                   {generateMutation.isPending ? (
@@ -1542,7 +1604,11 @@ export default function RequestDetailPage() {
                   href={resultUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 h-12 sm:h-14 px-4 sm:px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all active:scale-[0.98]"
+                  className="flex-1 flex items-center justify-center gap-2 h-12 sm:h-14 px-4 sm:px-6 rounded-xl text-white font-semibold transition-all active:scale-[0.98] border"
+                  style={{
+                    background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
+                    borderColor: 'rgba(148, 163, 184, 0.3)'
+                  }}
                   aria-label="Открыть сайт"
                 >
                   <ExternalLink className="w-5 h-5 flex-shrink-0" />
@@ -1555,7 +1621,12 @@ export default function RequestDetailPage() {
             <Tooltip content="Переместить в архив" position="top">
               <button
                 onClick={handleArchive}
-                className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
+                className="flex items-center justify-center w-12 h-12 sm:h-14 rounded-xl transition-all active:scale-95 disabled:opacity-50 border"
+                style={{
+                  background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                  borderColor: 'rgba(148, 163, 184, 0.2)',
+                  color: '#cbd5e1'
+                }}
                 disabled={archiveMutation.isPending}
                 aria-label="Архивировать"
               >
@@ -1569,7 +1640,12 @@ export default function RequestDetailPage() {
                 <button
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
-                  className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-95 disabled:opacity-50"
+                  className="flex items-center justify-center w-12 h-12 sm:h-14 rounded-xl transition-all active:scale-95 disabled:opacity-50 border"
+                  style={{
+                    background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                    borderColor: 'rgba(239, 68, 68, 0.3)',
+                    color: '#f87171'
+                  }}
                   aria-label="Удалить"
                 >
                   {deleteMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
@@ -1654,11 +1730,18 @@ export default function RequestDetailPage() {
                       }}
                       disabled={isAdded || addServiceMutation.isPending}
                       className={clsx(
-                        'w-full p-4 rounded-xl text-left transition-all',
+                        'w-full p-4 rounded-xl text-left transition-all border',
                         isAdded
-                          ? 'bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-500'
-                          : 'bg-tg-secondary-bg hover:bg-tg-hint/10'
+                          ? 'border-slate-400'
+                          : ''
                       )}
+                      style={isAdded ? {
+                        background: 'linear-gradient(145deg, #475569 0%, #334155 100%)',
+                        borderColor: 'rgba(148, 163, 184, 0.3)'
+                      } : {
+                        background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                        borderColor: 'rgba(100, 116, 139, 0.15)'
+                      }}
                     >
                       <div className="flex items-start gap-3">
                         <span className="text-2xl">{service.icon || '✨'}</span>
@@ -1696,7 +1779,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div>
       <p className="section-header">{title}</p>
-      <div className="bg-tg-section rounded-2xl overflow-hidden border border-tg-separator">
+      <div className="rounded-2xl overflow-hidden border" style={{
+        background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+        borderColor: 'rgba(100, 116, 139, 0.15)'
+      }}>
         {children}
       </div>
     </div>
@@ -1959,7 +2045,10 @@ function EditRequestForm({
       {activeTab === 'services' && (
         <div className="space-y-4">
           {formData.services.map((service: ServiceItem, i: number) => (
-            <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
+            <div key={i} className="rounded-xl p-4 border" style={{
+              background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+              borderColor: 'rgba(100, 116, 139, 0.15)'
+            }}>
               <div className="flex justify-between items-center mb-3">
                 <span className="text-sm font-medium text-tg-text">Услуга/Товар {i + 1}</span>
                 {formData.services.length > 1 && (
@@ -2129,27 +2218,32 @@ function EditRequestForm({
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, tariff: 'standard' }))}
                 className={clsx(
-                  'w-full p-4 rounded-2xl border-2 transition-all text-left',
+                  'w-full p-4 rounded-2xl border transition-all text-left',
                   formData.tariff === 'standard'
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-zinc-200 dark:border-zinc-700'
+                    ? 'border-slate-500'
+                    : 'border-slate-700/50'
                 )}
+                style={{
+                  background: formData.tariff === 'standard'
+                    ? 'linear-gradient(145deg, #334155 0%, #1e293b 100%)'
+                    : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                }}
               >
                 <div className="flex items-start gap-3">
                   <div className={clsx(
                     'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5',
-                    formData.tariff === 'standard' ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'
+                    formData.tariff === 'standard' ? 'border-slate-300' : 'border-slate-600'
                   )}>
                     {formData.tariff === 'standard' && (
-                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-tg-text">Стандарт</span>
-                      <span className="text-sm font-bold text-sky-400 ml-auto">Бесплатно</span>
+                      <span className="font-semibold text-slate-100">Стандарт</span>
+                      <span className="text-sm font-bold text-slate-300 ml-auto">Бесплатно</span>
                     </div>
-                    <p className="text-xs text-tg-hint mt-1">Базовая генерация лендинга</p>
+                    <p className="text-xs text-slate-400 mt-1">Базовая генерация лендинга</p>
                   </div>
                 </div>
               </button>
@@ -2159,46 +2253,41 @@ function EditRequestForm({
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, tariff: 'premium' }))}
                 className={clsx(
-                  'w-full p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden',
+                  'w-full p-4 rounded-2xl border transition-all text-left relative overflow-hidden',
                   formData.tariff === 'premium'
-                    ? 'border-purple-500 bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-blue-500/10 shadow-lg shadow-purple-500/20'
-                    : 'border-zinc-200 dark:border-zinc-700 hover:border-purple-300 dark:hover:border-purple-600'
+                    ? 'border-slate-400'
+                    : 'border-slate-700/50'
                 )}
+                style={{
+                  background: formData.tariff === 'premium'
+                    ? 'linear-gradient(145deg, #475569 0%, #334155 100%)'
+                    : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                }}
               >
-                {/* Shine effect when selected */}
-                {formData.tariff === 'premium' && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 2s ease-in-out infinite'
-                  }} />
-                )}
-
                 <div className="flex items-start gap-3 relative z-10">
                   <div className={clsx(
                     'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                     formData.tariff === 'premium'
-                      ? 'border-purple-500 bg-purple-500/20'
-                      : 'border-zinc-300 dark:border-zinc-600'
+                      ? 'border-slate-300'
+                      : 'border-slate-600'
                   )}>
                     {formData.tariff === 'premium' && (
-                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={clsx(
-                        'font-semibold',
-                        formData.tariff === 'premium'
-                          ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
-                          : 'text-tg-text'
-                      )}>
+                      <span className="font-semibold text-slate-100">
                         Премиум лендинг
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white ml-auto whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-100 ml-auto whitespace-nowrap border" style={{
+                        background: 'rgba(226, 232, 240, 0.15)',
+                        borderColor: 'rgba(226, 232, 240, 0.25)'
+                      }}>
                         PRO
                       </span>
                     </div>
-                    <p className="text-xs text-tg-hint mt-1">Профессиональный дизайн и качество</p>
+                    <p className="text-xs text-slate-400 mt-1">Профессиональный дизайн и качество</p>
                   </div>
                 </div>
               </button>

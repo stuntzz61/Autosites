@@ -71,7 +71,7 @@ export default function MainLayout() {
                 }}
                 className={clsx(
                   'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
-                  isActive ? 'text-tg-text' : 'text-tg-hint'
+                  isActive ? 'text-slate-100' : 'text-slate-500'
                 )}
               >
                 <Icon className="w-6 h-6" strokeWidth={isActive ? 2 : 1.5} />
@@ -88,7 +88,7 @@ export default function MainLayout() {
             }}
             className={clsx(
               'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
-              location.pathname.startsWith('/admin') ? 'text-tg-text' : 'text-tg-hint'
+              location.pathname.startsWith('/admin') ? 'text-slate-100' : 'text-slate-500'
             )}
           >
             <Shield className="w-6 h-6" strokeWidth={location.pathname.startsWith('/admin') ? 2 : 1.5} />

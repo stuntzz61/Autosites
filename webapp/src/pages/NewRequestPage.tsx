@@ -615,15 +615,21 @@ export default function NewRequestPage() {
       </AnimatePresence>
 
       {/* Header */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl border-b border-blue-500/10 px-4 py-3" style={{ background: 'rgba(10, 15, 30, 0.9)' }}>
+      <div className="sticky top-0 z-10 backdrop-blur-xl border-b px-4 py-3" style={{
+        background: 'rgba(15, 20, 25, 0.95)',
+        borderColor: 'rgba(100, 116, 139, 0.15)'
+      }}>
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-lg font-bold text-slate-100">Новая заявка</h1>
-            <p className="text-xs text-blue-300/70">{steps[currentStep].title}</p>
+            <p className="text-xs text-slate-400">{steps[currentStep].title}</p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30">
-            <span className="text-sm font-semibold text-blue-300">{currentStep + 1}</span>
-            <span className="text-sm text-blue-400/70">/ {steps.length}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{
+            background: 'rgba(100, 116, 139, 0.1)',
+            borderColor: 'rgba(148, 163, 184, 0.2)'
+          }}>
+            <span className="text-sm font-semibold text-slate-200">{currentStep + 1}</span>
+            <span className="text-sm text-slate-400">/ {steps.length}</span>
           </div>
         </div>
         <div className="flex gap-1.5">
@@ -633,9 +639,9 @@ export default function NewRequestPage() {
               className={clsx(
                 'flex-1 h-1.5 rounded-full transition-all duration-300',
                 i < currentStep
-                  ? 'bg-blue-500'
+                  ? 'bg-slate-500'
                   : i === currentStep
-                    ? 'bg-blue-400 shadow-lg shadow-blue-400/50'
+                    ? 'bg-slate-400'
                     : 'bg-slate-700'
               )}
             />
@@ -644,7 +650,7 @@ export default function NewRequestPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-4 pb-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -664,27 +670,32 @@ export default function NewRequestPage() {
                       type="button"
                       onClick={() => updateField('tariff', 'standard')}
                       className={clsx(
-                        'w-full p-4 rounded-2xl border-2 transition-all text-left',
+                        'w-full p-4 rounded-2xl border transition-all text-left',
                         formData.tariff === 'standard'
-                          ? 'border-blue-500 bg-blue-500/10'
-                          : 'border-zinc-200 dark:border-zinc-700'
+                          ? 'border-slate-500'
+                          : 'border-slate-700/50'
                       )}
+                      style={{
+                        background: formData.tariff === 'standard'
+                          ? 'linear-gradient(145deg, #334155 0%, #1e293b 100%)'
+                          : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                      }}
                     >
                       <div className="flex items-start gap-3">
                         <div className={clsx(
                           'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5',
-                          formData.tariff === 'standard' ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'
+                          formData.tariff === 'standard' ? 'border-slate-300' : 'border-slate-600'
                         )}>
                           {formData.tariff === 'standard' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-tg-text">Стандарт</span>
-                            <span className="text-sm font-bold text-sky-400 ml-auto">Бесплатно</span>
+                            <span className="font-semibold text-slate-100">Стандарт</span>
+                            <span className="text-sm font-bold text-slate-300 ml-auto">Бесплатно</span>
                           </div>
-                          <p className="text-xs text-tg-hint mt-1">Базовая генерация лендинга</p>
+                          <p className="text-xs text-slate-400 mt-1">Базовая генерация лендинга</p>
                         </div>
                       </div>
                     </button>
@@ -694,46 +705,41 @@ export default function NewRequestPage() {
                       type="button"
                       onClick={() => updateField('tariff', 'premium')}
                       className={clsx(
-                        'w-full p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden',
+                        'w-full p-4 rounded-2xl border transition-all text-left relative overflow-hidden',
                         formData.tariff === 'premium'
-                          ? 'border-purple-500 bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-blue-500/10 shadow-lg shadow-purple-500/20'
-                          : 'border-zinc-200 dark:border-zinc-700 hover:border-purple-300 dark:hover:border-purple-600'
+                          ? 'border-slate-400'
+                          : 'border-slate-700/50'
                       )}
+                      style={{
+                        background: formData.tariff === 'premium'
+                          ? 'linear-gradient(145deg, #475569 0%, #334155 100%)'
+                          : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                      }}
                     >
-                      {/* Shine effect when selected */}
-                      {formData.tariff === 'premium' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
-                          backgroundSize: '200% 100%',
-                          animation: 'shimmer 2s ease-in-out infinite'
-                        }} />
-                      )}
-
                       <div className="flex items-start gap-3 relative z-10">
                         <div className={clsx(
                           'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                           formData.tariff === 'premium'
-                            ? 'border-purple-500 bg-purple-500/20'
-                            : 'border-zinc-300 dark:border-zinc-600'
+                            ? 'border-slate-300'
+                            : 'border-slate-600'
                         )}>
                           {formData.tariff === 'premium' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={clsx(
-                              'font-semibold',
-                              formData.tariff === 'premium'
-                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
-                                : 'text-tg-text'
-                            )}>
+                            <span className="font-semibold text-slate-100">
                               Премиум лендинг
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white ml-auto whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-100 ml-auto whitespace-nowrap border" style={{
+                              background: 'rgba(226, 232, 240, 0.15)',
+                              borderColor: 'rgba(226, 232, 240, 0.25)'
+                            }}>
                               PRO
                             </span>
                           </div>
-                          <p className="text-xs text-tg-hint mt-1">Профессиональный дизайн и качество</p>
+                          <p className="text-xs text-slate-400 mt-1">Профессиональный дизайн и качество</p>
                         </div>
                       </div>
                     </button>
@@ -1327,32 +1333,37 @@ export default function NewRequestPage() {
       </div>
 
       {/* Bottom Actions - Full width centered layout */}
-      <div className="sticky bottom-0 bg-tg-bg/95 backdrop-blur-lg border-t border-tg-separator safe-bottom z-20">
+      <div className="sticky bottom-0 backdrop-blur-lg border-t safe-bottom z-20" style={{ background: 'rgba(15, 23, 42, 0.95)', borderColor: 'rgba(148, 163, 184, 0.1)' }}>
         {/* Validation status message */}
         {Object.keys(errors).length > 0 && (
-          <div className="px-4 pt-3 pb-1">
-            <p className="text-xs text-red-500 text-center flex items-center justify-center gap-1.5 animate-fade-in-up">
+          <div className="px-4 pt-3 pb-2">
+            <p className="text-xs text-red-400 text-center flex items-center justify-center gap-1.5 animate-fade-in-up">
               <AlertCircle className="w-3.5 h-3.5" />
               Исправьте ошибки в форме выше
             </p>
           </div>
         )}
         {!canGoNext() && Object.keys(errors).length === 0 && (
-          <div className="px-4 pt-3 pb-1">
-            <p className="text-xs text-amber-500 text-center flex items-center justify-center gap-1.5">
+          <div className="px-4 pt-3 pb-2">
+            <p className="text-xs text-slate-400 text-center flex items-center justify-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5" />
               Заполните обязательные поля для продолжения
             </p>
           </div>
         )}
 
-        <div className="p-4 pt-3">
-          <div className="flex gap-3 max-w-lg mx-auto">
+        <div className="px-4 pb-4 pt-2">
+          <div className="flex gap-3 items-center">
             {currentStep > 0 && (
               <Tooltip content="Вернуться назад" position="top">
                 <button
                   onClick={goBack}
-                  className="flex items-center justify-center w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-all active:scale-95 border"
+                  style={{
+                    background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    color: '#cbd5e1'
+                  }}
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -1372,28 +1383,35 @@ export default function NewRequestPage() {
             >
               <button
                 onClick={goNext}
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || !canGoNext()}
                 className={clsx(
-                  "flex-1 flex items-center justify-center gap-2.5 h-14 rounded-2xl font-semibold text-base transition-all active:scale-[0.98]",
-                  canGoNext() || createMutation.isPending
-                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40"
-                    : "bg-zinc-200 dark:bg-zinc-700 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                  "flex-1 flex items-center justify-center gap-2.5 h-12 rounded-xl font-semibold text-base transition-all active:scale-[0.98] min-w-0",
+                  (canGoNext() && !createMutation.isPending)
+                    ? "text-white border"
+                    : "text-slate-500 cursor-not-allowed border"
                 )}
+                style={canGoNext() && !createMutation.isPending ? {
+                  background: 'linear-gradient(145deg, #334155 0%, #1e293b 100%)',
+                  borderColor: 'rgba(148, 163, 184, 0.3)'
+                } : {
+                  background: 'linear-gradient(145deg, #0f172a 0%, #0a0f1e 100%)',
+                  borderColor: 'rgba(100, 116, 139, 0.2)'
+                }}
               >
                 {createMutation.isPending ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
+                    <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
                   </>
                 ) : currentStep === steps.length - 1 ? (
                   <>
-                    <Check className="w-5 h-5" />
-                    <span>Создать заявку</span>
+                    <Check className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">Создать заявку</span>
                   </>
                 ) : (
                   <>
-                    <span>Далее</span>
-                    <ArrowRight className="w-5 h-5" />
+                    <span className="truncate">Далее</span>
+                    <ArrowRight className="w-5 h-5 flex-shrink-0" />
                   </>
                 )}
               </button>
