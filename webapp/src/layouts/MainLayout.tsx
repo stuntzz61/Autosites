@@ -1,10 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Home, FileText, Archive, User, Shield, MessageSquare } from 'lucide-react'
+import { Home, FileText, User, Shield, MessageSquare } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useEffect } from 'react'
-import clsx from 'clsx'
 
 const navItems = [
   { path: '/', icon: Home, label: 'Главная' },
@@ -41,61 +40,115 @@ export default function MainLayout() {
   }, [location.pathname, backButton, navigate, haptic])
 
   return (
-    <div className="flex flex-col min-h-screen min-h-[100dvh] relative" style={{ background: 'var(--tg-theme-bg-color)' }}>
-      {/* Content */}
+    <div
+      className="flex flex-col min-h-screen min-h-[100dvh] relative"
+      style={{ background: 'var(--bg-deep)' }}
+    >
+      {/* Main Content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden main-content-with-nav">
         <motion.div
           key={location.pathname}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.2 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         >
           <Outlet />
         </motion.div>
       </main>
 
-      {/* Bottom Navigation - Fixed with proper z-index and safe area */}
-      <nav className="bottom-nav" style={{ position: 'fixed', bottom: 0, left: 0, right: 0 }}>
-        <div className="flex items-center justify-around px-2 py-2 w-full">
+      {/* Premium Bottom Navigation */}
+      <nav className="bottom-nav">
+        <div className="flex items-center justify-around w-full px-2">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path ||
               (path !== '/' && location.pathname.startsWith(path))
 
             return (
-              <button
+              <NavButton
                 key={path}
                 onClick={() => {
                   haptic?.selectionChanged()
                   navigate(path)
                 }}
-                className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-[64px]"
-                style={{
-                  color: isActive ? 'var(--accent-blue-light)' : 'var(--tg-theme-hint-color)'
-                }}
-              >
-                <Icon className="w-6 h-6" strokeWidth={isActive ? 2 : 1.5} />
-                <span className="text-[10px] font-medium">{label}</span>
-              </button>
+                icon={Icon}
+                label={label}
+                isActive={isActive}
+              />
             )
           })}
 
           {/* Admin button */}
-          <button
+          <NavButton
             onClick={() => {
               haptic?.selectionChanged()
               navigate(isAdmin ? '/admin' : '/admin-login')
             }}
-            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-[64px]"
-            style={{
-              color: location.pathname.startsWith('/admin') ? 'var(--accent-blue-light)' : 'var(--tg-theme-hint-color)'
-            }}
-          >
-            <Shield className="w-6 h-6" strokeWidth={location.pathname.startsWith('/admin') ? 2 : 1.5} />
-            <span className="text-[10px] font-medium">Админ</span>
-          </button>
+            icon={Shield}
+            label="Админ"
+            isActive={location.pathname.startsWith('/admin')}
+          />
         </div>
       </nav>
     </div>
+  )
+}
+
+interface NavButtonProps {
+  onClick: () => void
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  label: string
+  isActive: boolean
+}
+
+function NavButton({ onClick, icon: Icon, label, isActive }: NavButtonProps) {
+  return (
+    <motion.button
+      onClick={onClick}
+      className="relative flex flex-col items-center gap-1 px-3 py-2 min-w-[60px] rounded-xl transition-colors"
+      whileTap={{ scale: 0.92 }}
+      style={{
+        color: isActive ? 'var(--accent-primary-light)' : 'var(--text-subtle)'
+      }}
+    >
+      {/* Active indicator glow */}
+      {isActive && (
+        <motion.div
+          className="absolute inset-0 rounded-xl"
+          layoutId="navIndicator"
+          initial={false}
+          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+          style={{
+            background: 'radial-gradient(ellipse at center bottom, rgba(59, 130, 246, 0.15) 0%, transparent 70%)'
+          }}
+        />
+      )}
+
+      <div className="relative">
+        <Icon
+          className="w-6 h-6 transition-all duration-200"
+          strokeWidth={isActive ? 2.2 : 1.8}
+        />
+        {/* Active dot indicator */}
+        {isActive && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+            style={{ background: 'var(--accent-primary)' }}
+          />
+        )}
+      </div>
+
+      <span
+        className="text-[10px] font-semibold transition-colors"
+        style={{
+          color: isActive ? 'var(--accent-primary-light)' : 'var(--text-subtle)',
+          opacity: isActive ? 1 : 0.8
+        }}
+      >
+        {label}
+      </span>
+    </motion.button>
   )
 }

@@ -2,10 +2,10 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Building2, User, Briefcase, Phone, Mail, MapPin,
+  Building2, User, Briefcase, Phone, Mail,
   ArrowRight, ArrowLeft, Check, Loader2, Plus, X,
-  Clock, Palette, Camera, Upload, Image, AlertCircle,
-  RotateCcw, Info
+  Palette, Camera, Upload, AlertCircle,
+  RotateCcw, Crown
 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -789,16 +789,16 @@ export default function NewRequestPage() {
           </div>
         </div>
         <div className="flex gap-1.5">
-          {steps.map((step, i) => (
+          {steps.map((_, i) => (
             <div
               key={i}
               className="flex-1 h-1.5 rounded-full transition-all duration-300"
               style={{
                 background: i < currentStep
-                  ? 'var(--accent-blue)'
+                  ? 'var(--accent-primary)'
                   : i === currentStep
-                    ? 'var(--accent-blue-light)'
-                    : 'var(--surface-tertiary)'
+                    ? 'var(--accent-primary-light)'
+                    : 'var(--bg-tertiary)'
               }}
             />
           ))}
@@ -816,134 +816,122 @@ export default function NewRequestPage() {
             transition={{ duration: 0.2 }}
           >
             {currentStep === 0 && (
-              <div className="space-y-4">
-                {/* Tariff Selection */}
+              <div className="space-y-5">
+                {/* Tariff Selection - Premium Design */}
                 <div>
-                  <label className="text-sm text-tg-hint mb-2 block">Тариф генерации</label>
+                  <label className="text-sm font-medium mb-3 block" style={{ color: 'var(--text-muted)' }}>
+                    Тариф генерации
+                  </label>
                   <div className="space-y-3">
                     {/* Standard tariff */}
                     <button
                       type="button"
                       onClick={() => updateField('tariff', 'standard')}
-                      className={clsx(
-                        'w-full p-4 rounded-2xl border transition-all text-left',
-                        formData.tariff === 'standard'
-                          ? 'border-blue-500/60'
-                          : 'border-slate-700/30'
-                      )}
+                      className="w-full p-4 rounded-2xl transition-all text-left active:scale-[0.99]"
                       style={{
                         background: formData.tariff === 'standard'
-                          ? 'linear-gradient(145deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.15) 100%)'
-                          : 'linear-gradient(145deg, #1e232f 0%, #1a1d26 100%)',
+                          ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, var(--bg-surface) 100%)'
+                          : 'var(--bg-surface)',
+                        border: `1px solid ${formData.tariff === 'standard' ? 'var(--border-accent)' : 'var(--border-default)'}`,
                         boxShadow: formData.tariff === 'standard'
-                          ? '0 0 0 1px rgba(59, 130, 246, 0.3), 0 4px 16px -4px rgba(59, 130, 246, 0.2)'
-                          : 'none'
+                          ? '0 4px 20px -4px rgba(59, 130, 246, 0.25)'
+                          : '0 4px 16px rgba(0, 0, 0, 0.15)'
                       }}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className={clsx(
-                          'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
-                          formData.tariff === 'standard'
-                            ? 'border-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
-                            : 'border-slate-600'
-                        )}>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                          style={{
+                            borderColor: formData.tariff === 'standard' ? 'var(--accent-primary)' : 'var(--text-subtle)',
+                            boxShadow: formData.tariff === 'standard' ? '0 0 8px var(--accent-primary-glow)' : 'none'
+                          }}
+                        >
                           {formData.tariff === 'standard' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(59,130,246,0.7)]" />
+                            <div
+                              className="w-2.5 h-2.5 rounded-full"
+                              style={{ background: 'var(--accent-primary)' }}
+                            />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={clsx(
-                              'font-semibold',
-                              formData.tariff === 'standard'
-                                ? 'text-blue-200'
-                                : 'text-slate-300'
-                            )}>Стандарт</span>
-                          </div>
-                          <p className={clsx(
-                            'text-xs mt-1',
-                            formData.tariff === 'standard'
-                              ? 'text-blue-300/80'
-                              : 'text-slate-400'
-                          )}>Базовая генерация лендинга</p>
+                          <span
+                            className="font-semibold"
+                            style={{ color: formData.tariff === 'standard' ? 'var(--accent-primary-light)' : 'var(--text-secondary)' }}
+                          >
+                            Стандарт
+                          </span>
+                          <p
+                            className="text-xs mt-0.5"
+                            style={{ color: formData.tariff === 'standard' ? 'var(--text-muted)' : 'var(--text-subtle)' }}
+                          >
+                            Базовая генерация лендинга
+                          </p>
                         </div>
                       </div>
                     </button>
 
-                    {/* Premium tariff */}
+                    {/* Premium tariff - Gold Gradient */}
                     <button
                       type="button"
                       onClick={() => updateField('tariff', 'premium')}
-                      className="w-full p-4 rounded-2xl transition-all text-left relative overflow-hidden border"
+                      className="w-full p-4 rounded-2xl transition-all text-left relative overflow-hidden active:scale-[0.99]"
                       style={{
-                        borderColor: formData.tariff === 'premium'
-                          ? 'rgba(139, 92, 246, 0.6)'
-                          : 'rgba(139, 92, 246, 0.2)',
                         background: formData.tariff === 'premium'
-                          ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.4) 0%, rgba(59, 130, 246, 0.35) 50%, rgba(139, 92, 246, 0.4) 100%)'
-                          : 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 50%, rgba(139, 92, 246, 0.15) 100%)',
-                        backgroundSize: '200% 200%',
-                        animation: formData.tariff === 'premium' ? 'gradientShift 3s ease infinite' : 'none',
+                          ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, var(--bg-surface) 50%, rgba(245, 158, 11, 0.08) 100%)'
+                          : 'var(--bg-surface)',
+                        border: `1px solid ${formData.tariff === 'premium' ? 'var(--border-gold)' : 'var(--border-default)'}`,
                         boxShadow: formData.tariff === 'premium'
-                          ? '0 0 0 2px rgba(139, 92, 246, 0.6), 0 0 0 4px rgba(59, 130, 246, 0.3), 0 8px 32px -4px rgba(139, 92, 246, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
-                          : '0 0 0 1px rgba(139, 92, 246, 0.2), 0 2px 8px -2px rgba(139, 92, 246, 0.15)'
+                          ? '0 4px 24px -4px var(--gold-glow), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)'
+                          : '0 4px 16px rgba(0, 0, 0, 0.15)'
                       }}
                     >
-                      {/* Shine effect - only visible when premium is selected */}
+                      {/* Shine effect */}
                       {formData.tariff === 'premium' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none rounded-2xl" style={{
-                          backgroundSize: '200% 100%',
-                          animation: 'shimmer 2.5s ease-in-out infinite',
-                          zIndex: 1
-                        }} />
+                        <div
+                          className="absolute inset-0 pointer-events-none rounded-2xl opacity-30"
+                          style={{
+                            background: 'linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.2) 50%, transparent 100%)',
+                            backgroundSize: '200% 100%',
+                            animation: 'shimmer 3s ease-in-out infinite'
+                          }}
+                        />
                       )}
-                      <div className="flex items-start gap-3 relative z-10">
-                        <div className={clsx(
-                          'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
-                          formData.tariff === 'premium'
-                            ? 'border-purple-300 shadow-[0_0_12px_rgba(139,92,246,0.7)]'
-                            : 'border-purple-500/40'
-                        )}>
+
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div
+                          className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                          style={{
+                            borderColor: formData.tariff === 'premium' ? 'var(--gold-primary)' : 'var(--text-subtle)',
+                            boxShadow: formData.tariff === 'premium' ? '0 0 10px var(--gold-glow)' : 'none'
+                          }}
+                        >
                           {formData.tariff === 'premium' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-300 to-blue-300 shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
+                            <div
+                              className="w-2.5 h-2.5 rounded-full"
+                              style={{ background: 'linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 100%)' }}
+                            />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={clsx(
-                              'font-semibold',
-                              formData.tariff === 'premium'
-                                ? 'bg-gradient-to-r from-purple-200 via-blue-200 to-purple-200 bg-clip-text text-transparent'
-                                : 'text-purple-300/70'
-                            )}>
+                            <span
+                              className="font-semibold"
+                              style={{ color: formData.tariff === 'premium' ? 'var(--gold-light)' : 'var(--text-secondary)' }}
+                            >
                               Премиум лендинг
                             </span>
-                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-white ml-auto whitespace-nowrap relative overflow-hidden" style={{
-                              background: formData.tariff === 'premium'
-                                ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 30%, #d97706 60%, #f59e0b 100%)'
-                                : 'linear-gradient(135deg, rgba(251, 191, 36, 0.5) 0%, rgba(245, 158, 11, 0.5) 30%, rgba(217, 119, 6, 0.5) 60%, rgba(245, 158, 11, 0.5) 100%)',
-                              backgroundSize: '200% 100%',
-                              animation: formData.tariff === 'premium' ? 'gradientShift 2s ease infinite' : 'none',
-                              boxShadow: formData.tariff === 'premium'
-                                ? '0 2px 16px -2px rgba(251, 191, 36, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 0 rgba(0, 0, 0, 0.2)'
-                                : '0 1px 8px -2px rgba(251, 191, 36, 0.3)'
-                            }}>
-                              {/* Metallic shine effect - only when premium is selected */}
-                              {formData.tariff === 'premium' && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" style={{
-                                  backgroundSize: '200% 100%',
-                                  animation: 'shimmer 2s ease-in-out infinite'
-                                }} />
-                              )}
-                              <span className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">PREMIUM</span>
+                            {/* Premium badge with gold gradient */}
+                            <span className={`badge-premium ml-auto ${formData.tariff !== 'premium' ? 'opacity-60' : ''}`}>
+                              <Crown className="w-3 h-3" />
+                              PREMIUM
                             </span>
                           </div>
-                          <p className={clsx(
-                            'text-xs mt-1',
-                            formData.tariff === 'premium'
-                              ? 'text-slate-200'
-                              : 'text-slate-400'
-                          )}>Профессиональный дизайн и качество</p>
+                          <p
+                            className="text-xs mt-0.5"
+                            style={{ color: formData.tariff === 'premium' ? 'var(--text-muted)' : 'var(--text-subtle)' }}
+                          >
+                            Профессиональный дизайн и качество
+                          </p>
                         </div>
                       </div>
                     </button>
@@ -951,11 +939,14 @@ export default function NewRequestPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm text-tg-hint mb-1.5 block">
-                    Название компании <span className="text-red-500">*</span>
+                  <label className="text-sm font-medium mb-2 block" style={{ color: 'var(--text-muted)' }}>
+                    Название компании <span style={{ color: 'var(--error-light)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint pointer-events-none" />
+                    <Building2
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none"
+                      style={{ color: 'var(--text-subtle)' }}
+                    />
                     <input
                       type="text"
                       value={formData.company}
@@ -964,7 +955,7 @@ export default function NewRequestPage() {
                       className={clsx('input pl-12', errors.company && 'input-error field-error-shake')}
                     />
                     {formData.company.trim() && (
-                      <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                      <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--success)' }} />
                     )}
                   </div>
                   {errors.company && (

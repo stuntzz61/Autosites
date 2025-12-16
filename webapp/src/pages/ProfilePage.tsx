@@ -11,12 +11,12 @@ import { profileApi } from '@/api/client'
 import toast from 'react-hot-toast'
 
 const ranks = [
-  { min: 0, name: 'Новичок', emoji: '', color: 'from-slate-600 to-slate-400' },
-  { min: 5, name: 'Начинающий', emoji: '', color: 'from-sky-500 to-blue-500' },
-  { min: 15, name: 'Опытный', emoji: '', color: 'from-indigo-500 to-sky-500' },
-  { min: 30, name: 'Профессионал', emoji: '', color: 'from-amber-400 to-orange-500' },
-  { min: 50, name: 'Эксперт', emoji: '', color: 'from-cyan-400 to-blue-500' },
-  { min: 100, name: 'Мастер', emoji: '', color: 'from-amber-300 to-amber-500' },
+  { min: 0, name: 'Новичок', color: 'from-slate-500 to-slate-400', ring: 'slate' },
+  { min: 5, name: 'Начинающий', color: 'from-sky-500 to-blue-500', ring: 'blue' },
+  { min: 15, name: 'Опытный', color: 'from-indigo-500 to-purple-500', ring: 'purple' },
+  { min: 30, name: 'Профессионал', color: 'from-amber-400 to-orange-500', ring: 'gold' },
+  { min: 50, name: 'Эксперт', color: 'from-cyan-400 to-blue-500', ring: 'premium' },
+  { min: 100, name: 'Мастер', color: 'from-amber-300 to-yellow-500', ring: 'gold' },
 ]
 
 export default function ProfilePage() {
@@ -66,88 +66,148 @@ export default function ProfilePage() {
     })
   }
 
+  // Determine avatar ring class based on rank
+  const getAvatarRingClass = () => {
+    if (user?.role === 'admin') return 'avatar-ring-gold'
+    if (rank.ring === 'gold') return 'avatar-ring-gold'
+    if (rank.ring === 'premium') return 'avatar-ring-premium'
+    return ''
+  }
+
   return (
-    <div className="min-h-screen pb-8" style={{ background: 'var(--tg-theme-bg-color)' }}>
-      {/* Header */}
-      <div className="px-5 pt-10 pb-24" style={{ background: 'var(--tg-theme-bg-color)' }}>
+    <div className="min-h-screen pb-8" style={{ background: 'var(--bg-deep)' }}>
+      {/* Header with gradient background */}
+      <div
+        className="relative px-5 pt-12 pb-24 overflow-hidden"
+        style={{
+          background: 'linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-elevated) 100%)'
+        }}
+      >
+        {/* Decorative background glow */}
+        {(user?.role === 'admin' || rank.ring === 'gold') && (
+          <div
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full blur-3xl opacity-15"
+            style={{ background: 'var(--gold-primary)' }}
+          />
+        )}
+
         <motion.div
-          className="text-center"
+          className="text-center relative z-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="relative inline-block mb-3">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold" style={{
-              background: 'rgba(59, 130, 246, 0.15)',
-              border: '1px solid var(--border-accent)',
-              color: 'var(--accent-blue-light)'
-            }}>
+          {/* Avatar with status ring */}
+          <div className="relative inline-block mb-4">
+            <div
+              className={`w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-bold ${getAvatarRingClass()}`}
+              style={{
+                background: 'linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-elevated) 100%)',
+                border: '1px solid var(--border-accent)',
+                color: 'var(--accent-primary-light)'
+              }}
+            >
               {user?.first_name?.[0]?.toUpperCase()}
             </div>
+
+            {/* Admin/Role badge */}
             {user?.role === 'admin' && (
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg flex items-center justify-center shadow-lg border" style={{
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                borderColor: 'rgba(245, 158, 11, 0.3)'
-              }}>
-                <Crown className="w-3.5 h-3.5 text-white" />
-              </div>
+              <motion.div
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-lg flex items-center justify-center"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: 'spring' }}
+                style={{
+                  background: 'linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 100%)',
+                  boxShadow: '0 4px 12px -2px var(--gold-glow)'
+                }}
+              >
+                <Crown className="w-4 h-4 text-amber-900" />
+              </motion.div>
             )}
           </div>
-          <h1 className="text-xl font-bold mb-0.5" style={{ color: 'var(--tg-theme-text-color)' }}>
+
+          <h1
+            className="text-xl font-bold mb-0.5"
+            style={{ color: 'var(--text-primary)' }}
+          >
             {user?.first_name} {user?.last_name}
           </h1>
           {user?.username && (
-            <p className="text-sm" style={{ color: 'var(--tg-theme-hint-color)' }}>@{user.username}</p>
+            <p className="text-sm" style={{ color: 'var(--text-subtle)' }}>
+              @{user.username}
+            </p>
           )}
         </motion.div>
       </div>
 
       {/* Content */}
       <div className="px-4 -mt-16 space-y-4 relative z-10">
-        {/* Rank Card */}
+        {/* Rank Card - Premium Design */}
         <motion.div
-          className="rounded-2xl overflow-hidden border shadow-xl"
+          className="rounded-2xl overflow-hidden"
           style={{
-            background: 'var(--surface-secondary)',
-            borderColor: 'var(--border-subtle)'
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.25)'
           }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <div className={`bg-gradient-to-r ${rank.color} p-4`}>
-            <div className="flex items-center justify-between">
+          {/* Rank header with gradient */}
+          <div
+            className={`relative bg-gradient-to-r ${rank.color} p-5 overflow-hidden`}
+          >
+            {/* Shine effect */}
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{
+                background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%)',
+                backgroundSize: '200% 200%',
+                animation: 'shimmer 3s ease-in-out infinite'
+              }}
+            />
+
+            <div className="relative flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <span className="text-xs font-semibold tracking-wide uppercase text-white/80">LVL</span>
+                <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                  <span className="text-sm font-bold tracking-wide text-white/90">LVL</span>
                 </div>
                 <div>
-                  <p className="text-white/70 text-xs font-medium">Ваш ранг</p>
+                  <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Ваш ранг</p>
                   <p className="text-white text-lg font-bold">{rank.name}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-white text-2xl font-bold">{totalRequests}</p>
-                <p className="text-white/70 text-xs">заявок</p>
+                <p className="text-white text-3xl font-bold number-animate">{totalRequests}</p>
+                <p className="text-white/70 text-xs font-medium">заявок</p>
               </div>
             </div>
           </div>
 
+          {/* Progress section */}
           {nextRank && (
-            <div className="p-4" style={{ background: 'var(--surface-primary)' }}>
-              <div className="flex justify-between text-xs font-medium mb-2">
-                <span style={{ color: 'var(--tg-theme-hint-color)' }}>{rank.name}</span>
-                <span style={{ color: 'var(--tg-theme-text-color)' }}>{nextRank.name}</span>
+            <div className="p-5" style={{ background: 'var(--bg-elevated)' }}>
+              <div className="flex justify-between text-xs font-semibold mb-3">
+                <span style={{ color: 'var(--text-subtle)' }}>{rank.name}</span>
+                <span style={{ color: 'var(--text-primary)' }}>{nextRank.name}</span>
               </div>
-              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-tertiary)' }}>
+
+              {/* Premium progress bar */}
+              <div className={`progress-bar ${rank.ring === 'gold' ? 'progress-bar-gold' : ''}`}>
                 <motion.div
-                  className={`h-full bg-gradient-to-r ${rank.color} rounded-full`}
+                  className="progress-bar-fill"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  transition={{ duration: 1, ease: [0.4, 0, 0.2, 1] }}
+                  style={rank.ring === 'gold' ? {
+                    background: `linear-gradient(90deg, var(--gold-dark) 0%, var(--gold-primary) 50%, var(--gold-light) 100%)`
+                  } : {}}
                 />
               </div>
-              <p className="text-xs mt-2 text-center" style={{ color: 'var(--tg-theme-hint-color)' }}>
-                Ещё <span className="font-bold" style={{ color: 'var(--tg-theme-text-color)' }}>{nextRank.min - totalRequests}</span> до следующего
+
+              <p className="text-xs mt-3 text-center" style={{ color: 'var(--text-subtle)' }}>
+                Ещё <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{nextRank.min - totalRequests}</span> до следующего ранга
               </p>
             </div>
           )}
@@ -181,7 +241,7 @@ export default function ProfilePage() {
             icon={<TrendingUp className="w-4 h-4" />}
             value={stats?.this_week || 0}
             label="За неделю"
-            accent="amber"
+            accent="gold"
           />
         </motion.div>
 
@@ -192,29 +252,39 @@ export default function ProfilePage() {
           transition={{ delay: 0.3 }}
         >
           <p className="section-header">Контакт</p>
-          <div className="rounded-2xl border overflow-hidden" style={{
-            background: 'var(--surface-secondary)',
-            borderColor: 'var(--border-subtle)'
-          }}>
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)'
+            }}
+          >
             <button
               onClick={() => {
                 haptic?.impactOccurred('light')
                 setContactValue(user?.contact || '')
                 setEditContact(true)
               }}
-              className="flex items-center gap-3 p-4 w-full text-left hover:bg-white/[0.02] transition-colors"
+              className="flex items-center gap-3 p-4 w-full text-left transition-all hover:bg-white/[0.02] active:scale-[0.99]"
             >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                background: 'rgba(59, 130, 246, 0.15)',
-                border: '1px solid var(--border-accent)'
-              }}>
-                <Phone className="w-5 h-5" style={{ color: 'var(--accent-blue-light)' }} />
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'rgba(59, 130, 246, 0.12)',
+                  border: '1px solid var(--border-accent)'
+                }}
+              >
+                <Phone className="w-5 h-5" style={{ color: 'var(--accent-primary-light)' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs mb-0.5" style={{ color: 'var(--tg-theme-hint-color)' }}>Телефон / Email</p>
-                <p className="font-semibold truncate" style={{ color: 'var(--tg-theme-text-color)' }}>{user?.contact || 'Не указан'}</p>
+                <p className="text-xs mb-0.5" style={{ color: 'var(--text-subtle)' }}>
+                  Телефон / Email
+                </p>
+                <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                  {user?.contact || 'Не указан'}
+                </p>
               </div>
-              <Edit2 className="w-4 h-4 shrink-0" style={{ color: 'var(--tg-theme-hint-color)' }} />
+              <Edit2 className="w-4 h-4 shrink-0" style={{ color: 'var(--text-subtle)' }} />
             </button>
           </div>
         </motion.div>
@@ -226,50 +296,80 @@ export default function ProfilePage() {
           transition={{ delay: 0.4 }}
         >
           <p className="section-header">Аккаунт</p>
-          <div className="rounded-2xl border overflow-hidden" style={{
-            background: 'var(--surface-secondary)',
-            borderColor: 'var(--border-subtle)'
-          }}>
-            <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                background: 'var(--surface-tertiary)'
-              }}>
-                <User className="w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} />
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)'
+            }}
+          >
+            {/* Telegram ID */}
+            <div
+              className="flex items-center gap-3 p-4"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
+            >
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{ background: 'var(--bg-tertiary)' }}
+              >
+                <User className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
               </div>
               <div className="flex-1">
-                <p className="text-xs mb-0.5" style={{ color: 'var(--tg-theme-hint-color)' }}>Telegram ID</p>
-                <p className="font-mono text-sm" style={{ color: 'var(--tg-theme-text-color)' }}>{user?.tg_id}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                background: 'rgba(139, 92, 246, 0.15)'
-              }}>
-                {user?.role === 'admin' ? (
-                  <Sparkles className="w-5 h-5" style={{ color: '#a78bfa' }} />
-                ) : (
-                  <Star className="w-5 h-5" style={{ color: '#a78bfa' }} />
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="text-xs mb-0.5" style={{ color: 'var(--tg-theme-hint-color)' }}>Роль</p>
-                <p className="font-semibold" style={{ color: 'var(--tg-theme-text-color)' }}>
-                  {user?.role === 'admin' ? 'Администратор' : 'Менеджер'}
+                <p className="text-xs mb-0.5" style={{ color: 'var(--text-subtle)' }}>
+                  Telegram ID
+                </p>
+                <p className="font-mono text-sm" style={{ color: 'var(--text-primary)' }}>
+                  {user?.tg_id}
                 </p>
               </div>
             </div>
 
+            {/* Role */}
+            <div
+              className="flex items-center gap-3 p-4"
+              style={{ borderBottom: '1px solid var(--border-subtle)' }}
+            >
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{
+                  background: user?.role === 'admin'
+                    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%)'
+                    : 'rgba(139, 92, 246, 0.12)'
+                }}
+              >
+                {user?.role === 'admin' ? (
+                  <Sparkles className="w-5 h-5" style={{ color: 'var(--gold-primary)' }} />
+                ) : (
+                  <Star className="w-5 h-5" style={{ color: 'var(--info-light)' }} />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-xs mb-0.5" style={{ color: 'var(--text-subtle)' }}>Роль</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {user?.role === 'admin' ? 'Администратор' : 'Менеджер'}
+                  </p>
+                  {user?.role === 'admin' && (
+                    <span className="badge-premium text-[9px] px-2 py-1">ADMIN</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Logout button */}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 p-4 w-full text-left hover:bg-red-500/5 transition-colors"
+              className="flex items-center gap-3 p-4 w-full text-left transition-all hover:bg-red-500/5 active:scale-[0.99]"
             >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                background: 'rgba(239, 68, 68, 0.15)'
-              }}>
-                <LogOut className="w-5 h-5" style={{ color: 'var(--tg-theme-destructive-text-color)' }} />
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{ background: 'var(--error-bg)' }}
+              >
+                <LogOut className="w-5 h-5" style={{ color: 'var(--error-light)' }} />
               </div>
-              <span className="font-semibold" style={{ color: 'var(--tg-theme-destructive-text-color)' }}>Выйти из аккаунта</span>
+              <span className="font-semibold" style={{ color: 'var(--error-light)' }}>
+                Выйти из аккаунта
+              </span>
             </button>
           </div>
         </motion.div>
@@ -280,17 +380,19 @@ export default function ProfilePage() {
         {editContact && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/70 z-40"
+              className="fixed inset-0 z-40"
+              style={{ background: 'rgba(0, 0, 0, 0.7)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setEditContact(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-50 safe-bottom border-t"
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-50 safe-bottom"
               style={{
-                background: 'var(--surface-primary)',
-                borderColor: 'var(--border-subtle)'
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderBottom: 'none'
               }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -298,20 +400,26 @@ export default function ProfilePage() {
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
             >
               <div className="p-5">
-                <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'var(--surface-tertiary)' }} />
+                {/* Drag handle */}
+                <div
+                  className="w-10 h-1 rounded-full mx-auto mb-5"
+                  style={{ background: 'var(--bg-tertiary)' }}
+                />
 
                 <div className="flex justify-between items-center mb-5">
-                  <h3 className="text-lg font-bold" style={{ color: 'var(--tg-theme-text-color)' }}>Контакт для связи</h3>
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                    Контакт для связи
+                  </h3>
                   <button
                     onClick={() => setEditContact(false)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ background: 'var(--surface-tertiary)' }}
+                    className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-white/5"
+                    style={{ background: 'var(--bg-tertiary)' }}
                   >
-                    <X className="w-4 h-4" style={{ color: 'var(--tg-theme-hint-color)' }} />
+                    <X className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
                   </button>
                 </div>
 
-                <p className="text-sm mb-4" style={{ color: 'var(--tg-theme-hint-color)' }}>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-subtle)' }}>
                   Укажите телефон или email для связи
                 </p>
 
@@ -327,7 +435,7 @@ export default function ProfilePage() {
                 <button
                   onClick={() => updateMutation.mutate({ contact: contactValue })}
                   disabled={updateMutation.isPending}
-                  className="btn btn-primary w-full"
+                  className="btn btn-primary btn-lg w-full"
                 >
                   {updateMutation.isPending ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -344,33 +452,59 @@ export default function ProfilePage() {
   )
 }
 
-function StatCard({ icon, value, label, accent }: {
+interface StatCardProps {
   icon: React.ReactNode
   value: number
   label: string
-  accent?: 'emerald' | 'blue' | 'amber'
-}) {
+  accent?: 'emerald' | 'blue' | 'gold'
+}
+
+function StatCard({ icon, value, label, accent }: StatCardProps) {
   const colors = {
-    emerald: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', value: '#34d399' },
-    blue: { bg: 'rgba(59, 130, 246, 0.15)', text: 'var(--accent-blue)', value: 'var(--accent-blue-light)' },
-    amber: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b', value: '#fbbf24' },
+    emerald: {
+      bg: 'rgba(16, 185, 129, 0.12)',
+      color: 'var(--success)',
+      value: 'var(--success-light)'
+    },
+    blue: {
+      bg: 'rgba(59, 130, 246, 0.12)',
+      color: 'var(--accent-primary)',
+      value: 'var(--accent-primary-light)'
+    },
+    gold: {
+      bg: 'rgba(245, 158, 11, 0.12)',
+      color: 'var(--gold-primary)',
+      value: 'var(--gold-light)'
+    },
   }
 
-  const color = accent ? colors[accent] : { bg: 'var(--surface-tertiary)', text: 'var(--tg-theme-subtitle-text-color)', value: 'var(--tg-theme-text-color)' }
+  const color = accent ? colors[accent] : {
+    bg: 'var(--bg-tertiary)',
+    color: 'var(--text-muted)',
+    value: 'var(--text-primary)'
+  }
 
   return (
-    <div className="rounded-2xl p-4 border" style={{
-      background: 'var(--surface-secondary)',
-      borderColor: 'var(--border-subtle)'
-    }}>
-      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold mb-2" style={{
-        background: color.bg,
-        color: color.text
-      }}>
+    <div
+      className="rounded-2xl p-4"
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)'
+      }}
+    >
+      <div
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold mb-2"
+        style={{
+          background: color.bg,
+          color: color.color
+        }}
+      >
         {icon}
         {label}
       </div>
-      <p className="text-2xl font-bold" style={{ color: color.value }}>{value}</p>
+      <p className="text-2xl font-bold number-animate" style={{ color: color.value }}>
+        {value}
+      </p>
     </div>
   )
 }

@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, FileText, Archive, Clock, CheckCircle, ChevronRight,
-  Sparkles, TrendingUp, Zap, ArrowRight
+  Plus, FileText, Clock, CheckCircle, ChevronRight,
+  Sparkles, TrendingUp, ArrowRight, Crown, Zap
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
@@ -27,34 +27,47 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--tg-theme-bg-color)' }}>
-      {/* Premium Header */}
-      <div className="relative overflow-hidden px-5 pt-10 pb-24" style={{ background: 'var(--tg-theme-bg-color)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--bg-deep)' }}>
+      {/* Premium Header with subtle gradient */}
+      <div
+        className="relative overflow-hidden px-5 pt-12 pb-8"
+        style={{
+          background: 'linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-elevated) 100%)'
+        }}
+      >
+        {/* Decorative background elements */}
+        <div
+          className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20"
+          style={{ background: 'var(--accent-primary)' }}
+        />
+
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           className="relative z-10"
         >
-          <p className="text-sm font-medium mb-1" style={{ color: 'var(--tg-theme-hint-color)' }}>
+          <p
+            className="text-sm font-medium mb-1"
+            style={{ color: 'var(--text-subtle)' }}
+          >
             {getGreeting()}
           </p>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--tg-theme-text-color)' }}>
+          <h1
+            className="text-3xl font-bold tracking-tight mb-3"
+            style={{ color: 'var(--text-primary)' }}
+          >
             {user?.first_name}
           </h1>
+
           {user?.role === 'admin' && (
             <motion.span
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border"
-              style={{
-                background: 'rgba(59, 130, 246, 0.15)',
-                borderColor: 'rgba(59, 130, 246, 0.3)',
-                color: 'var(--accent-blue-light)'
-              }}
+              className="badge-premium inline-flex items-center gap-1.5"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <Sparkles className="w-3 h-3" />
+              <Crown className="w-3.5 h-3.5" />
               Администратор
             </motion.span>
           )}
@@ -62,8 +75,8 @@ export default function HomePage() {
       </div>
 
       {/* Content */}
-      <div className="px-4 -mt-16 space-y-5 pb-8 relative z-10">
-        {/* Main Action Card */}
+      <div className="px-4 space-y-5 pb-8 relative z-10">
+        {/* Main Action Card - Create New Request */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -76,27 +89,55 @@ export default function HomePage() {
             }}
             className="w-full group"
           >
-            <div className="relative overflow-hidden rounded-3xl p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] border" style={{
-              background: 'var(--surface-secondary)',
-              borderColor: 'var(--border-accent)',
-              boxShadow: '0 4px 32px -4px rgba(59, 130, 246, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
-            }}>
+            <div
+              className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:scale-[1.01] active:scale-[0.98]"
+              style={{
+                background: 'linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-elevated) 100%)',
+                border: '1px solid var(--border-accent)',
+                boxShadow: '0 4px 24px -4px rgba(59, 130, 246, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
+              }}
+            >
+              {/* Subtle glow effect */}
+              <div
+                className="absolute -top-20 -right-20 w-40 h-40 rounded-full blur-3xl opacity-30 group-hover:opacity-50 transition-opacity"
+                style={{ background: 'var(--accent-primary)' }}
+              />
+
               <div className="relative flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid rgba(59, 130, 246, 0.25)'
-                }}>
-                  <Plus className="w-8 h-8" style={{ color: 'var(--accent-blue-light)' }} />
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+                    boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
+                  }}
+                >
+                  <Plus className="w-7 h-7 text-white" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-bold text-xl mb-0.5" style={{ color: 'var(--tg-theme-text-color)' }}>Новая заявка</p>
-                  <p className="text-sm" style={{ color: 'var(--tg-theme-hint-color)' }}>Создать сайт для клиента</p>
+                  <p
+                    className="font-bold text-lg mb-0.5"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
+                    Новая заявка
+                  </p>
+                  <p
+                    className="text-sm"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    Создать сайт для клиента
+                  </p>
                 </div>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors" style={{
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid rgba(59, 130, 246, 0.25)'
-                }}>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" style={{ color: 'var(--accent-blue-light)' }} />
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:translate-x-1"
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid var(--border-accent)'
+                  }}
+                >
+                  <ArrowRight
+                    className="w-5 h-5"
+                    style={{ color: 'var(--accent-primary-light)' }}
+                  />
                 </div>
               </div>
             </div>
@@ -133,7 +174,7 @@ export default function HomePage() {
             icon={<TrendingUp className="w-5 h-5" />}
             value={stats?.this_week || 0}
             label="За неделю"
-            accent="amber"
+            accent="gold"
           />
         </motion.div>
 
@@ -144,61 +185,62 @@ export default function HomePage() {
           transition={{ delay: 0.3 }}
         >
           <p className="section-header">Быстрые действия</p>
-          <div className="rounded-3xl overflow-hidden border" style={{
-            background: 'var(--surface-secondary)',
-            borderColor: 'var(--border-subtle)',
-            boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
-          }}>
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+            }}
+          >
             <QuickAction
               icon={<FileText className="w-5 h-5" />}
-              iconBg="transparent"
-              iconColor="var(--tg-theme-subtitle-text-color)"
               title="Все заявки"
               subtitle={`${stats?.total_requests || 0} заявок`}
               onClick={() => navigate('/requests')}
             />
-            <div className="h-px ml-[68px]" style={{ background: 'var(--border-subtle)' }} />
+            <div className="divider" />
             <QuickAction
               icon={<Zap className="w-5 h-5" />}
-              iconBg="transparent"
-              iconColor="var(--accent-blue)"
+              iconAccent
               title="Активные"
               subtitle={`${stats?.pending_requests || 0} в работе`}
               onClick={() => navigate('/requests?status=generating')}
-            />
-            <div className="h-px ml-[68px]" style={{ background: 'var(--border-subtle)' }} />
-            <QuickAction
-              icon={<Archive className="w-5 h-5" />}
-              iconBg="transparent"
-              iconColor="var(--tg-theme-subtitle-text-color)"
-              title="Архив"
-              subtitle="Завершённые проекты"
-              onClick={() => navigate('/archive')}
             />
           </div>
         </motion.div>
 
         {/* Tip Card */}
         <motion.div
-          className="rounded-2xl p-4 border"
+          className="rounded-2xl p-4"
           style={{
-            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--surface-secondary) 100%)',
-            borderColor: 'var(--border-accent)',
-            boxShadow: '0 4px 24px -4px rgba(59, 130, 246, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, var(--bg-surface) 100%)',
+            border: '1px solid var(--border-accent)',
           }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{
-              background: 'rgba(59, 130, 246, 0.15)'
-            }}>
-              <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-blue-light)' }} />
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)'
+              }}
+            >
+              <Sparkles className="w-4.5 h-4.5 text-white" />
             </div>
             <div>
-              <p className="font-semibold text-sm mb-0.5" style={{ color: 'var(--tg-theme-text-color)' }}>Совет дня</p>
-              <p className="text-xs leading-relaxed" style={{ color: 'var(--tg-theme-subtitle-text-color)' }}>
+              <p
+                className="font-semibold text-sm mb-0.5"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Совет дня
+              </p>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: 'var(--text-muted)' }}
+              >
                 Добавляйте качественные фото для лучшего результата генерации сайта
               </p>
             </div>
@@ -209,101 +251,120 @@ export default function HomePage() {
   )
 }
 
-function StatsCard({
-  icon,
-  value,
-  label,
-  onClick,
-  accent,
-}: {
+interface StatsCardProps {
   icon: React.ReactNode
   value: number
   label: string
   onClick?: () => void
-  accent?: 'blue' | 'amber' | 'emerald'
-}) {
+  accent?: 'blue' | 'gold' | 'emerald'
+}
+
+function StatsCard({ icon, value, label, onClick, accent }: StatsCardProps) {
   const colors = {
     blue: {
-      bg: 'rgba(59, 130, 246, 0.1)',
-      text: 'var(--accent-blue)',
-      value: 'var(--accent-blue-light)',
-      border: 'rgba(59, 130, 246, 0.25)',
+      iconBg: 'rgba(59, 130, 246, 0.12)',
+      iconColor: 'var(--accent-primary)',
+      valueColor: 'var(--accent-primary-light)',
+      border: 'rgba(59, 130, 246, 0.2)',
     },
-    amber: {
-      bg: 'rgba(245, 158, 11, 0.1)',
-      text: '#F59E0B',
-      value: '#FBBF24',
-      border: 'rgba(245, 158, 11, 0.25)',
+    gold: {
+      iconBg: 'rgba(245, 158, 11, 0.12)',
+      iconColor: 'var(--gold-primary)',
+      valueColor: 'var(--gold-light)',
+      border: 'rgba(245, 158, 11, 0.2)',
     },
     emerald: {
-      bg: 'rgba(16, 185, 129, 0.1)',
-      text: '#10B981',
-      value: '#34D399',
-      border: 'rgba(16, 185, 129, 0.25)',
+      iconBg: 'rgba(16, 185, 129, 0.12)',
+      iconColor: 'var(--success)',
+      valueColor: 'var(--success-light)',
+      border: 'rgba(16, 185, 129, 0.2)',
     },
   }
 
   const color = accent ? colors[accent] : {
-    bg: 'transparent',
-    text: 'var(--tg-theme-subtitle-text-color)',
-    value: 'var(--tg-theme-text-color)',
-    border: 'var(--border-subtle)',
+    iconBg: 'var(--bg-tertiary)',
+    iconColor: 'var(--text-muted)',
+    valueColor: 'var(--text-primary)',
+    border: 'var(--border-default)',
   }
 
   return (
     <motion.button
       onClick={onClick}
-      className="rounded-2xl p-4 text-left transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] border"
+      className="rounded-2xl p-4 text-left transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
       style={{
-        background: 'var(--surface-secondary)',
-        borderColor: color.border,
-        boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
+        background: 'var(--bg-surface)',
+        border: `1px solid ${color.border}`,
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)'
       }}
       whileTap={{ scale: 0.98 }}
     >
-      <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3" style={{
-        color: color.text,
-        background: color.bg
-      }}>
+      <div
+        className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3"
+        style={{
+          color: color.iconColor,
+          background: color.iconBg
+        }}
+      >
         {icon}
       </div>
-      <p className="text-3xl font-bold mb-0.5" style={{ color: color.value }}>
+      <p
+        className="text-2xl font-bold mb-0.5 number-animate"
+        style={{ color: color.valueColor }}
+      >
         {value}
       </p>
-      <p className="text-xs font-medium" style={{ color: 'var(--tg-theme-hint-color)' }}>{label}</p>
+      <p
+        className="text-xs font-medium"
+        style={{ color: 'var(--text-subtle)' }}
+      >
+        {label}
+      </p>
     </motion.button>
   )
 }
 
-function QuickAction({
-  icon,
-  iconBg,
-  iconColor,
-  title,
-  subtitle,
-  onClick
-}: {
+interface QuickActionProps {
   icon: React.ReactNode
-  iconBg: string
-  iconColor: string
   title: string
   subtitle: string
   onClick: () => void
-}) {
+  iconAccent?: boolean
+}
+
+function QuickAction({ icon, title, subtitle, onClick, iconAccent }: QuickActionProps) {
   return (
-    <button onClick={onClick} className="flex items-center gap-4 p-4 w-full text-left transition-colors group hover:bg-white/[0.02]" style={{
-      background: 'transparent'
-    }}>
-      <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105" style={{
-        color: iconColor
-      }}>
+    <button
+      onClick={onClick}
+      className="flex items-center gap-4 p-4 w-full text-left transition-all group hover:bg-white/[0.02] active:scale-[0.99]"
+    >
+      <div
+        className="w-11 h-11 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105"
+        style={{
+          color: iconAccent ? 'var(--accent-primary)' : 'var(--text-muted)',
+          background: iconAccent ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-tertiary)'
+        }}
+      >
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold" style={{ color: 'var(--tg-theme-text-color)' }}>{title}</p>
-        <p className="text-sm" style={{ color: 'var(--tg-theme-hint-color)' }}>{subtitle}</p>
+        <p
+          className="font-semibold text-[15px]"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          {title}
+        </p>
+        <p
+          className="text-sm"
+          style={{ color: 'var(--text-subtle)' }}
+        >
+          {subtitle}
+        </p>
       </div>
-      <ChevronRight className="w-5 h-5 transition-all group-hover:translate-x-0.5" style={{ color: 'var(--tg-theme-hint-color)' }} />
+      <ChevronRight
+        className="w-5 h-5 transition-all group-hover:translate-x-0.5"
+        style={{ color: 'var(--text-subtle)' }}
+      />
     </button>
   )
 }
