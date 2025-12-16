@@ -361,10 +361,98 @@ async def register_manager(
                                 (invite['id'],)
                             )
 
+                    # Try to get Telegram user ID from request if available (user opened form from Telegram)
+                    tg_id = None
+                    try:
+                        init_data = request.headers.get('X-Telegram-Init-Data')
+                        if init_data:
+                            from routes.auth import verify_telegram_init_data
+                            user_data = verify_telegram_init_data(init_data)
+                            if user_data:
+                                tg_id = user_data.get('id')
+                                # Check if user exists with this tg_id
+                                await cur.execute(
+                                    "SELECT * FROM users WHERE tg_id = %s LIMIT 1",
+                                    (tg_id,)
+                                )
+                                existing_user = await cur.fetchone()
+                                if existing_user:
+                                    # Update existing user instead of creating new one
+                                    await cur.execute(
+                                        """UPDATE users
+                                           SET full_name = %s, phone = %s, email = %s,
+                                               registered_via_code = %s, group_id = %s,
+                                               approval_status = %s, registration_completed_at = NOW()
+                                           WHERE id = %s
+                                           RETURNING *""",
+                                        (
+                                            data.full_name,
+                                            data.phone,
+                                            data.email,
+                                            invite['id'],
+                                            invite.get('group_id'),
+                                            'approved' if invite.get('auto_approve') else 'pending',
+                                            existing_user['id']
+                                        )
+                                    )
+                                    user = await cur.fetchone()
+
+                                    # Record invite usage if not already recorded
+                                    await cur.execute(
+                                        "SELECT id FROM invite_code_usage WHERE invite_code_id = %s AND user_id = %s",
+                                        (invite['id'], str(user['id']))
+                                    )
+                                    if not await cur.fetchone():
+                                        await cur.execute(
+                                            """INSERT INTO invite_code_usage (invite_code_id, user_id)
+                                               VALUES (%s, %s)""",
+                                            (invite['id'], str(user['id']))
+                                        )
+                                        await cur.execute(
+                                            "UPDATE invite_codes SET uses_count = uses_count + 1 WHERE id = %s",
+                                            (invite['id'],)
+                                        )
+
+                                    # Add to group if specified
+                                    if invite.get('group_id'):
+                                        await cur.execute(
+                                            """INSERT INTO user_group_membership (user_id, group_id, role, added_by)
+                                               VALUES (%s, %s, 'member', %s)
+                                               ON CONFLICT (user_id, group_id) DO UPDATE SET role = 'member'""",
+                                            (str(user['id']), invite['group_id'], invite['created_by'])
+                                        )
+
+                                    await conn.commit()
+                                    log.info(f"Updated existing user {user['id']} with new invite {token[:8]}")
+                                    # Skip to workspace creation
+                                    user = dict(user)
+                                    user_id = str(user['id'])
+                                    workspace = await create_workspace_for_manager(user_id, data.full_name)
+                                    await mark_invite_activated(token, user_id)
+                                    await db.use_invite_code(token, user_id)
+                                    return RegisterManagerResponse(
+                                        status="ok",
+                                        manager={
+                                            "id": user_id,
+                                            "full_name": user.get('full_name'),
+                                            "phone": user.get('phone'),
+                                            "email": user.get('email')
+                                        },
+                                        workspace={
+                                            "id": str(workspace['id']),
+                                            "name": workspace['name'],
+                                            "slug": workspace['slug']
+                                        },
+                                        redirect_url="/",
+                                        message="Регистрация успешно завершена"
+                                    )
+                    except Exception as e:
+                        log.warning(f"Could not get Telegram user ID from request: {e}")
+
                     # Create new user without telegram data (will be linked later)
                     # For now, generate a placeholder tg_id
                     import secrets
-                    temp_tg_id = int(secrets.token_hex(8), 16) % (10**10)
+                    temp_tg_id = tg_id or int(secrets.token_hex(8), 16) % (10**10)
 
                     await cur.execute(
                         """INSERT INTO users

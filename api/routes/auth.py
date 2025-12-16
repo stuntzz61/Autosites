@@ -129,6 +129,58 @@ async def verify_init_data(request: VerifyRequest):
         else:
             # Create user without invite code
             user = await db.create_user(tg_id, username, first_name, last_name)
+    else:
+        # User exists - update invite code if provided
+        if request.invite_code:
+            # Validate invite code first
+            is_valid, result = await db.validate_invite_code(request.invite_code)
+            if is_valid:
+                invite = result
+                # Update user's invite code and group
+                async with await db.get_conn() as conn:
+                    async with conn.cursor(row_factory=dict_row) as cur:
+                        # Check if user already used this invite
+                        await cur.execute(
+                            "SELECT id FROM invite_code_usage WHERE invite_code_id = %s AND user_id = %s",
+                            (invite['id'], str(user['id']))
+                        )
+                        if not await cur.fetchone():
+                            # Record usage
+                            await cur.execute(
+                                """INSERT INTO invite_code_usage (invite_code_id, user_id)
+                                   VALUES (%s, %s)""",
+                                (invite['id'], str(user['id']))
+                            )
+                            # Increment usage count
+                            await cur.execute(
+                                "UPDATE invite_codes SET uses_count = uses_count + 1 WHERE id = %s",
+                                (invite['id'],)
+                            )
+
+                        # Update user's registered_via_code and group
+                        await cur.execute(
+                            """UPDATE users
+                               SET registered_via_code = %s, admin_group_id = %s,
+                                   approval_status = CASE
+                                       WHEN %s THEN 'approved'
+                                       ELSE approval_status
+                                   END
+                               WHERE id = %s
+                               RETURNING *""",
+                            (invite['id'], invite.get('group_id'), invite.get('auto_approve'), str(user['id']))
+                        )
+                        user = await cur.fetchone()
+
+                        # Add to group if specified
+                        if invite.get('group_id'):
+                            await cur.execute(
+                                """INSERT INTO user_group_membership (user_id, group_id, role, added_by)
+                                   VALUES (%s, %s, 'member', %s)
+                                   ON CONFLICT (user_id, group_id) DO UPDATE SET role = 'member'""",
+                                (str(user['id']), invite['group_id'], invite['created_by'])
+                            )
+
+                        await conn.commit()
 
     # Check if blocked
     if user.get('is_blocked'):

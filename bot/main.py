@@ -354,13 +354,10 @@ async def cb_register_with_invite(callback: types.CallbackQuery, state: FSMConte
     tg_id = callback.from_user.id
     invite_code = callback.data.replace("register_invite_", "")
 
-    # Check if already registered
+    # Check if user exists
     user = await db.get_user_by_tg_id(tg_id)
-    if user:
-        await callback.answer("Вы уже зарегистрированы", show_alert=True)
-        return
 
-    # Validate invite code again
+    # Validate invite code
     is_valid, result = await db.validate_invite_code(invite_code)
     if not is_valid:
         await callback.message.edit_text(
@@ -372,14 +369,61 @@ async def cb_register_with_invite(callback: types.CallbackQuery, state: FSMConte
 
     invite = result
 
-    # Create user with invite code
-    new_user = await db.create_user_with_invite(
-        tg_id=tg_id,
-        username=callback.from_user.username or "",
-        first_name=callback.from_user.first_name or "",
-        last_name=callback.from_user.last_name or "",
-        invite_code=invite_code
-    )
+    if user:
+        # User exists - update invite code and group
+        async with db.get_conn() as conn:
+            async with conn.cursor(row_factory=dict_row) as cur:
+                # Check if user already used this invite
+                await cur.execute(
+                    "SELECT id FROM invite_code_usage WHERE invite_code_id = %s AND user_id = %s",
+                    (invite['id'], str(user['id']))
+                )
+                if not await cur.fetchone():
+                    # Record usage
+                    await cur.execute(
+                        """INSERT INTO invite_code_usage (invite_code_id, user_id)
+                           VALUES (%s, %s)""",
+                        (invite['id'], str(user['id']))
+                    )
+                    # Increment usage count
+                    await cur.execute(
+                        "UPDATE invite_codes SET uses_count = uses_count + 1 WHERE id = %s",
+                        (invite['id'],)
+                    )
+
+                # Update user's registered_via_code and group
+                await cur.execute(
+                    """UPDATE users
+                       SET registered_via_code = %s, admin_group_id = %s,
+                           approval_status = CASE
+                               WHEN %s THEN 'approved'
+                               ELSE approval_status
+                           END
+                       WHERE id = %s
+                       RETURNING *""",
+                    (invite['id'], invite.get('group_id'), invite.get('auto_approve'), str(user['id']))
+                )
+                new_user = await cur.fetchone()
+
+                # Add to group if specified
+                if invite.get('group_id'):
+                    await cur.execute(
+                        """INSERT INTO user_group_membership (user_id, group_id, role, added_by)
+                           VALUES (%s, %s, 'member', %s)
+                           ON CONFLICT (user_id, group_id) DO UPDATE SET role = 'member'""",
+                        (str(new_user['id']), invite['group_id'], invite['created_by'])
+                    )
+
+                await conn.commit()
+    else:
+        # Create new user with invite code
+        new_user = await db.create_user_with_invite(
+            tg_id=tg_id,
+            username=callback.from_user.username or "",
+            first_name=callback.from_user.first_name or "",
+            last_name=callback.from_user.last_name or "",
+            invite_code=invite_code
+        )
 
     if invite.get('auto_approve'):
         # Auto-approved - show success
