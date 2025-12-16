@@ -67,18 +67,19 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen pb-8" style={{ background: '#0F1115' }}>
+    <div className="min-h-screen pb-8" style={{ background: 'var(--tg-theme-bg-color)' }}>
       {/* Header */}
-      <div className="px-5 pt-10 pb-24" style={{ background: '#0F1115' }}>
+      <div className="px-5 pt-10 pb-24" style={{ background: 'var(--tg-theme-bg-color)' }}>
         <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="relative inline-block mb-3">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-slate-100 border" style={{
-              background: 'rgba(100, 116, 139, 0.15)',
-              borderColor: 'rgba(148, 163, 184, 0.25)'
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold" style={{
+              background: 'rgba(59, 130, 246, 0.15)',
+              border: '1px solid var(--border-accent)',
+              color: 'var(--accent-blue-light)'
             }}>
               {user?.first_name?.[0]?.toUpperCase()}
             </div>
@@ -91,11 +92,11 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-          <h1 className="text-xl font-bold text-slate-100 mb-0.5">
+          <h1 className="text-xl font-bold mb-0.5" style={{ color: 'var(--tg-theme-text-color)' }}>
             {user?.first_name} {user?.last_name}
           </h1>
           {user?.username && (
-            <p className="text-sm text-slate-400">@{user.username}</p>
+            <p className="text-sm" style={{ color: 'var(--tg-theme-hint-color)' }}>@{user.username}</p>
           )}
         </motion.div>
       </div>
@@ -106,8 +107,8 @@ export default function ProfilePage() {
         <motion.div
           className="rounded-2xl overflow-hidden border shadow-xl"
           style={{
-            background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
-            borderColor: 'rgba(100, 116, 139, 0.15)'
+            background: 'var(--surface-secondary)',
+            borderColor: 'var(--border-subtle)'
           }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -132,12 +133,12 @@ export default function ProfilePage() {
           </div>
 
           {nextRank && (
-            <div className="p-4" style={{ background: 'rgba(15, 20, 25, 0.5)' }}>
+            <div className="p-4" style={{ background: 'var(--surface-primary)' }}>
               <div className="flex justify-between text-xs font-medium mb-2">
-                <span className="text-slate-400">{rank.name}</span>
-                <span className="text-slate-200">{nextRank.name}</span>
+                <span style={{ color: 'var(--tg-theme-hint-color)' }}>{rank.name}</span>
+                <span style={{ color: 'var(--tg-theme-text-color)' }}>{nextRank.name}</span>
               </div>
-              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(100, 116, 139, 0.2)' }}>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-tertiary)' }}>
                 <motion.div
                   className={`h-full bg-gradient-to-r ${rank.color} rounded-full`}
                   initial={{ width: 0 }}
@@ -145,8 +146,8 @@ export default function ProfilePage() {
                   transition={{ duration: 0.8, ease: "easeOut" }}
                 />
               </div>
-              <p className="text-xs text-slate-400 mt-2 text-center">
-                Ещё <span className="font-bold text-slate-200">{nextRank.min - totalRequests}</span> до следующего
+              <p className="text-xs mt-2 text-center" style={{ color: 'var(--tg-theme-hint-color)' }}>
+                Ещё <span className="font-bold" style={{ color: 'var(--tg-theme-text-color)' }}>{nextRank.min - totalRequests}</span> до следующего
               </p>
             </div>
           )}
@@ -192,8 +193,8 @@ export default function ProfilePage() {
         >
           <p className="section-header">Контакт</p>
           <div className="rounded-2xl border overflow-hidden" style={{
-            background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
-            borderColor: 'rgba(100, 116, 139, 0.15)'
+            background: 'var(--surface-secondary)',
+            borderColor: 'var(--border-subtle)'
           }}>
             <button
               onClick={() => {
@@ -201,18 +202,19 @@ export default function ProfilePage() {
                 setContactValue(user?.contact || '')
                 setEditContact(true)
               }}
-              className="flex items-center gap-3 p-4 w-full text-left"
+              className="flex items-center gap-3 p-4 w-full text-left hover:bg-white/[0.02] transition-colors"
             >
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                background: 'rgba(59, 130, 246, 0.15)'
+                background: 'rgba(59, 130, 246, 0.15)',
+                border: '1px solid var(--border-accent)'
               }}>
-                <Phone className="w-5 h-5" style={{ color: '#60a5fa' }} />
+                <Phone className="w-5 h-5" style={{ color: 'var(--accent-blue-light)' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-400 mb-0.5">Телефон / Email</p>
-                <p className="font-semibold text-slate-100 truncate">{user?.contact || 'Не указан'}</p>
+                <p className="text-xs mb-0.5" style={{ color: 'var(--tg-theme-hint-color)' }}>Телефон / Email</p>
+                <p className="font-semibold truncate" style={{ color: 'var(--tg-theme-text-color)' }}>{user?.contact || 'Не указан'}</p>
               </div>
-              <Edit2 className="w-4 h-4 text-slate-400 shrink-0" />
+              <Edit2 className="w-4 h-4 shrink-0" style={{ color: 'var(--tg-theme-hint-color)' }} />
             </button>
           </div>
         </motion.div>
@@ -225,22 +227,22 @@ export default function ProfilePage() {
         >
           <p className="section-header">Аккаунт</p>
           <div className="rounded-2xl border overflow-hidden" style={{
-            background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
-            borderColor: 'rgba(100, 116, 139, 0.15)'
+            background: 'var(--surface-secondary)',
+            borderColor: 'var(--border-subtle)'
           }}>
-            <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'rgba(100, 116, 139, 0.1)' }}>
+            <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                background: 'rgba(100, 116, 139, 0.1)'
+                background: 'var(--surface-tertiary)'
               }}>
-                <User className="w-5 h-5 text-slate-400" />
+                <User className="w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} />
               </div>
               <div className="flex-1">
-                <p className="text-xs text-slate-400 mb-0.5">Telegram ID</p>
-                <p className="font-mono text-sm text-slate-200">{user?.tg_id}</p>
+                <p className="text-xs mb-0.5" style={{ color: 'var(--tg-theme-hint-color)' }}>Telegram ID</p>
+                <p className="font-mono text-sm" style={{ color: 'var(--tg-theme-text-color)' }}>{user?.tg_id}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'rgba(100, 116, 139, 0.1)' }}>
+            <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
                 background: 'rgba(139, 92, 246, 0.15)'
               }}>
@@ -251,8 +253,8 @@ export default function ProfilePage() {
                 )}
               </div>
               <div className="flex-1">
-                <p className="text-xs text-slate-400 mb-0.5">Роль</p>
-                <p className="font-semibold text-slate-100">
+                <p className="text-xs mb-0.5" style={{ color: 'var(--tg-theme-hint-color)' }}>Роль</p>
+                <p className="font-semibold" style={{ color: 'var(--tg-theme-text-color)' }}>
                   {user?.role === 'admin' ? 'Администратор' : 'Менеджер'}
                 </p>
               </div>
@@ -260,14 +262,14 @@ export default function ProfilePage() {
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 p-4 w-full text-left"
+              className="flex items-center gap-3 p-4 w-full text-left hover:bg-red-500/5 transition-colors"
             >
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
                 background: 'rgba(239, 68, 68, 0.15)'
               }}>
-                <LogOut className="w-5 h-5" style={{ color: '#f87171' }} />
+                <LogOut className="w-5 h-5" style={{ color: 'var(--tg-theme-destructive-text-color)' }} />
               </div>
-              <span className="font-semibold" style={{ color: '#f87171' }}>Выйти из аккаунта</span>
+              <span className="font-semibold" style={{ color: 'var(--tg-theme-destructive-text-color)' }}>Выйти из аккаунта</span>
             </button>
           </div>
         </motion.div>
@@ -278,7 +280,7 @@ export default function ProfilePage() {
         {editContact && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/60 z-40"
+              className="fixed inset-0 bg-black/70 z-40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -287,8 +289,8 @@ export default function ProfilePage() {
             <motion.div
               className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-50 safe-bottom border-t"
               style={{
-                background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
-                borderColor: 'rgba(100, 116, 139, 0.15)'
+                background: 'var(--surface-primary)',
+                borderColor: 'var(--border-subtle)'
               }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -296,20 +298,20 @@ export default function ProfilePage() {
               transition={{ type: 'spring', damping: 30, stiffness: 400 }}
             >
               <div className="p-5">
-                <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(148, 163, 184, 0.3)' }} />
+                <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'var(--surface-tertiary)' }} />
 
                 <div className="flex justify-between items-center mb-5">
-                  <h3 className="text-lg font-bold text-slate-100">Контакт для связи</h3>
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--tg-theme-text-color)' }}>Контакт для связи</h3>
                   <button
                     onClick={() => setEditContact(false)}
                     className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ background: 'rgba(100, 116, 139, 0.1)' }}
+                    style={{ background: 'var(--surface-tertiary)' }}
                   >
-                    <X className="w-4 h-4 text-slate-400" />
+                    <X className="w-4 h-4" style={{ color: 'var(--tg-theme-hint-color)' }} />
                   </button>
                 </div>
 
-                <p className="text-sm text-slate-400 mb-4">
+                <p className="text-sm mb-4" style={{ color: 'var(--tg-theme-hint-color)' }}>
                   Укажите телефон или email для связи
                 </p>
 
@@ -350,16 +352,16 @@ function StatCard({ icon, value, label, accent }: {
 }) {
   const colors = {
     emerald: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', value: '#34d399' },
-    blue: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', value: '#60a5fa' },
+    blue: { bg: 'rgba(59, 130, 246, 0.15)', text: 'var(--accent-blue)', value: 'var(--accent-blue-light)' },
     amber: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b', value: '#fbbf24' },
   }
 
-  const color = accent ? colors[accent] : { bg: 'rgba(100, 116, 139, 0.1)', text: '#94a3b8', value: '#cbd5e1' }
+  const color = accent ? colors[accent] : { bg: 'var(--surface-tertiary)', text: 'var(--tg-theme-subtitle-text-color)', value: 'var(--tg-theme-text-color)' }
 
   return (
     <div className="rounded-2xl p-4 border" style={{
-      background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
-      borderColor: 'rgba(100, 116, 139, 0.15)'
+      background: 'var(--surface-secondary)',
+      borderColor: 'var(--border-subtle)'
     }}>
       <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold mb-2" style={{
         background: color.bg,

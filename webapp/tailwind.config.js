@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Outfit', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
       colors: {
         tg: {

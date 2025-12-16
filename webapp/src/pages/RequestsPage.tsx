@@ -149,17 +149,17 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0F1115' }}>
+    <div className="min-h-screen" style={{ background: 'var(--tg-theme-bg-color)' }}>
       {/* Premium Header */}
-      <div className="relative overflow-hidden pt-8 pb-20 px-5" style={{ background: '#0F1115' }}>
+      <div className="relative overflow-hidden pt-8 pb-20 px-5" style={{ background: 'var(--tg-theme-bg-color)' }}>
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between mb-6 relative z-10"
         >
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>Заявки</h1>
-            <p className="text-sm mt-0.5" style={{ color: '#9CA3AF' }}>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--tg-theme-text-color)' }}>Заявки</h1>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--tg-theme-hint-color)' }}>
               {requests.length} {requests.length === 1 ? 'заявка' : requests.length < 5 ? 'заявки' : 'заявок'}
             </p>
           </div>
@@ -169,11 +169,10 @@ export default function RequestsPage() {
                 haptic?.impactOccurred('medium')
                 navigate('/requests/new')
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm border"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white"
               style={{
-                background: '#3B82F6',
-                borderColor: '#3B82F6',
-                color: '#FFFFFF'
+                background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%)',
+                boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
               }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -191,10 +190,9 @@ export default function RequestsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Search className={clsx(
-            "absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-200",
-            isSearchFocused ? 'text-blue-400' : 'text-slate-500'
-          )} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-200"
+            style={{ color: isSearchFocused ? 'var(--accent-blue-light)' : 'var(--tg-theme-hint-color)' }}
+          />
           <input
             type="text"
             placeholder="Найти заявку..."
@@ -202,10 +200,13 @@ export default function RequestsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
-            className="w-full pl-12 pr-12 py-3.5 rounded-2xl text-slate-100 placeholder:text-slate-500 outline-none border transition-all shadow-lg"
+            className="w-full pl-12 pr-12 py-3.5 rounded-2xl outline-none transition-all"
             style={{
-              background: '#1E222B',
-              borderColor: isSearchFocused ? 'rgba(148, 163, 184, 0.3)' : 'rgba(100, 116, 139, 0.15)'
+              background: 'var(--surface-secondary)',
+              borderColor: isSearchFocused ? 'var(--border-accent)' : 'var(--border-subtle)',
+              border: '1px solid',
+              color: 'var(--tg-theme-text-color)',
+              boxShadow: isSearchFocused ? '0 0 0 3px var(--accent-blue-glow)' : 'none'
             }}
           />
           <AnimatePresence>
@@ -215,7 +216,8 @@ export default function RequestsPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-700 text-slate-400"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full"
+                style={{ background: 'var(--surface-tertiary)', color: 'var(--tg-theme-hint-color)' }}
               >
                 <X className="w-3.5 h-3.5" />
               </motion.button>
@@ -239,19 +241,18 @@ export default function RequestsPage() {
                 haptic?.selectionChanged()
                 setSearchParams(filter.value === 'all' ? {} : { status: filter.value })
               }}
-              className={clsx(
-                'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-300 shadow-lg border',
-                statusFilter === filter.value
-                  ? 'text-slate-100 scale-105'
-                  : 'text-slate-400 hover:text-slate-300'
-              )}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-300"
               style={{
                 background: statusFilter === filter.value
-                  ? '#1E222B'
-                  : '#1E222B',
-                borderColor: statusFilter === filter.value
-                  ? 'rgba(148, 163, 184, 0.3)'
-                  : 'rgba(100, 116, 139, 0.2)'
+                  ? 'var(--accent-blue)'
+                  : 'var(--surface-secondary)',
+                border: `1px solid ${statusFilter === filter.value ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
+                color: statusFilter === filter.value
+                  ? 'white'
+                  : 'var(--tg-theme-subtitle-text-color)',
+                boxShadow: statusFilter === filter.value
+                  ? '0 4px 16px -4px rgba(59, 130, 246, 0.4)'
+                  : 'none'
               }}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -283,29 +284,29 @@ export default function RequestsPage() {
             animate={{ opacity: 1, y: 0 }}
           >
             <motion.div
-              className="w-24 h-24 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-xl border"
+              className="w-24 h-24 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-xl"
               style={{
-                background: '#1E222B',
-                borderColor: 'rgba(148, 163, 184, 0.2)'
+                background: 'var(--surface-secondary)',
+                border: '1px solid var(--border-accent)'
               }}
               animate={{ y: [0, -8, 0] }}
               transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
             >
-              <Globe className="w-12 h-12 text-slate-300" />
+              <Globe className="w-12 h-12" style={{ color: 'var(--accent-blue-light)' }} />
             </motion.div>
-            <h3 className="text-xl font-bold text-slate-100 mb-2">
+            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--tg-theme-text-color)' }}>
               {searchQuery ? 'Ничего не найдено' : 'Пока нет заявок'}
             </h3>
-            <p className="text-slate-400 mb-6 max-w-xs mx-auto">
+            <p className="mb-6 max-w-xs mx-auto" style={{ color: 'var(--tg-theme-hint-color)' }}>
               {searchQuery ? 'Попробуйте изменить поисковый запрос' : 'Создайте первую заявку и начните работу с клиентами'}
             </p>
             {!searchQuery && (
               <motion.button
                 onClick={() => navigate('/requests/new')}
-                className="inline-flex items-center gap-2 px-6 py-3.5 text-slate-100 rounded-2xl font-semibold shadow-xl border"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-semibold text-white"
                 style={{
-                  background: '#1E222B',
-                  borderColor: 'rgba(148, 163, 184, 0.25)'
+                  background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%)',
+                  boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
                 }}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
@@ -345,10 +346,10 @@ export default function RequestsPage() {
                       style={{
                         background: request.tariff === 'premium'
                           ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 50%, rgba(139, 92, 246, 0.15) 100%)'
-                          : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                          : 'var(--surface-secondary)',
                         borderColor: request.tariff === 'premium'
                           ? 'rgba(139, 92, 246, 0.3)'
-                          : 'rgba(100, 116, 139, 0.15)'
+                          : 'var(--border-subtle)'
                       }}
                     >
                       {request.tariff === 'premium' && (
@@ -357,18 +358,19 @@ export default function RequestsPage() {
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
                         <div className="relative flex-shrink-0">
-                          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-slate-100 font-bold text-xl shadow-lg border" style={{
-                            background: '#1E222B',
-                            borderColor: 'rgba(148, 163, 184, 0.2)'
+                          <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg" style={{
+                            background: 'rgba(59, 130, 246, 0.15)',
+                            border: '1px solid var(--border-accent)',
+                            color: 'var(--accent-blue-light)'
                           }}>
                             {request.company_name?.[0]?.toUpperCase() || '?'}
                           </div>
                           {status === 'success' && (
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg border" style={{
-                              background: 'rgba(226, 232, 240, 0.2)',
-                              borderColor: 'rgba(226, 232, 240, 0.3)'
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg flex items-center justify-center shadow-lg" style={{
+                              background: 'rgba(16, 185, 129, 0.2)',
+                              border: '1px solid rgba(16, 185, 129, 0.3)'
                             }}>
-                              <CheckCircle2 className="w-3 h-3 text-slate-200" />
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                             </div>
                           )}
                         </div>
@@ -377,7 +379,7 @@ export default function RequestsPage() {
                         <div className="flex-1 min-w-0 relative z-10">
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <div className="flex items-center gap-2 flex-wrap min-w-0">
-                              <h3 className="font-bold text-slate-100 truncate text-[15px]">
+                              <h3 className="font-bold truncate text-[15px]" style={{ color: 'var(--tg-theme-text-color)' }}>
                                 {request.company_name || 'Без названия'}
                               </h3>
                               {request.tariff === 'premium' && (
@@ -390,10 +392,10 @@ export default function RequestsPage() {
                                 </span>
                               )}
                             </div>
-                            <ArrowUpRight className="w-4 h-4 text-slate-600 flex-shrink-0 opacity-0 group-hover:opacity-100 group-hover:text-blue-400 transition-all" />
+                            <ArrowUpRight className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all" style={{ color: 'var(--accent-blue-light)' }} />
                           </div>
 
-                          <div className="flex items-center gap-3 text-sm text-slate-400 mb-3">
+                          <div className="flex items-center gap-3 text-sm mb-3" style={{ color: 'var(--tg-theme-hint-color)' }}>
                             <span className="flex items-center gap-1 truncate">
                               <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
                               {request.client_name || 'Без клиента'}

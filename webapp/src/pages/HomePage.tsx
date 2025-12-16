@@ -27,28 +27,28 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0F1115' }}>
+    <div className="min-h-screen" style={{ background: 'var(--tg-theme-bg-color)' }}>
       {/* Premium Header */}
-      <div className="relative overflow-hidden px-5 pt-10 pb-24" style={{ background: '#0F1115' }}>
+      <div className="relative overflow-hidden px-5 pt-10 pb-24" style={{ background: 'var(--tg-theme-bg-color)' }}>
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="relative z-10"
         >
-          <p className="text-sm font-medium mb-1" style={{ color: '#9CA3AF' }}>
+          <p className="text-sm font-medium mb-1" style={{ color: 'var(--tg-theme-hint-color)' }}>
             {getGreeting()}
           </p>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: '#FFFFFF' }}>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--tg-theme-text-color)' }}>
             {user?.first_name}
           </h1>
           {user?.role === 'admin' && (
             <motion.span
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border"
               style={{
-                background: 'rgba(59, 130, 246, 0.1)',
-                borderColor: 'rgba(59, 130, 246, 0.2)',
-                color: '#3B82F6'
+                background: 'rgba(59, 130, 246, 0.15)',
+                borderColor: 'rgba(59, 130, 246, 0.3)',
+                color: 'var(--accent-blue-light)'
               }}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -77,26 +77,26 @@ export default function HomePage() {
             className="w-full group"
           >
             <div className="relative overflow-hidden rounded-3xl p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] border" style={{
-              background: '#1E222B',
-              borderColor: 'rgba(156, 163, 175, 0.1)',
-              boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
+              background: 'var(--surface-secondary)',
+              borderColor: 'var(--border-accent)',
+              boxShadow: '0 4px 32px -4px rgba(59, 130, 246, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
             }}>
               <div className="relative flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  borderColor: 'rgba(59, 130, 246, 0.2)'
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)'
                 }}>
-                  <Plus className="w-8 h-8" style={{ color: '#3B82F6' }} />
+                  <Plus className="w-8 h-8" style={{ color: 'var(--accent-blue-light)' }} />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-bold text-xl mb-0.5" style={{ color: '#FFFFFF' }}>Новая заявка</p>
-                  <p className="text-sm" style={{ color: '#9CA3AF' }}>Создать сайт для клиента</p>
+                  <p className="font-bold text-xl mb-0.5" style={{ color: 'var(--tg-theme-text-color)' }}>Новая заявка</p>
+                  <p className="text-sm" style={{ color: 'var(--tg-theme-hint-color)' }}>Создать сайт для клиента</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors" style={{
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  borderColor: 'rgba(59, 130, 246, 0.2)'
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)'
                 }}>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" style={{ color: '#3B82F6' }} />
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" style={{ color: 'var(--accent-blue-light)' }} />
                 </div>
               </div>
             </div>
@@ -145,32 +145,32 @@ export default function HomePage() {
         >
           <p className="section-header">Быстрые действия</p>
           <div className="rounded-3xl overflow-hidden border" style={{
-            background: '#1E222B',
-            borderColor: 'rgba(156, 163, 175, 0.1)',
-            boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
+            background: 'var(--surface-secondary)',
+            borderColor: 'var(--border-subtle)',
+            boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
           }}>
             <QuickAction
               icon={<FileText className="w-5 h-5" />}
               iconBg="transparent"
-              iconColor="#9CA3AF"
+              iconColor="var(--tg-theme-subtitle-text-color)"
               title="Все заявки"
               subtitle={`${stats?.total_requests || 0} заявок`}
               onClick={() => navigate('/requests')}
             />
-            <div className="h-px ml-[68px]" style={{ background: 'rgba(156, 163, 175, 0.1)' }} />
+            <div className="h-px ml-[68px]" style={{ background: 'var(--border-subtle)' }} />
             <QuickAction
               icon={<Zap className="w-5 h-5" />}
               iconBg="transparent"
-              iconColor="#3B82F6"
+              iconColor="var(--accent-blue)"
               title="Активные"
               subtitle={`${stats?.pending_requests || 0} в работе`}
               onClick={() => navigate('/requests?status=generating')}
             />
-            <div className="h-px ml-[68px]" style={{ background: 'rgba(156, 163, 175, 0.1)' }} />
+            <div className="h-px ml-[68px]" style={{ background: 'var(--border-subtle)' }} />
             <QuickAction
               icon={<Archive className="w-5 h-5" />}
               iconBg="transparent"
-              iconColor="#9CA3AF"
+              iconColor="var(--tg-theme-subtitle-text-color)"
               title="Архив"
               subtitle="Завершённые проекты"
               onClick={() => navigate('/archive')}
@@ -182,21 +182,23 @@ export default function HomePage() {
         <motion.div
           className="rounded-2xl p-4 border"
           style={{
-            background: '#1E222B',
-            borderColor: 'rgba(156, 163, 175, 0.1)',
-            boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--surface-secondary) 100%)',
+            borderColor: 'var(--border-accent)',
+            boxShadow: '0 4px 24px -4px rgba(59, 130, 246, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
           }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-4 h-4" style={{ color: '#3B82F6' }} />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{
+              background: 'rgba(59, 130, 246, 0.15)'
+            }}>
+              <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-blue-light)' }} />
             </div>
             <div>
-              <p className="font-semibold text-sm mb-0.5" style={{ color: '#FFFFFF' }}>Совет дня</p>
-              <p className="text-xs leading-relaxed" style={{ color: '#9CA3AF' }}>
+              <p className="font-semibold text-sm mb-0.5" style={{ color: 'var(--tg-theme-text-color)' }}>Совет дня</p>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--tg-theme-subtitle-text-color)' }}>
                 Добавляйте качественные фото для лучшего результата генерации сайта
               </p>
             </div>
@@ -222,30 +224,30 @@ function StatsCard({
 }) {
   const colors = {
     blue: {
-      bg: 'transparent',
-      text: '#3B82F6',
-      value: '#60A5FA',
-      border: 'rgba(59, 130, 246, 0.2)',
+      bg: 'rgba(59, 130, 246, 0.1)',
+      text: 'var(--accent-blue)',
+      value: 'var(--accent-blue-light)',
+      border: 'rgba(59, 130, 246, 0.25)',
     },
     amber: {
-      bg: 'transparent',
+      bg: 'rgba(245, 158, 11, 0.1)',
       text: '#F59E0B',
       value: '#FBBF24',
-      border: 'rgba(245, 158, 11, 0.2)',
+      border: 'rgba(245, 158, 11, 0.25)',
     },
     emerald: {
-      bg: 'transparent',
+      bg: 'rgba(16, 185, 129, 0.1)',
       text: '#10B981',
       value: '#34D399',
-      border: 'rgba(16, 185, 129, 0.2)',
+      border: 'rgba(16, 185, 129, 0.25)',
     },
   }
 
   const color = accent ? colors[accent] : {
     bg: 'transparent',
-    text: '#9CA3AF',
-    value: '#FFFFFF',
-    border: 'rgba(156, 163, 175, 0.1)',
+    text: 'var(--tg-theme-subtitle-text-color)',
+    value: 'var(--tg-theme-text-color)',
+    border: 'var(--border-subtle)',
   }
 
   return (
@@ -253,21 +255,22 @@ function StatsCard({
       onClick={onClick}
       className="rounded-2xl p-4 text-left transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] border"
       style={{
-        background: '#1E222B',
+        background: 'var(--surface-secondary)',
         borderColor: color.border,
-        boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.03)'
+        boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.02)'
       }}
       whileTap={{ scale: 0.98 }}
     >
       <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3" style={{
-        color: color.text
+        color: color.text,
+        background: color.bg
       }}>
         {icon}
       </div>
       <p className="text-3xl font-bold mb-0.5" style={{ color: color.value }}>
         {value}
       </p>
-      <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>{label}</p>
+      <p className="text-xs font-medium" style={{ color: 'var(--tg-theme-hint-color)' }}>{label}</p>
     </motion.button>
   )
 }
@@ -288,7 +291,7 @@ function QuickAction({
   onClick: () => void
 }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-4 p-4 w-full text-left transition-colors group" style={{
+    <button onClick={onClick} className="flex items-center gap-4 p-4 w-full text-left transition-colors group hover:bg-white/[0.02]" style={{
       background: 'transparent'
     }}>
       <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105" style={{
@@ -297,10 +300,10 @@ function QuickAction({
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold" style={{ color: '#FFFFFF' }}>{title}</p>
-        <p className="text-sm" style={{ color: '#9CA3AF' }}>{subtitle}</p>
+        <p className="font-semibold" style={{ color: 'var(--tg-theme-text-color)' }}>{title}</p>
+        <p className="text-sm" style={{ color: 'var(--tg-theme-hint-color)' }}>{subtitle}</p>
       </div>
-      <ChevronRight className="w-5 h-5 transition-all group-hover:translate-x-0.5" style={{ color: '#9CA3AF' }} />
+      <ChevronRight className="w-5 h-5 transition-all group-hover:translate-x-0.5" style={{ color: 'var(--tg-theme-hint-color)' }} />
     </button>
   )
 }

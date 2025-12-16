@@ -41,7 +41,7 @@ export default function MainLayout() {
   }, [location.pathname, backButton, navigate, haptic])
 
   return (
-    <div className="flex flex-col min-h-screen min-h-[100dvh] bg-tg-secondary-bg relative">
+    <div className="flex flex-col min-h-screen min-h-[100dvh] relative" style={{ background: 'var(--tg-theme-bg-color)' }}>
       {/* Content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden main-content-with-nav">
         <motion.div
@@ -69,10 +69,10 @@ export default function MainLayout() {
                   haptic?.selectionChanged()
                   navigate(path)
                 }}
-                className={clsx(
-                  'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
-                  isActive ? 'text-slate-100' : 'text-slate-500'
-                )}
+                className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-[64px]"
+                style={{
+                  color: isActive ? 'var(--accent-blue-light)' : 'var(--tg-theme-hint-color)'
+                }}
               >
                 <Icon className="w-6 h-6" strokeWidth={isActive ? 2 : 1.5} />
                 <span className="text-[10px] font-medium">{label}</span>
@@ -86,10 +86,10 @@ export default function MainLayout() {
               haptic?.selectionChanged()
               navigate(isAdmin ? '/admin' : '/admin-login')
             }}
-            className={clsx(
-              'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[64px]',
-              location.pathname.startsWith('/admin') ? 'text-slate-100' : 'text-slate-500'
-            )}
+            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-[64px]"
+            style={{
+              color: location.pathname.startsWith('/admin') ? 'var(--accent-blue-light)' : 'var(--tg-theme-hint-color)'
+            }}
           >
             <Shield className="w-6 h-6" strokeWidth={location.pathname.startsWith('/admin') ? 2 : 1.5} />
             <span className="text-[10px] font-medium">Админ</span>

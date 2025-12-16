@@ -10,7 +10,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { requestsApi } from '@/api/client'
-import Tooltip from '@/components/Tooltip'
+import ScrollContainer from '@/components/ScrollContainer'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -200,6 +200,148 @@ const clearDraft = (): void => {
   } catch (e) {
     console.error('Failed to clear draft:', e)
   }
+}
+
+// DropZone Component for drag-and-drop file uploads
+function DropZone({
+  onFilesAdded,
+  categoryLabel,
+  fileInputRef,
+  onFileSelect
+}: {
+  onFilesAdded: (files: FileList | File[]) => void
+  categoryLabel: string
+  fileInputRef: React.RefObject<HTMLInputElement>
+  onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void
+}) {
+  const [isDragging, setIsDragging] = useState(false)
+  const dragCounter = useRef(0)
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current === 0) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    dragCounter.current = 0
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      onFilesAdded(e.dataTransfer.files)
+      e.dataTransfer.clearData()
+    }
+  }
+
+  return (
+    <label
+      className={clsx(
+        "relative flex flex-col items-center justify-center w-full min-h-[140px] p-6 border-2 border-dashed rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden",
+        isDragging
+          ? "scale-[1.02]"
+          : "hover:scale-[1.01]"
+      )}
+      style={{
+        borderColor: isDragging ? 'var(--accent-blue)' : 'var(--border-subtle)',
+        background: isDragging
+          ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)'
+          : 'var(--surface-secondary)',
+        boxShadow: isDragging
+          ? '0 0 30px -5px rgba(59, 130, 246, 0.3), inset 0 0 20px -10px rgba(59, 130, 246, 0.2)'
+          : 'none'
+      }}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Animated background effect when dragging */}
+      {isDragging && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.1) 50%, transparent 70%)',
+            backgroundSize: '200% 200%',
+            animation: 'shimmer 1.5s ease-in-out infinite'
+          }}
+        />
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={onFileSelect}
+        className="sr-only"
+        aria-label="Загрузить фотографии"
+      />
+
+      <div className="flex flex-col items-center pointer-events-none relative z-10">
+        <div
+          className={clsx(
+            "w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all duration-300",
+            isDragging && "scale-110"
+          )}
+          style={{
+            background: isDragging
+              ? 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%)'
+              : 'rgba(59, 130, 246, 0.1)',
+            border: `1px solid ${isDragging ? 'var(--accent-blue)' : 'var(--border-accent)'}`,
+            boxShadow: isDragging ? '0 4px 20px -4px rgba(59, 130, 246, 0.5)' : 'none'
+          }}
+        >
+          <Upload
+            className={clsx(
+              "w-6 h-6 transition-all duration-300",
+              isDragging && "animate-bounce"
+            )}
+            style={{
+              color: isDragging ? 'white' : 'var(--accent-blue-light)'
+            }}
+          />
+        </div>
+
+        <span
+          className="text-center font-semibold mb-1 transition-colors duration-300"
+          style={{
+            color: isDragging ? 'var(--accent-blue-light)' : 'var(--tg-theme-text-color)'
+          }}
+        >
+          {isDragging ? 'Отпустите для загрузки' : `Добавить фото в «${categoryLabel}»`}
+        </span>
+
+        <span
+          className="text-center text-xs transition-colors duration-300"
+          style={{ color: 'var(--tg-theme-hint-color)' }}
+        >
+          {isDragging
+            ? 'Перетащите изображения сюда'
+            : 'Нажмите, перетащите файлы или вставьте из буфера (Ctrl+V)'
+          }
+        </span>
+      </div>
+    </label>
+  )
 }
 
 export default function NewRequestPage() {
@@ -558,7 +700,7 @@ export default function NewRequestPage() {
   }, [currentStep, selectedCategory, selectedServiceIndexForPhoto])
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#1a1d26' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--tg-theme-bg-color)' }}>
       {/* Draft Restoration Prompt */}
       <AnimatePresence>
         {showDraftPrompt && (
@@ -577,17 +719,24 @@ export default function NewRequestPage() {
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-blue-500/20" style={{ background: 'linear-gradient(145deg, #0f172a 0%, #0d1424 100%)' }}>
+              <div className="rounded-3xl p-6 w-full max-w-sm shadow-2xl border" style={{
+                background: 'var(--surface-primary)',
+                borderColor: 'var(--border-accent)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-accent)'
+              }}>
                 <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <RotateCcw className="w-8 h-8 text-blue-400" />
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)'
+                  }}>
+                    <RotateCcw className="w-8 h-8" style={{ color: 'var(--accent-blue-light)' }} />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-100 mb-2">Найден черновик</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-3">
+                  <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--tg-theme-text-color)' }}>Найден черновик</h3>
+                  <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--tg-theme-hint-color)' }}>
                     У вас есть незаконченная заявка. Хотите продолжить заполнение?
                   </p>
                   {draftData?.formData.company && (
-                    <p className="text-sm text-blue-300 font-medium">
+                    <p className="text-sm font-medium" style={{ color: 'var(--accent-blue-light)' }}>
                       "{draftData.formData.company}"
                     </p>
                   )}
@@ -595,15 +744,22 @@ export default function NewRequestPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={handleDiscardDraft}
-                    className="flex-1 px-4 py-3.5 rounded-xl font-semibold transition-colors border border-slate-600/50 text-slate-300 hover:bg-slate-700/50"
-                    style={{ background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)' }}
+                    className="flex-1 px-4 py-3.5 rounded-xl font-semibold transition-all hover:bg-slate-700/30"
+                    style={{
+                      background: 'var(--surface-secondary)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--tg-theme-subtitle-text-color)'
+                    }}
                   >
                     Начать заново
                   </button>
                   <button
                     onClick={handleRestoreDraft}
-                    className="flex-1 px-4 py-3.5 rounded-xl text-white font-semibold transition-colors border border-blue-500/30"
-                    style={{ background: 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)' }}
+                    className="flex-1 px-4 py-3.5 rounded-xl text-white font-semibold transition-all hover:shadow-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%)',
+                      boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
+                    }}
                   >
                     Продолжить
                   </button>
@@ -616,34 +772,34 @@ export default function NewRequestPage() {
 
       {/* Header */}
       <div className="sticky top-0 z-10 backdrop-blur-xl border-b px-4 py-3" style={{
-        background: 'rgba(26, 29, 38, 0.95)',
-        borderColor: 'rgba(148, 163, 184, 0.15)'
+        background: 'rgba(10, 14, 23, 0.95)',
+        borderColor: 'var(--border-subtle)'
       }}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-100">Новая заявка</h1>
-            <p className="text-xs text-slate-400">{steps[currentStep].title}</p>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--tg-theme-text-color)' }}>Новая заявка</h1>
+            <p className="text-xs" style={{ color: 'var(--tg-theme-hint-color)' }}>{steps[currentStep].title}</p>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{
-            background: 'rgba(100, 116, 139, 0.1)',
-            borderColor: 'rgba(148, 163, 184, 0.2)'
+            background: 'rgba(59, 130, 246, 0.1)',
+            borderColor: 'var(--border-accent)'
           }}>
-            <span className="text-sm font-semibold text-slate-200">{currentStep + 1}</span>
-            <span className="text-sm text-slate-400">/ {steps.length}</span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--accent-blue-light)' }}>{currentStep + 1}</span>
+            <span className="text-sm" style={{ color: 'var(--tg-theme-hint-color)' }}>/ {steps.length}</span>
           </div>
         </div>
         <div className="flex gap-1.5">
           {steps.map((step, i) => (
             <div
               key={i}
-              className={clsx(
-                'flex-1 h-1.5 rounded-full transition-all duration-300',
-                i < currentStep
-                  ? 'bg-slate-500'
+              className="flex-1 h-1.5 rounded-full transition-all duration-300"
+              style={{
+                background: i < currentStep
+                  ? 'var(--accent-blue)'
                   : i === currentStep
-                    ? 'bg-slate-400'
-                    : 'bg-slate-700'
-              )}
+                    ? 'var(--accent-blue-light)'
+                    : 'var(--surface-tertiary)'
+              }}
             />
           ))}
         </div>
@@ -1003,11 +1159,14 @@ export default function NewRequestPage() {
                   </div>
                 )}
                 {formData.services.map((service, i) => (
-                  <div key={i} className="rounded-xl p-4 space-y-3 border border-blue-500/10" style={{ background: 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)' }}>
+                  <div key={i} className="rounded-2xl p-4 space-y-3 border" style={{
+                    background: 'var(--surface-secondary)',
+                    borderColor: 'var(--border-subtle)'
+                  }}>
                     <div className="flex justify-between mb-3">
-                      <span className="text-sm font-medium text-slate-200">Услуга/Товар {i + 1}</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>Услуга/Товар {i + 1}</span>
                       {formData.services.length > 1 && (
-                        <button onClick={() => removeService(i)} className="text-red-500">
+                        <button onClick={() => removeService(i)} style={{ color: 'var(--tg-theme-destructive-text-color)' }}>
                           <X className="w-4 h-4" />
                         </button>
                       )}
@@ -1022,19 +1181,22 @@ export default function NewRequestPage() {
 
                       {/* Subcategory selector */}
                       <div>
-                        <label className="text-xs text-tg-hint mb-1 block">Категория услуги</label>
+                        <label className="text-xs mb-1 block" style={{ color: 'var(--tg-theme-hint-color)' }}>Категория услуги</label>
                         <div className="flex gap-1.5 flex-wrap">
                           {defaultServiceCategories.map(cat => (
                             <button
                               key={cat.id}
                               type="button"
                               onClick={() => updateService(i, 'subcategory', cat.id)}
-                              className={clsx(
-                                'px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
-                                service.subcategory === cat.id
-                                  ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                                  : 'bg-zinc-100 dark:bg-zinc-700 text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-600'
-                              )}
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                              style={{
+                                background: service.subcategory === cat.id
+                                  ? 'var(--accent-blue)'
+                                  : 'var(--surface-tertiary)',
+                                color: service.subcategory === cat.id
+                                  ? 'white'
+                                  : 'var(--tg-theme-text-color)'
+                              }}
                             >
                               {cat.label}
                             </button>
@@ -1164,17 +1326,21 @@ export default function NewRequestPage() {
               <div className="space-y-4">
                 {/* Bind photos to specific service/product */}
                 <div>
-                  <label className="text-sm text-tg-hint mb-2 block">Привязать фото к услуге/товару (опционально)</label>
-                  <div className="flex gap-2 overflow-x-auto scroll-x-container pb-1">
+                  <label className="text-sm mb-2 block" style={{ color: 'var(--tg-theme-hint-color)' }}>Привязать фото к услуге/товару (опционально)</label>
+                  <ScrollContainer>
                     <button
                       type="button"
                       onClick={() => setSelectedServiceIndexForPhoto(null)}
-                      className={clsx(
-                        'px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap',
-                        selectedServiceIndexForPhoto === null
-                          ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                          : 'bg-tg-secondary-bg text-tg-text'
-                      )}
+                      className="px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all"
+                      style={{
+                        background: selectedServiceIndexForPhoto === null
+                          ? 'var(--accent-blue)'
+                          : 'var(--surface-secondary)',
+                        color: selectedServiceIndexForPhoto === null
+                          ? 'white'
+                          : 'var(--tg-theme-text-color)',
+                        border: `1px solid ${selectedServiceIndexForPhoto === null ? 'var(--accent-blue)' : 'var(--border-subtle)'}`
+                      }}
                     >
                       Без привязки
                     </button>
@@ -1183,23 +1349,27 @@ export default function NewRequestPage() {
                         key={i}
                         type="button"
                         onClick={() => setSelectedServiceIndexForPhoto(i)}
-                        className={clsx(
-                          'px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap',
-                          selectedServiceIndexForPhoto === i
-                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                            : 'bg-tg-secondary-bg text-tg-text'
-                        )}
+                        className="px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all"
+                        style={{
+                          background: selectedServiceIndexForPhoto === i
+                            ? 'var(--accent-blue)'
+                            : 'var(--surface-secondary)',
+                          color: selectedServiceIndexForPhoto === i
+                            ? 'white'
+                            : 'var(--tg-theme-text-color)',
+                          border: `1px solid ${selectedServiceIndexForPhoto === i ? 'var(--accent-blue)' : 'var(--border-subtle)'}`
+                        }}
                       >
                         {s.name || `Услуга/Товар ${i + 1}`}
                       </button>
                     ))}
-                  </div>
+                  </ScrollContainer>
                 </div>
 
                 {/* Category selector with improved visibility */}
                 <div>
-                  <label className="text-sm text-tg-hint mb-2 block">Выберите категорию для новых фото:</label>
-                  <div className="flex gap-2 overflow-x-auto pb-2 scroll-x-container">
+                  <label className="text-sm mb-2 block" style={{ color: 'var(--tg-theme-hint-color)' }}>Выберите категорию для новых фото:</label>
+                  <ScrollContainer>
                     {photoCategories.map(cat => (
                       <button
                         key={cat.id}
@@ -1207,70 +1377,38 @@ export default function NewRequestPage() {
                           setSelectedCategory(cat.id)
                           haptic?.selectionChanged()
                         }}
-                        className={clsx(
-                          'px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
-                          selectedCategory === cat.id
-                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg'
-                            : 'bg-tg-secondary-bg text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                        )}
+                        className="px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all"
+                        style={{
+                          background: selectedCategory === cat.id
+                            ? 'var(--accent-blue)'
+                            : 'var(--surface-secondary)',
+                          color: selectedCategory === cat.id
+                            ? 'white'
+                            : 'var(--tg-theme-text-color)',
+                          border: `1px solid ${selectedCategory === cat.id ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
+                          boxShadow: selectedCategory === cat.id ? '0 4px 12px -4px rgba(59, 130, 246, 0.4)' : 'none'
+                        }}
                       >
                         <span>{cat.label}</span>
                         {getPhotosByCategory(cat.id).length > 0 && (
-                          <span className="ml-1.5 px-1.5 py-0.5 bg-white/20 dark:bg-black/20 rounded-md text-xs">
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded-md text-xs" style={{
+                            background: selectedCategory === cat.id ? 'rgba(255,255,255,0.2)' : 'var(--surface-tertiary)'
+                          }}>
                             {getPhotosByCategory(cat.id).length}
                           </span>
                         )}
                       </button>
                     ))}
-                  </div>
+                  </ScrollContainer>
                 </div>
 
                 {/* Photo upload button with label for better mobile support + drag & drop */}
-                <label
-                  className="flex flex-col items-center justify-center w-full min-h-[120px] p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-blue-400 hover:text-blue-400 hover:bg-blue-500/5 transition-all cursor-pointer active:bg-tg-secondary-bg"
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                  }}
-                  onDragEnter={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.currentTarget.classList.add('border-blue-400', 'bg-blue-500/10')
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.currentTarget.classList.remove('border-blue-400', 'bg-blue-500/10')
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.currentTarget.classList.remove('border-blue-400', 'bg-blue-500/10')
-                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                      addPhotosFromFileList(e.dataTransfer.files)
-                      e.dataTransfer.clearData()
-                    }
-                  }}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handlePhotoSelect}
-                    className="sr-only"
-                    aria-label="Загрузить фотографии"
-                  />
-                  <div className="flex flex-col items-center pointer-events-none">
-                    <div className="w-12 h-12 rounded-full bg-tg-secondary-bg flex items-center justify-center mb-3">
-                      <Upload className="w-6 h-6" />
-                    </div>
-                    <span className="text-center font-medium">Добавить фото в «{photoCategories.find(c => c.id === selectedCategory)?.label}»</span>
-                    <span className="text-center text-[11px] text-tg-hint mt-1">
-                      Нажмите, перетащите файлы или вставьте из буфера (Ctrl+V)
-                    </span>
-                  </div>
-                </label>
+                <DropZone
+                  onFilesAdded={addPhotosFromFileList}
+                  categoryLabel={photoCategories.find(c => c.id === selectedCategory)?.label || ''}
+                  fileInputRef={fileInputRef}
+                  onFileSelect={handlePhotoSelect}
+                />
 
                 {/* Photos grid with category labels */}
                 {formData.photos.length > 0 && (
@@ -1338,13 +1476,16 @@ export default function NewRequestPage() {
                   />
                 </div>
 
-                <div className="rounded-xl p-4 border border-blue-500/20" style={{ background: 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)' }}>
-                  <p className="font-medium mb-3 text-slate-100">Итого</p>
+                <div className="rounded-2xl p-4 border" style={{
+                  background: 'var(--surface-secondary)',
+                  borderColor: 'var(--border-accent)'
+                }}>
+                  <p className="font-medium mb-3" style={{ color: 'var(--tg-theme-text-color)' }}>Итого</p>
                   <div className="space-y-2 text-sm">
-                    <p className="flex justify-between"><span className="text-slate-400">Компания:</span> <span className="text-slate-200 font-medium">{formData.company || '—'}</span></p>
-                    <p className="flex justify-between"><span className="text-slate-400">Клиент:</span> <span className="text-slate-200 font-medium">{formData.client_name || '—'}</span></p>
-                    <p className="flex justify-between"><span className="text-slate-400">Услуг/Товаров:</span> <span className="text-slate-200 font-medium">{formData.services.filter(s => s.name.trim()).length}</span></p>
-                    <p className="flex justify-between"><span className="text-slate-400">Фото:</span> <span className="text-slate-200 font-medium">{formData.photos.length}</span></p>
+                    <p className="flex justify-between"><span style={{ color: 'var(--tg-theme-hint-color)' }}>Компания:</span> <span className="font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>{formData.company || '—'}</span></p>
+                    <p className="flex justify-between"><span style={{ color: 'var(--tg-theme-hint-color)' }}>Клиент:</span> <span className="font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>{formData.client_name || '—'}</span></p>
+                    <p className="flex justify-between"><span style={{ color: 'var(--tg-theme-hint-color)' }}>Услуг/Товаров:</span> <span className="font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>{formData.services.filter(s => s.name.trim()).length}</span></p>
+                    <p className="flex justify-between"><span style={{ color: 'var(--tg-theme-hint-color)' }}>Фото:</span> <span className="font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>{formData.photos.length}</span></p>
                   </div>
 
                   {/* Price summary with add-ons */}
@@ -1381,12 +1522,16 @@ export default function NewRequestPage() {
       </div>
 
       {/* Bottom Actions - Full width centered layout */}
-      <div className="sticky bottom-0 backdrop-blur-xl border-t safe-bottom z-20 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.3)]" style={{ background: 'rgba(26, 29, 38, 0.98)', borderColor: 'rgba(148, 163, 184, 0.15)' }}>
+      <div className="sticky bottom-0 backdrop-blur-xl border-t safe-bottom z-20" style={{
+        background: 'rgba(10, 14, 23, 0.98)',
+        borderColor: 'var(--border-subtle)',
+        boxShadow: '0 -4px 30px -4px rgba(0, 0, 0, 0.5)'
+      }}>
         <div className="p-4">
           {/* Validation status message - placed directly above button, centered */}
           {Object.keys(errors).length > 0 && (
             <div className="mb-4">
-              <p className="text-sm text-red-400 text-center flex items-center justify-center gap-2 animate-fade-in-up font-medium">
+              <p className="text-sm text-center flex items-center justify-center gap-2 animate-fade-in-up font-medium" style={{ color: 'var(--tg-theme-destructive-text-color)' }}>
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Заполните поля</span>
               </p>
@@ -1394,7 +1539,7 @@ export default function NewRequestPage() {
           )}
           {!canGoNext() && Object.keys(errors).length === 0 && (
             <div className="mb-4">
-              <p className="text-sm text-slate-400 text-center flex items-center justify-center gap-2 font-medium">
+              <p className="text-sm text-center flex items-center justify-center gap-2 font-medium" style={{ color: 'var(--tg-theme-hint-color)' }}>
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Заполните обязательные поля для продолжения</span>
               </p>
@@ -1402,75 +1547,56 @@ export default function NewRequestPage() {
           )}
 
           {/* Action buttons row */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full">
             {/* Back button - fixed width */}
             {currentStep > 0 && (
-              <Tooltip content="Вернуться назад" position="top">
-                <button
-                  onClick={goBack}
-                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-all active:scale-95 border flex-shrink-0"
-                  style={{
-                    background: 'linear-gradient(145deg, #2a2f3e 0%, #1e232f 100%)',
-                    borderColor: 'rgba(148, 163, 184, 0.25)',
-                    color: '#cbd5e1'
-                  }}
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              </Tooltip>
+              <button
+                onClick={goBack}
+                className="flex items-center justify-center w-14 h-14 rounded-xl transition-all active:scale-95 border flex-shrink-0"
+                style={{
+                  background: 'var(--surface-secondary)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--tg-theme-subtitle-text-color)'
+                }}
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
             )}
 
-            {/* Spacer to push main button to the right */}
-            {currentStep > 0 && <div className="flex-1" />}
-
             {/* Main CTA Button - Takes remaining space */}
-            <div className={currentStep > 0 ? "flex-1" : "w-full"}>
-              <Tooltip
-                content={
-                  createMutation.isPending
-                    ? 'Подождите...'
-                    : !canGoNext()
-                      ? 'Заполните обязательные поля'
-                      : currentStep === steps.length - 1
-                        ? 'Создать заявку'
-                        : 'Перейти к следующему шагу'
-                }
-                position="top"
-              >
-                <button
-                  onClick={goNext}
-                  disabled={createMutation.isPending || !canGoNext()}
-                  className={clsx(
-                    "w-full flex items-center justify-center gap-2.5 h-16 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-xl text-white border-0",
-                    (!canGoNext() || createMutation.isPending) && "opacity-60 cursor-not-allowed"
-                  )}
-                  style={{
-                    width: '100% !important',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-                    boxShadow: '0 6px 32px -4px rgba(59, 130, 246, 0.8), 0 0 0 1px rgba(59, 130, 246, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
-                    fontWeight: '700',
-                    letterSpacing: '0.025em'
-                  }}
-                >
-                  {createMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
-                    </>
-                  ) : currentStep === steps.length - 1 ? (
-                    <>
-                      <Check className="w-5 h-5 flex-shrink-0" />
-                      <span className="truncate">Создать заявку</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="truncate">Далее</span>
-                      <ArrowRight className="w-5 h-5 flex-shrink-0" />
-                    </>
-                  )}
-                </button>
-              </Tooltip>
-            </div>
+            <button
+              onClick={goNext}
+              disabled={createMutation.isPending || !canGoNext()}
+              className={clsx(
+                "flex-1 flex items-center justify-center gap-2.5 h-14 rounded-xl font-bold text-lg transition-all active:scale-[0.98] text-white",
+                (!canGoNext() || createMutation.isPending) && "opacity-50 cursor-not-allowed"
+              )}
+              style={{
+                background: (!canGoNext() || createMutation.isPending)
+                  ? 'var(--surface-tertiary)'
+                  : 'linear-gradient(135deg, var(--accent-blue-light) 0%, var(--accent-blue) 50%, var(--accent-blue-dark) 100%)',
+                boxShadow: (!canGoNext() || createMutation.isPending)
+                  ? 'none'
+                  : '0 8px 32px -4px rgba(59, 130, 246, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.15)'
+              }}
+            >
+              {createMutation.isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
+                </>
+              ) : currentStep === steps.length - 1 ? (
+                <>
+                  <Check className="w-5 h-5 flex-shrink-0" />
+                  <span className="truncate">Создать заявку</span>
+                </>
+              ) : (
+                <>
+                  <span className="truncate">Далее</span>
+                  <ArrowRight className="w-5 h-5 flex-shrink-0" />
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
