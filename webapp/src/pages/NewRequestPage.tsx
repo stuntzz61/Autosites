@@ -1421,53 +1421,51 @@ export default function NewRequestPage() {
           )}
 
           {/* Main CTA Button - Full Width, Bright and Prominent */}
-          <Tooltip
-            content={
-              createMutation.isPending
-                ? 'Подождите...'
-                : !canGoNext()
-                  ? 'Заполните обязательные поля'
-                  : currentStep === steps.length - 1
-                    ? 'Создать заявку'
-                    : 'Перейти к следующему шагу'
-            }
-            position="top"
-          >
-            <button
-              onClick={goNext}
-              disabled={createMutation.isPending || !canGoNext()}
-              className={clsx(
-                "w-full flex items-center justify-center gap-2.5 h-14 rounded-xl font-bold text-base transition-all active:scale-[0.98] shadow-lg",
-                (canGoNext() && !createMutation.isPending)
-                  ? "text-white border-0"
-                  : "text-slate-500 cursor-not-allowed border border-slate-700/50"
-              )}
-              style={canGoNext() && !createMutation.isPending ? {
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-                boxShadow: '0 4px 24px -4px rgba(59, 130, 246, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.15)'
-              } : {
-                background: 'linear-gradient(145deg, #1a1d26 0%, #151820 100%)',
-                boxShadow: 'none'
-              }}
+          <div className="w-full">
+            <Tooltip
+              content={
+                createMutation.isPending
+                  ? 'Подождите...'
+                  : !canGoNext()
+                    ? 'Заполните обязательные поля'
+                    : currentStep === steps.length - 1
+                      ? 'Создать заявку'
+                      : 'Перейти к следующему шагу'
+              }
+              position="top"
             >
-              {createMutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
-                </>
-              ) : currentStep === steps.length - 1 ? (
-                <>
-                  <Check className="w-5 h-5 flex-shrink-0" />
-                  <span className="truncate">Создать заявку</span>
-                </>
-              ) : (
-                <>
-                  <span className="truncate">Далее</span>
-                  <ArrowRight className="w-5 h-5 flex-shrink-0" />
-                </>
-              )}
-            </button>
-          </Tooltip>
+              <button
+                onClick={goNext}
+                disabled={createMutation.isPending || !canGoNext()}
+                className={clsx(
+                  "w-full flex items-center justify-center gap-2.5 h-14 rounded-xl font-bold text-base transition-all active:scale-[0.98] shadow-lg text-white border-0",
+                  (!canGoNext() || createMutation.isPending) && "opacity-60 cursor-not-allowed"
+                )}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+                  boxShadow: '0 4px 24px -4px rgba(59, 130, 246, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.15)'
+                }}
+              >
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="truncate">{uploadingPhotos ? 'Загрузка фото...' : 'Создание...'}</span>
+                  </>
+                ) : currentStep === steps.length - 1 ? (
+                  <>
+                    <Check className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">Создать заявку</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="truncate">Далее</span>
+                    <ArrowRight className="w-5 h-5 flex-shrink-0" />
+                  </>
+                )}
+              </button>
+            </Tooltip>
+          </div>
         </div>
       </div>
     </div>
