@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
 import {
   User, CheckCircle, XCircle, Ban, Unlock, Trash2,
-  ChevronRight, Shield, UserCog, X, FileText, BarChart3
+  ChevronRight, Shield, UserCog, X, FileText, BarChart3, Users2, ArrowRight
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -22,6 +22,8 @@ interface Manager {
   total_requests?: number
   completed_requests?: number
   created_at: string
+  group_id?: string
+  group_name?: string
 }
 
 export default function AdminManagers() {
@@ -30,6 +32,8 @@ export default function AdminManagers() {
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null)
   const [managerToDelete, setManagerToDelete] = useState<Manager | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showMoveGroupModal, setShowMoveGroupModal] = useState(false)
+  const [managerToMove, setManagerToMove] = useState<Manager | null>(null)
 
   const { data: managers, isLoading } = useQuery({
     queryKey: ['admin', 'managers'],
@@ -101,6 +105,26 @@ export default function AdminManagers() {
     },
     onError: () => {
       toast.error('Ошибка')
+    },
+  })
+
+  const { data: groups = [] } = useQuery({
+    queryKey: ['admin', 'groups'],
+    queryFn: () => adminApi.groups.list().then(res => res.data),
+  })
+
+  const moveGroupMutation = useMutation({
+    mutationFn: ({ managerId, groupId }: { managerId: string; groupId: string }) =>
+      adminApi.managers.moveGroup(managerId, groupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
+      toast.success('Менеджер перемещен в группу')
+      setShowMoveGroupModal(false)
+      setManagerToMove(null)
+      setSelectedManager(null)
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Ошибка перемещения')
     },
   })
 
@@ -231,6 +255,11 @@ export default function AdminManagers() {
                       {manager.username && (
                         <p className="text-sm text-tg-hint">@{manager.username}</p>
                       )}
+                      {manager.group_name && (
+                        <p className="text-xs text-tg-accent font-medium">
+                          Группа: {manager.group_name}
+                        </p>
+                      )}
                       <p className="text-xs text-tg-hint">
                         Заявок: {manager.request_count || manager.total_requests || 0}
                       </p>
@@ -355,6 +384,14 @@ export default function AdminManagers() {
                       {new Date(selectedManager.created_at).toLocaleDateString('ru')}
                     </span>
                   </div>
+                  {selectedManager.group_name && (
+                    <div className="flex justify-between">
+                      <span className="text-tg-hint">Группа</span>
+                      <span className="text-tg-text font-medium text-tg-accent">
+                        {selectedManager.group_name}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -396,6 +433,21 @@ export default function AdminManagers() {
                     <div />
                   )}
                 </div>
+
+                {/* Move Group */}
+                {selectedManager.role !== 'admin' && (
+                  <button
+                    onClick={() => {
+                      setManagerToMove(selectedManager)
+                      setSelectedManager(null)
+                      setTimeout(() => setShowMoveGroupModal(true), 150)
+                    }}
+                    className="w-full p-3 rounded-xl bg-blue-500/10 text-blue-500 font-medium flex items-center justify-center gap-2 mb-2"
+                  >
+                    <Users2 className="w-5 h-5" />
+                    Переместить в группу
+                  </button>
+                )}
 
                 {/* Delete - always visible */}
                 <button
@@ -464,6 +516,106 @@ export default function AdminManagers() {
                   >
                     {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
                   </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Move Group Modal */}
+      <AnimatePresence>
+        {showMoveGroupModal && managerToMove && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setShowMoveGroupModal(false)
+                setManagerToMove(null)
+              }}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+            >
+              <div className="flex-shrink-0 pt-3 pb-2">
+                <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto" />
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 pb-2">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-tg-text">Переместить менеджера</h2>
+                  <button
+                    onClick={() => {
+                      setShowMoveGroupModal(false)
+                      setManagerToMove(null)
+                    }}
+                    className="p-2 rounded-full bg-tg-secondary-bg"
+                  >
+                    <X className="w-5 h-5 text-tg-hint" />
+                  </button>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-tg-text font-medium mb-1">
+                    {managerToMove.first_name} {managerToMove.last_name}
+                  </p>
+                  {managerToMove.group_name && (
+                    <p className="text-sm text-tg-hint">
+                      Текущая группа: <span className="text-tg-accent">{managerToMove.group_name}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs text-tg-hint mb-1 block">
+                    Выберите группу <span className="text-red-500">*</span>
+                  </label>
+                  {groups.length === 0 ? (
+                    <p className="text-sm text-orange-500 py-4">
+                      Нет доступных групп. Создайте группу в разделе "Группы"
+                    </p>
+                  ) : (
+                    groups.map((group: any) => (
+                      <button
+                        key={group.id}
+                        onClick={() => {
+                          moveGroupMutation.mutate({
+                            managerId: managerToMove.id,
+                            groupId: group.id,
+                          })
+                        }}
+                        disabled={moveGroupMutation.isPending || group.id === managerToMove.group_id}
+                        className={`w-full p-4 rounded-xl text-left transition-colors ${
+                          group.id === managerToMove.group_id
+                            ? 'bg-tg-accent/20 border-2 border-tg-accent'
+                            : 'bg-tg-secondary-bg hover:bg-tg-secondary-bg/80'
+                        } ${moveGroupMutation.isPending ? 'opacity-50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-tg-text">{group.name}</p>
+                            {group.description && (
+                              <p className="text-sm text-tg-hint mt-1">{group.description}</p>
+                            )}
+                            <p className="text-xs text-tg-hint mt-1">
+                              Участников: {group.member_count || 0}
+                            </p>
+                          </div>
+                          {group.id === managerToMove.group_id ? (
+                            <CheckCircle className="w-5 h-5 text-tg-accent" />
+                          ) : (
+                            <ArrowRight className="w-5 h-5 text-tg-hint" />
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             </motion.div>

@@ -157,6 +157,55 @@ async def make_manager_admin(manager_id: str, user: dict = Depends(get_admin_use
     return {"success": True}
 
 
+@router.post("/managers/{manager_id}/move-group")
+async def move_manager_to_group(
+    manager_id: str,
+    data: MoveManagerRequest,
+    user: dict = Depends(get_admin_user)
+):
+    """Move manager to another group. Only accessible if both manager and group belong to admin."""
+    # Check if manager is accessible
+    if not await db.is_manager_accessible_by_admin(manager_id, str(user['id'])):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете перемещать только своих менеджеров")
+
+    # Check if target group belongs to admin
+    group = await db.get_admin_group(data.group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Группа не найдена")
+
+    if str(group['created_by']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете перемещать только в свои группы")
+
+    # Remove from old groups and add to new group
+    async with await db.get_conn() as conn:
+        async with conn.cursor() as cur:
+            # Remove from all groups created by this admin
+            await cur.execute(
+                """DELETE FROM user_group_membership
+                   WHERE user_id = %s
+                     AND group_id IN (SELECT id FROM admin_groups WHERE created_by = %s)""",
+                (manager_id, str(user['id']))
+            )
+
+            # Add to new group
+            await cur.execute(
+                """INSERT INTO user_group_membership (user_id, group_id, role, added_by)
+                   VALUES (%s, %s, 'member', %s)
+                   ON CONFLICT (user_id, group_id) DO UPDATE SET role = 'member'""",
+                (manager_id, data.group_id, str(user['id']))
+            )
+
+            # Update primary group
+            await cur.execute(
+                "UPDATE users SET admin_group_id = %s WHERE id = %s",
+                (data.group_id, manager_id)
+            )
+
+            await conn.commit()
+
+    return {"success": True, "message": "Менеджер перемещен в группу"}
+
+
 # ==================== Pending Registrations ====================
 
 @router.get("/pending")
@@ -364,6 +413,10 @@ async def add_group_member(
     if str(group['created_by']) != str(user['id']):
         raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете добавлять пользователей только в свои группы")
 
+    # Check if manager is accessible (belongs to admin's groups)
+    if not await db.is_manager_accessible_by_admin(data.user_id, str(user['id'])):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете перемещать только своих менеджеров")
+
     membership = await db.add_user_to_group(
         user_id=data.user_id,
         group_id=group_id,
@@ -395,6 +448,77 @@ async def remove_group_member(
 async def get_my_groups(user: dict = Depends(get_admin_user)):
     """Get groups the current admin belongs to."""
     return await db.get_user_groups(str(user['id']))
+
+
+class UpdateGroupRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+@router.patch("/groups/{group_id}")
+async def update_group(
+    group_id: str,
+    data: UpdateGroupRequest,
+    user: dict = Depends(get_admin_user)
+):
+    """Update an admin group. Only accessible if group was created by admin."""
+    group = await db.get_admin_group(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    if str(group['created_by']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете редактировать только свои группы")
+
+    update_data = data.model_dump(exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Нет данных для обновления")
+
+    async with await db.get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            set_clause = ", ".join(f"{k} = %s" for k in update_data.keys())
+            values = list(update_data.values()) + [group_id]
+
+            await cur.execute(
+                f"UPDATE admin_groups SET {set_clause}, updated_at = NOW() WHERE id = %s RETURNING *",
+                values
+            )
+            updated = await cur.fetchone()
+            await conn.commit()
+
+    return {**updated, "id": str(updated["id"])}
+
+
+@router.delete("/groups/{group_id}")
+async def delete_group(group_id: str, user: dict = Depends(get_admin_user)):
+    """Delete an admin group. Only accessible if group was created by admin."""
+    group = await db.get_admin_group(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    if str(group['created_by']) != str(user['id']):
+        raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете удалять только свои группы")
+
+    # Check if group has members
+    async with await db.get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT COUNT(*) FROM user_group_membership WHERE group_id = %s",
+                (group_id,)
+            )
+            member_count = (await cur.fetchone())[0]
+            if member_count > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Нельзя удалить группу с {member_count} участниками. Сначала переместите или удалите участников."
+                )
+
+    async with await db.get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("DELETE FROM admin_groups WHERE id = %s", (group_id,))
+            await conn.commit()
+
+    return {"success": True}
 
 
 # ==================== Invite Codes ====================

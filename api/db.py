@@ -2277,11 +2277,12 @@ async def list_managers_by_admin(admin_id: str) -> List[Dict]:
     """List managers that belong to groups created by this admin."""
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
-            # Get managers from groups created by this admin
+            # Get managers from groups created by this admin with group info
             await cur.execute(
                 """SELECT DISTINCT u.id, u.tg_id, u.username, u.first_name, u.last_name,
                           u.contact, u.role, u.approval_status, u.is_blocked, u.created_at,
-                          COUNT(r.id) as request_count
+                          COUNT(r.id) as request_count,
+                          ag.id as group_id, ag.name as group_name
                    FROM users u
                    JOIN user_group_membership ugm ON ugm.user_id = u.id
                    JOIN admin_groups ag ON ag.id = ugm.group_id
@@ -2291,7 +2292,7 @@ async def list_managers_by_admin(admin_id: str) -> List[Dict]:
                      AND u.role = 'manager'
                      AND u.approval_status = 'approved'
                      AND ag.is_active = TRUE
-                   GROUP BY u.id
+                   GROUP BY u.id, ag.id, ag.name
                    ORDER BY request_count DESC""",
                 (admin_id,)
             )

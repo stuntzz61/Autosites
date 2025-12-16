@@ -76,6 +76,8 @@ export const adminApi = {
     delete: (id: string, confirmation?: string) =>
       api.delete(`/admin/managers/${id}`, { params: { confirmation } }),
     makeAdmin: (id: string) => api.post(`/admin/managers/${id}/make-admin`),
+    moveGroup: (id: string, groupId: string) =>
+      api.post(`/admin/managers/${id}/move-group`, { group_id: groupId }),
   },
 
   pending: {
@@ -99,11 +101,26 @@ export const adminApi = {
     list: () => api.get('/admin/groups'),
     create: (data: { name: string; description?: string }) => api.post('/admin/groups', data),
     get: (id: string) => api.get(`/admin/groups/${id}`),
+    update: (id: string, data: { name?: string; description?: string; is_active?: boolean }) =>
+      api.patch(`/admin/groups/${id}`, data),
+    delete: (id: string) => api.delete(`/admin/groups/${id}`),
     addMember: (groupId: string, data: { user_id: string; role?: string }) =>
       api.post(`/admin/groups/${groupId}/members`, data),
     removeMember: (groupId: string, userId: string) =>
       api.delete(`/admin/groups/${groupId}/members/${userId}`),
     myGroups: () => api.get('/admin/my-groups'),
+  },
+
+  managers: {
+    list: () => api.get('/admin/managers'),
+    get: (id: string) => api.get(`/admin/managers/${id}`),
+    block: (id: string) => api.post(`/admin/managers/${id}/block`),
+    unblock: (id: string) => api.post(`/admin/managers/${id}/unblock`),
+    delete: (id: string, confirmation?: string) =>
+      api.delete(`/admin/managers/${id}`, { params: { confirmation } }),
+    makeAdmin: (id: string) => api.post(`/admin/managers/${id}/make-admin`),
+    moveGroup: (id: string, groupId: string) =>
+      api.post(`/admin/managers/${id}/move-group`, { group_id: groupId }),
   },
 
   inviteCodes: {
