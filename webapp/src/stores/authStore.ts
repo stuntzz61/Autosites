@@ -12,6 +12,10 @@ interface User {
   approval_status: 'pending' | 'approved' | 'rejected'
   is_blocked: boolean
   created_at: string
+  full_name?: string
+  phone?: string
+  email?: string
+  registration_completed_at?: string | null
   stats?: {
     total_requests: number
     completed_requests: number

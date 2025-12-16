@@ -38,7 +38,8 @@ async def get_user_by_tg_id(tg_id: int) -> Optional[Dict]:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT id, tg_id, username, first_name, last_name, contact, role,
-                          approval_status, created_at, COALESCE(is_blocked, FALSE) as is_blocked
+                          approval_status, created_at, COALESCE(is_blocked, FALSE) as is_blocked,
+                          full_name, phone, email, registration_completed_at
                    FROM users WHERE tg_id = %s""",
                 (tg_id,)
             )
@@ -50,7 +51,8 @@ async def get_user_by_id(user_id: str) -> Optional[Dict]:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """SELECT id, tg_id, username, first_name, last_name, contact, role,
-                          approval_status, created_at, COALESCE(is_blocked, FALSE) as is_blocked
+                          approval_status, created_at, COALESCE(is_blocked, FALSE) as is_blocked,
+                          full_name, phone, email, registration_completed_at
                    FROM users WHERE id = %s""",
                 (user_id,)
             )
@@ -101,14 +103,37 @@ async def list_admins() -> List[Dict]:
             return await cur.fetchall()
 
 
-async def list_pending_registrations() -> List[Dict]:
+async def list_pending_registrations(admin_id: str = None) -> List[Dict]:
+    """List pending registrations. If admin_id is provided, only show users from admin's groups."""
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
-            await cur.execute(
-                """SELECT id, tg_id, username, first_name, last_name, created_at
-                   FROM users WHERE approval_status = 'pending'
-                   ORDER BY created_at DESC"""
-            )
+            if admin_id:
+                # Show only users registered via invite codes from admin's groups or in admin's groups
+                await cur.execute(
+                    """SELECT DISTINCT u.id, u.tg_id, u.username, u.first_name, u.last_name,
+                              u.contact, u.role, u.approval_status, u.created_at
+                       FROM users u
+                       LEFT JOIN invite_codes ic ON ic.id = u.registered_via_code
+                       LEFT JOIN admin_groups ag1 ON ag1.id = ic.group_id
+                       LEFT JOIN user_group_membership ugm ON ugm.user_id = u.id
+                       LEFT JOIN admin_groups ag2 ON ag2.id = ugm.group_id
+                       WHERE u.role = 'manager'
+                         AND u.approval_status = 'pending'
+                         AND (
+                           (ic.id IS NOT NULL AND ag1.created_by = %s)
+                           OR (ugm.id IS NOT NULL AND ag2.created_by = %s)
+                         )
+                       ORDER BY u.created_at DESC""",
+                    (admin_id, admin_id)
+                )
+            else:
+                await cur.execute(
+                    """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name,
+                              u.contact, u.role, u.approval_status, u.created_at
+                       FROM users u
+                       WHERE u.role = 'manager' AND u.approval_status = 'pending'
+                       ORDER BY u.created_at DESC"""
+                )
             return await cur.fetchall()
 
 
@@ -2114,17 +2139,23 @@ async def create_admin_group(name: str, description: str = None, created_by: str
             return await cur.fetchone()
 
 
-async def list_admin_groups(active_only: bool = True) -> List[Dict]:
-    """List all admin groups."""
+async def list_admin_groups(active_only: bool = True, created_by: str = None) -> List[Dict]:
+    """List admin groups. If created_by is provided, only show groups created by that admin."""
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             query = """SELECT ag.*,
                        (SELECT COUNT(*) FROM user_group_membership ugm WHERE ugm.group_id = ag.id) as member_count
                        FROM admin_groups ag"""
+            conditions = []
             if active_only:
-                query += " WHERE ag.is_active = TRUE"
+                conditions.append("ag.is_active = TRUE")
+            if created_by:
+                conditions.append("ag.created_by = %s")
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
             query += " ORDER BY ag.name"
-            await cur.execute(query)
+            params = (created_by,) if created_by else None
+            await cur.execute(query, params if params else None)
             return await cur.fetchall()
 
 
@@ -2204,6 +2235,24 @@ async def get_user_groups(user_id: str) -> List[Dict]:
             return await cur.fetchall()
 
 
+async def is_manager_accessible_by_admin(manager_id: str, admin_id: str) -> bool:
+    """Check if a manager belongs to any group created by the admin."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """SELECT 1
+                   FROM users u
+                   JOIN user_group_membership ugm ON ugm.user_id = u.id
+                   JOIN admin_groups ag ON ag.id = ugm.group_id
+                   WHERE u.id = %s
+                     AND ag.created_by = %s
+                     AND ag.is_active = TRUE
+                   LIMIT 1""",
+                (manager_id, admin_id)
+            )
+            return await cur.fetchone() is not None
+
+
 async def get_group_managers(group_id: str) -> List[Dict]:
     """Get all managers in a specific group."""
     async with await get_conn() as conn:
@@ -2225,33 +2274,28 @@ async def get_group_managers(group_id: str) -> List[Dict]:
 
 
 async def list_managers_by_admin(admin_id: str) -> List[Dict]:
-    """List managers that belong to the same group as the admin."""
+    """List managers that belong to groups created by this admin."""
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
-            # Get admin's groups
+            # Get managers from groups created by this admin
             await cur.execute(
                 """SELECT DISTINCT u.id, u.tg_id, u.username, u.first_name, u.last_name,
                           u.contact, u.role, u.approval_status, u.is_blocked, u.created_at,
                           COUNT(r.id) as request_count
                    FROM users u
                    JOIN user_group_membership ugm ON ugm.user_id = u.id
-                   JOIN user_group_membership admin_ugm ON admin_ugm.group_id = ugm.group_id
+                   JOIN admin_groups ag ON ag.id = ugm.group_id
                    LEFT JOIN projects p ON p.manager_id = u.id
                    LEFT JOIN requests r ON r.project_id = p.id
-                   WHERE admin_ugm.user_id = %s
+                   WHERE ag.created_by = %s
                      AND u.role = 'manager'
                      AND u.approval_status = 'approved'
+                     AND ag.is_active = TRUE
                    GROUP BY u.id
                    ORDER BY request_count DESC""",
                 (admin_id,)
             )
-            result = await cur.fetchall()
-
-            # If no group-based managers found, fall back to all managers
-            if not result:
-                return await list_managers()
-
-            return result
+            return await cur.fetchall()
 
 
 # ==================== Anti-Nuke Protection ====================

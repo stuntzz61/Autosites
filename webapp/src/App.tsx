@@ -111,6 +111,11 @@ function App() {
     )
   }
 
+  // Check if approved manager needs to complete registration
+  if (user && user.approval_status === 'approved' && user.role === 'manager' && !user.registration_completed_at) {
+    return <ManagerRegistrationPage />
+  }
+
   // Check if user is rejected
   if (user && user.approval_status === 'rejected') {
     return (

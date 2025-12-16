@@ -33,6 +33,7 @@ class InviteStatusResponse(BaseModel):
 class RegisterManagerRequest(BaseModel):
     full_name: str
     phone: str
+    email: str
     agree_terms: bool = True
 
     @field_validator('full_name')
@@ -67,6 +68,18 @@ class RegisterManagerRequest(BaseModel):
         if not re.match(r'^\+7\d{10}$', v):
             raise ValueError('Некорректный формат телефона. Используйте: +7 (XXX) XXX-XX-XX')
 
+        return v
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        v = v.strip().lower()
+        if not v:
+            raise ValueError('Email обязателен для заполнения')
+        # Basic email validation
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, v):
+            raise ValueError('Некорректный формат email')
         return v
 
 
@@ -161,16 +174,16 @@ async def create_workspace_for_manager(manager_id: str, full_name: str) -> dict:
             return dict(workspace)
 
 
-async def update_manager_profile(user_id: str, full_name: str, phone: str) -> dict:
+async def update_manager_profile(user_id: str, full_name: str, phone: str, email: str) -> dict:
     """Update manager profile with registration data."""
     async with await db.get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """UPDATE users
-                   SET full_name = %s, phone = %s, registration_completed_at = NOW()
+                   SET full_name = %s, phone = %s, email = %s, registration_completed_at = NOW()
                    WHERE id = %s
                    RETURNING *""",
-                (full_name, phone, user_id)
+                (full_name, phone, email, user_id)
             )
             user = await cur.fetchone()
             await conn.commit()
@@ -328,10 +341,10 @@ async def register_manager(
 
                     await cur.execute(
                         """INSERT INTO users
-                           (tg_id, username, first_name, last_name, full_name, phone,
+                           (tg_id, username, first_name, last_name, full_name, phone, email,
                             role, approval_status, registered_via_code, group_id,
                             registration_completed_at)
-                           VALUES (%s, %s, %s, %s, %s, %s, 'manager', %s, %s, %s, NOW())
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, 'manager', %s, %s, %s, NOW())
                            RETURNING *""",
                         (
                             temp_tg_id,
@@ -340,6 +353,7 @@ async def register_manager(
                             data.full_name.split()[-1] if len(data.full_name.split()) > 1 else '',
                             data.full_name,
                             data.phone,
+                            data.email,
                             'approved' if invite.get('auto_approve') else 'pending',
                             invite['id'],
                             invite.get('group_id')
@@ -352,10 +366,10 @@ async def register_manager(
                     # Update existing user
                     await cur.execute(
                         """UPDATE users
-                           SET full_name = %s, phone = %s, registration_completed_at = NOW()
+                           SET full_name = %s, phone = %s, email = %s, registration_completed_at = NOW()
                            WHERE id = %s
                            RETURNING *""",
-                        (data.full_name, data.phone, user['id'])
+                        (data.full_name, data.phone, data.email, user['id'])
                     )
                     user = await cur.fetchone()
                     await conn.commit()
@@ -380,7 +394,8 @@ async def register_manager(
             manager={
                 "id": user_id,
                 "full_name": user.get('full_name'),
-                "phone": user.get('phone')
+                "phone": user.get('phone'),
+                "email": user.get('email')
             },
             workspace={
                 "id": str(workspace['id']),
@@ -447,10 +462,91 @@ async def get_manager_profile(user: dict = Depends(get_current_user)):
             "id": str(user['id']),
             "full_name": user.get('full_name'),
             "phone": user.get('phone'),
+            "email": user.get('email'),
             "registration_completed": user.get('registration_completed_at') is not None
         },
         "workspace": workspace
     }
+
+
+@router.post("/register", response_model=RegisterManagerResponse)
+async def register_approved_manager(
+    data: RegisterManagerRequest,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Register an approved manager with profile data.
+    This endpoint is for managers who were approved but haven't completed registration yet.
+    """
+    # Check if user is a manager
+    if user.get('role') != 'manager':
+        raise HTTPException(status_code=403, detail="Only managers can register")
+
+    # Check if already registered
+    if user.get('registration_completed_at'):
+        return RegisterManagerResponse(
+            status="ok",
+            manager={
+                "id": str(user['id']),
+                "full_name": user.get('full_name'),
+                "phone": user.get('phone'),
+                "email": user.get('email')
+            },
+            redirect_url="/",
+            message="Вы уже зарегистрированы"
+        )
+
+    # Check if user is approved
+    if user.get('approval_status') != 'approved':
+        raise HTTPException(
+            status_code=400,
+            detail="Ваша заявка еще не одобрена. Дождитесь одобрения администратором."
+        )
+
+    try:
+        user_id = str(user['id'])
+
+        # Update user profile
+        async with await db.get_conn() as conn:
+            async with conn.cursor(row_factory=dict_row) as cur:
+                await cur.execute(
+                    """UPDATE users
+                       SET full_name = %s, phone = %s, email = %s, registration_completed_at = NOW()
+                       WHERE id = %s
+                       RETURNING *""",
+                    (data.full_name, data.phone, data.email, user_id)
+                )
+                updated_user = await cur.fetchone()
+                await conn.commit()
+
+        # Create workspace if not exists
+        workspace = await create_workspace_for_manager(user_id, data.full_name)
+
+        log.info(f"Manager {user_id} completed registration")
+
+        return RegisterManagerResponse(
+            status="ok",
+            manager={
+                "id": user_id,
+                "full_name": updated_user.get('full_name'),
+                "phone": updated_user.get('phone'),
+                "email": updated_user.get('email')
+            },
+            workspace={
+                "id": str(workspace['id']),
+                "name": workspace['name'],
+                "slug": workspace['slug']
+            },
+            redirect_url="/",
+            message="Регистрация успешно завершена"
+        )
+
+    except Exception as e:
+        log.error(f"Registration failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Ошибка при регистрации. Попробуйте ещё раз."
+        )
 
 
 @router.patch("/profile")
@@ -459,7 +555,7 @@ async def update_profile(
     user: dict = Depends(get_current_user)
 ):
     """Update manager profile."""
-    allowed_fields = {'full_name', 'phone'}
+    allowed_fields = {'full_name', 'phone', 'email'}
     update_data = {k: v for k, v in data.items() if k in allowed_fields}
 
     if not update_data:
@@ -480,6 +576,14 @@ async def update_profile(
             raise HTTPException(status_code=400, detail="Некорректный формат телефона")
         update_data['phone'] = phone
 
+    # Validate email if provided
+    if 'email' in update_data:
+        email = update_data['email'].strip().lower()
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            raise HTTPException(status_code=400, detail="Некорректный формат email")
+        update_data['email'] = email
+
     async with await db.get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             set_clause = ", ".join(f"{k} = %s" for k in update_data.keys())
@@ -497,7 +601,8 @@ async def update_profile(
         "manager": {
             "id": str(updated['id']),
             "full_name": updated.get('full_name'),
-            "phone": updated.get('phone')
+            "phone": updated.get('phone'),
+            "email": updated.get('email')
         }
     }
 

@@ -297,8 +297,12 @@ export const managerApi = {
     api.get(`/manager/invite/${token}`),
 
   // Register manager via invite
-  register: (token: string, data: { full_name: string; phone: string; agree_terms?: boolean }) =>
+  registerViaInvite: (token: string, data: { full_name: string; phone: string; email: string; agree_terms?: boolean }) =>
     api.post(`/manager/invite/${token}/register`, data),
+
+  // Register approved manager (in mini app)
+  register: (data: { full_name: string; phone: string; email: string; agree_terms?: boolean }) =>
+    api.post('/manager/register', data),
 
   // Get session for activated invite
   getSession: (token: string) =>
@@ -309,7 +313,7 @@ export const managerApi = {
     api.get('/manager/profile'),
 
   // Update profile
-  updateProfile: (data: { full_name?: string; phone?: string }) =>
+  updateProfile: (data: { full_name?: string; phone?: string; email?: string }) =>
     api.patch('/manager/profile', data),
 }
 

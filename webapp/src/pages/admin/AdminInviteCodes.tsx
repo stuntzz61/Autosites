@@ -107,19 +107,24 @@ export default function AdminInviteCodes() {
   })
 
   const handleCreate = () => {
+    if (!formData.group_id) {
+      toast.error('Выберите группу')
+      return
+    }
+
     const data: {
       name?: string
-      group_id?: string
+      group_id: string
       max_uses?: number
       expires_in_days?: number
       auto_approve?: boolean
       notes?: string
     } = {
+      group_id: formData.group_id,
       auto_approve: formData.auto_approve,
     }
 
     if (formData.name) data.name = formData.name
-    if (formData.group_id) data.group_id = formData.group_id
     if (formData.max_uses) data.max_uses = parseInt(formData.max_uses, 10)
     if (formData.expires_in_days) data.expires_in_days = parseInt(formData.expires_in_days, 10)
     if (formData.notes) data.notes = formData.notes
@@ -340,17 +345,25 @@ export default function AdminInviteCodes() {
 
                   {/* Group */}
                   <div>
-                    <label className="text-xs text-tg-hint mb-1 block">Группа</label>
+                    <label className="text-xs text-tg-hint mb-1 block">
+                      Группа <span className="text-red-500">*</span>
+                    </label>
                     <select
                       value={formData.group_id}
                       onChange={(e) => setFormData(prev => ({ ...prev, group_id: e.target.value }))}
                       className="input"
+                      required
                     >
-                      <option value="">Без группы</option>
+                      <option value="">Выберите группу</option>
                       {groups.map((group: any) => (
                         <option key={group.id} value={group.id}>{group.name}</option>
                       ))}
                     </select>
+                    {groups.length === 0 && (
+                      <p className="text-xs text-orange-500 mt-1">
+                        Сначала создайте группу в разделе "Группы"
+                      </p>
+                    )}
                     <p className="text-xs text-tg-hint/70 mt-1">
                       Менеджер будет автоматически добавлен в эту группу
                     </p>
