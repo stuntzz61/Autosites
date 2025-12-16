@@ -229,7 +229,16 @@ async def get_invite_status(code: str) -> dict:
     # Check if already activated (has associated user with completed registration)
     if invite.get('activated_by'):
         user = await db.get_user_by_id(str(invite['activated_by']))
-        if user and user.get('registration_completed_at'):
+        # If user was deleted, reset activated_by
+        if not user:
+            async with await db.get_conn() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "UPDATE invite_codes SET activated_by = NULL, activated_at = NULL WHERE id = %s",
+                        (invite['id'],)
+                    )
+                    await conn.commit()
+        elif user and user.get('registration_completed_at'):
             workspace = None
             if user.get('workspace_id'):
                 async with await db.get_conn() as conn:
@@ -334,6 +343,24 @@ async def register_manager(
                 user = await cur.fetchone()
 
                 if not user:
+                    # Check if there's a pending user (created via bot but not registered via invite form)
+                    # This handles the case where user was created via bot, then deleted, then tries to register with new invite
+                    # We'll create a new user since the old one was deleted
+
+                    # Also check if invite was previously activated but user was deleted
+                    # Reset activated_by if user doesn't exist
+                    if invite.get('activated_by'):
+                        await cur.execute(
+                            "SELECT id FROM users WHERE id = %s",
+                            (invite['activated_by'],)
+                        )
+                        if not await cur.fetchone():
+                            # User was deleted, reset invite activation
+                            await cur.execute(
+                                "UPDATE invite_codes SET activated_by = NULL, activated_at = NULL WHERE id = %s",
+                                (invite['id'],)
+                            )
+
                     # Create new user without telegram data (will be linked later)
                     # For now, generate a placeholder tg_id
                     import secrets

@@ -232,8 +232,36 @@ async def update_user_role(user_id: str, role: str):
 
 
 async def delete_user(user_id: str):
+    """Delete user and clean up related invite code data."""
     async with await get_conn() as conn:
         async with conn.cursor() as cur:
+            # Get invite codes that were activated by this user
+            await cur.execute(
+                "SELECT id FROM invite_codes WHERE activated_by = %s",
+                (user_id,)
+            )
+            invite_ids = [row[0] for row in await cur.fetchall()]
+
+            # Reset activated_by for invite codes
+            if invite_ids:
+                await cur.execute(
+                    "UPDATE invite_codes SET activated_by = NULL, activated_at = NULL WHERE id = ANY(%s)",
+                    (invite_ids,)
+                )
+
+            # Delete invite code usage records
+            await cur.execute(
+                "DELETE FROM invite_code_usage WHERE user_id = %s",
+                (user_id,)
+            )
+
+            # Delete user group memberships
+            await cur.execute(
+                "DELETE FROM user_group_membership WHERE user_id = %s",
+                (user_id,)
+            )
+
+            # Delete user
             await cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
             await conn.commit()
 
