@@ -23,7 +23,7 @@ const steps = [
   { id: 'services', title: 'Услуга/Товар', icon: Briefcase },
   { id: 'photos', title: 'Фото', icon: Camera },
   { id: 'details', title: 'Детали', icon: Palette },
-]*** End Patch```} />
+]
 
 const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты']
 
