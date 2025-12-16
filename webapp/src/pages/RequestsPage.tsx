@@ -167,33 +167,35 @@ export default function RequestsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 relative z-10"
         >
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold tracking-tight mb-2" style={{ color: 'var(--text-primary)' }}>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
                 Заявки
               </h1>
-              <p className="text-sm" style={{ color: 'var(--text-subtle)' }}>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-subtle)' }}>
                 {requests.length} {requests.length === 1 ? 'заявка' : requests.length < 5 ? 'заявки' : 'заявок'}
               </p>
             </div>
-            <Tooltip content="Создать новую заявку" position="bottom">
-              <motion.button
-                onClick={() => {
-                  haptic?.impactOccurred('medium')
-                  navigate('/requests/new')
-                }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white flex-shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
-                  boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Plus className="w-4 h-4" />
-                Новая
-              </motion.button>
-            </Tooltip>
+            <div className="flex-shrink-0">
+              <Tooltip content="Создать новую заявку" position="bottom">
+                <motion.button
+                  onClick={() => {
+                    haptic?.impactOccurred('medium')
+                    navigate('/requests/new')
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+                    boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Новая
+                </motion.button>
+              </Tooltip>
+            </div>
           </div>
         </motion.div>
 

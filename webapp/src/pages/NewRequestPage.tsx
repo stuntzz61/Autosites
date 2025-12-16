@@ -996,24 +996,35 @@ export default function NewRequestPage() {
                       className="w-full p-4 rounded-2xl transition-all text-left relative overflow-hidden active:scale-[0.99]"
                       style={{
                         background: formData.tariff === 'premium'
-                          ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)'
-                          : 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bg-surface) 100%)',
-                        border: `1px solid ${formData.tariff === 'premium' ? 'rgba(245, 158, 11, 0.5)' : 'rgba(245, 158, 11, 0.25)'}`,
+                          ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0.15) 50%, rgba(245, 158, 11, 0.25) 100%)'
+                          : 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.06) 50%, rgba(245, 158, 11, 0.12) 100%)',
+                        border: `1px solid ${formData.tariff === 'premium' ? 'rgba(245, 158, 11, 0.6)' : 'rgba(245, 158, 11, 0.3)'}`,
                         boxShadow: formData.tariff === 'premium'
-                          ? '0 4px 24px -4px var(--gold-glow), inset 0 1px 0 0 rgba(255, 255, 255, 0.08)'
-                          : '0 2px 12px rgba(0, 0, 0, 0.1)'
+                          ? '0 6px 32px -4px rgba(245, 158, 11, 0.4), 0 0 0 1px rgba(245, 158, 11, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.12)'
+                          : '0 2px 12px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(245, 158, 11, 0.15)'
                       }}
                     >
                       {/* Shine effect - always visible but stronger when selected */}
                       <div
                         className="absolute inset-0 pointer-events-none rounded-2xl"
                         style={{
-                          opacity: formData.tariff === 'premium' ? 0.4 : 0.15,
-                          background: 'linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.2) 50%, transparent 100%)',
+                          opacity: formData.tariff === 'premium' ? 0.5 : 0.2,
+                          background: 'linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.3) 50%, transparent 100%)',
                           backgroundSize: '200% 100%',
                           animation: 'shimmer 3s ease-in-out infinite'
                         }}
                       />
+
+                      {/* Additional glow effect when selected */}
+                      {formData.tariff === 'premium' && (
+                        <div
+                          className="absolute inset-0 pointer-events-none rounded-2xl"
+                          style={{
+                            background: 'radial-gradient(ellipse at center, rgba(245, 158, 11, 0.15) 0%, transparent 70%)',
+                            animation: 'pulse 2s ease-in-out infinite'
+                          }}
+                        />
+                      )}
 
                       <div className="flex items-center gap-3 relative z-10">
                         <div
@@ -1034,7 +1045,14 @@ export default function NewRequestPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
                               className="font-semibold"
-                              style={{ color: formData.tariff === 'premium' ? 'var(--gold-light)' : 'var(--gold-primary)' }}
+                              style={{
+                                color: formData.tariff === 'premium'
+                                  ? '#FCD34D'
+                                  : 'var(--gold-primary)',
+                                textShadow: formData.tariff === 'premium'
+                                  ? '0 0 8px rgba(252, 211, 77, 0.3)'
+                                  : 'none'
+                              }}
                             >
                               Премиум лендинг
                             </span>
@@ -1073,7 +1091,11 @@ export default function NewRequestPage() {
                           </div>
                           <p
                             className="text-xs mt-0.5"
-                            style={{ color: 'var(--text-muted)' }}
+                            style={{
+                              color: formData.tariff === 'premium'
+                                ? 'var(--text-secondary)'
+                                : 'var(--text-muted)'
+                            }}
                           >
                             Профессиональный дизайн и качество
                           </p>
