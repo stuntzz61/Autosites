@@ -1039,9 +1039,36 @@ export default function NewRequestPage() {
                               Премиум лендинг
                             </span>
                             {/* Premium badge with gold gradient - always visible */}
-                            <span className={`badge-premium ml-auto ${formData.tariff !== 'premium' ? 'opacity-70' : ''}`}>
-                              <Crown className="w-3 h-3" />
-                              PREMIUM
+                            <span
+                              className={`inline-flex items-center gap-1.5 ml-auto ${formData.tariff !== 'premium' ? 'opacity-70' : ''}`}
+                              style={{
+                                position: 'relative',
+                                overflow: 'hidden',
+                                padding: '6px 12px',
+                                borderRadius: '9999px',
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                letterSpacing: '0.1em',
+                                textTransform: 'uppercase',
+                                color: '#1A1A1A',
+                                background: 'linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 25%, var(--gold-light) 50%, var(--gold-primary) 75%, var(--gold-light) 100%)',
+                                backgroundSize: '200% 100%',
+                                animation: 'shimmerGold 3s ease-in-out infinite',
+                                boxShadow: '0 2px 12px -2px var(--gold-glow), 0 0 20px -4px rgba(245, 158, 11, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 0 rgba(0, 0, 0, 0.1)',
+                                textShadow: '0 1px 0 rgba(255, 255, 255, 0.3)'
+                              }}
+                            >
+                              <Crown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#1A1A1A' }} />
+                              <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800 }}>PREMIUM</span>
+                              {/* Shine effect */}
+                              <div
+                                className="absolute inset-0 pointer-events-none"
+                                style={{
+                                  background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                                  backgroundSize: '200% 100%',
+                                  animation: 'badgeShine 3s ease-in-out infinite'
+                                }}
+                              />
                             </span>
                           </div>
                           <p

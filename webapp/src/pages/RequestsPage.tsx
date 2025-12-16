@@ -165,34 +165,36 @@ export default function RequestsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-start justify-between mb-6 relative z-10 gap-4"
+          className="mb-6 relative z-10"
         >
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              Заявки
-            </h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-subtle)' }}>
-              {requests.length} {requests.length === 1 ? 'заявка' : requests.length < 5 ? 'заявки' : 'заявок'}
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight mb-2" style={{ color: 'var(--text-primary)' }}>
+                Заявки
+              </h1>
+              <p className="text-sm" style={{ color: 'var(--text-subtle)' }}>
+                {requests.length} {requests.length === 1 ? 'заявка' : requests.length < 5 ? 'заявки' : 'заявок'}
+              </p>
+            </div>
+            <Tooltip content="Создать новую заявку" position="bottom">
+              <motion.button
+                onClick={() => {
+                  haptic?.impactOccurred('medium')
+                  navigate('/requests/new')
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white flex-shrink-0"
+                style={{
+                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+                  boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Plus className="w-4 h-4" />
+                Новая
+              </motion.button>
+            </Tooltip>
           </div>
-          <Tooltip content="Создать новую заявку" position="bottom">
-            <motion.button
-              onClick={() => {
-                haptic?.impactOccurred('medium')
-                navigate('/requests/new')
-              }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white flex-shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
-                boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
-              }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Plus className="w-4 h-4" />
-              Новая
-            </motion.button>
-          </Tooltip>
         </motion.div>
 
         {/* Search */}
@@ -404,9 +406,34 @@ export default function RequestsPage() {
                                 {request.company_name || 'Без названия'}
                               </h3>
                               {isPremium && (
-                                <span className="badge-premium inline-flex items-center gap-1 text-[9px] px-2 py-1">
-                                  <Crown className="w-2.5 h-2.5" />
-                                  PREMIUM
+                                <span
+                                  className="inline-flex items-center gap-1.5 relative overflow-hidden"
+                                  style={{
+                                    padding: '4px 10px',
+                                    borderRadius: '9999px',
+                                    fontSize: '9px',
+                                    fontWeight: 800,
+                                    letterSpacing: '0.08em',
+                                    textTransform: 'uppercase',
+                                    color: '#1A1A1A',
+                                    background: 'linear-gradient(135deg, var(--gold-light) 0%, var(--gold-primary) 25%, var(--gold-light) 50%, var(--gold-primary) 75%, var(--gold-light) 100%)',
+                                    backgroundSize: '200% 100%',
+                                    animation: 'shimmerGold 3s ease-in-out infinite',
+                                    boxShadow: '0 2px 12px -2px var(--gold-glow), 0 0 20px -4px rgba(245, 158, 11, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.4), inset 0 -1px 0 0 rgba(0, 0, 0, 0.1)',
+                                    textShadow: '0 1px 0 rgba(255, 255, 255, 0.3)'
+                                  }}
+                                >
+                                  <Crown className="w-3 h-3 flex-shrink-0" style={{ color: '#1A1A1A' }} />
+                                  <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800 }}>PREMIUM</span>
+                                  {/* Shine effect */}
+                                  <div
+                                    className="absolute inset-0 pointer-events-none"
+                                    style={{
+                                      background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                                      backgroundSize: '200% 100%',
+                                      animation: 'badgeShine 3s ease-in-out infinite'
+                                    }}
+                                  />
                                 </span>
                               )}
                             </div>
