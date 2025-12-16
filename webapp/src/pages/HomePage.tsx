@@ -35,8 +35,8 @@ export default function HomePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <p className="text-zinc-500 text-sm font-medium mb-1">
-            {getGreeting()} 👋
+          <p className="text-zinc-400 text-sm font-medium mb-1">
+            {getGreeting()}
           </p>
           <h1 className="text-3xl font-bold text-white dark:text-zinc-900 mb-2">
             {user?.first_name}
@@ -73,7 +73,7 @@ export default function HomePage() {
             <div className="relative overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 dark:from-white dark:to-zinc-100 rounded-3xl p-6 shadow-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
               {/* Glow effect */}
               <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-500/30 to-purple-500/30 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 rounded-full blur-2xl" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-blue-600/30 via-sky-500/30 to-cyan-400/30 rounded-full blur-3xl" />
 
               <div className="relative flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-white/10 dark:bg-black/5 backdrop-blur-sm flex items-center justify-center border border-white/20 dark:border-black/10">
@@ -115,7 +115,7 @@ export default function HomePage() {
             icon={<CheckCircle className="w-5 h-5" />}
             value={stats?.completed_requests || 0}
             label="Завершено"
-            accent="emerald"
+            accent="blue"
           />
           <StatsCard
             icon={<TrendingUp className="w-5 h-5" />}
@@ -197,18 +197,13 @@ function StatsCard({
   value: number
   label: string
   onClick?: () => void
-  accent?: 'blue' | 'emerald' | 'amber'
+  accent?: 'blue' | 'amber'
 }) {
   const colors = {
     blue: {
       bg: 'bg-blue-50 dark:bg-blue-900/20',
       text: 'text-blue-600 dark:text-blue-400',
       value: 'text-blue-600 dark:text-blue-400',
-    },
-    emerald: {
-      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-      text: 'text-emerald-600 dark:text-emerald-400',
-      value: 'text-emerald-600 dark:text-emerald-400',
     },
     amber: {
       bg: 'bg-amber-50 dark:bg-amber-900/20',

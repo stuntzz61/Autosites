@@ -57,7 +57,7 @@ export default function MainLayout() {
 
       {/* Bottom Navigation - Fixed with proper z-index and safe area */}
       <nav className="bottom-nav">
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="flex items-center justify-around px-2 py-2 w-full">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path ||
               (path !== '/' && location.pathname.startsWith(path))

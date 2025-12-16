@@ -11,15 +11,15 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 const categories = [
-  { id: 'general', label: 'Общий вопрос', icon: '💬' },
-  { id: 'bug', label: 'Ошибка/Баг', icon: '🐛' },
-  { id: 'feature', label: 'Предложение', icon: '💡' },
-  { id: 'complaint', label: 'Жалоба', icon: '😤' },
-  { id: 'question', label: 'Вопрос', icon: '❓' },
+  { id: 'general', label: 'Общий вопрос', icon: '' },
+  { id: 'bug', label: 'Ошибка/Баг', icon: '' },
+  { id: 'feature', label: 'Предложение', icon: '' },
+  { id: 'complaint', label: 'Жалоба', icon: '' },
+  { id: 'question', label: 'Вопрос', icon: '' },
 ]
 
 const priorities = [
-  { id: 'low', label: 'Низкий', color: 'text-green-500' },
+  { id: 'low', label: 'Низкий', color: 'text-sky-400' },
   { id: 'normal', label: 'Обычный', color: 'text-yellow-500' },
   { id: 'high', label: 'Высокий', color: 'text-orange-500' },
   { id: 'urgent', label: 'Срочный', color: 'text-red-500' },

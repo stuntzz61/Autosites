@@ -15,6 +15,7 @@ import { useTelegram } from '@/contexts/TelegramContext'
 import { useAuthStore } from '@/stores/authStore'
 import { requestsApi, servicesApi, sitesApi, revisionsApi } from '@/api/client'
 import DomainModal from '@/components/DomainModal'
+import Tooltip from '@/components/Tooltip'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -448,28 +449,27 @@ export default function RequestDetailPage() {
       {/* Header */}
       <div className="m-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 dark:bg-black/20 flex items-center justify-center text-2xl font-bold">
-              {companyName[0]?.toUpperCase() || '?'}
-            </div>
-            {/* Tariff Badge */}
-            {tariff === 'premium' && (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 dark:text-purple-600 border border-purple-400/30">
-                <span>⭐</span>
-                <span>PREMIUM</span>
-              </div>
-            )}
+          <div className="w-14 h-14 rounded-2xl bg-white/20 dark:bg-black/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+            {companyName[0]?.toUpperCase() || '?'}
           </div>
           <button
             onClick={() => setShowStatusMenu(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-white/20 dark:bg-black/20"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-white/20 dark:bg-black/20 flex-shrink-0"
           >
             {config.icon}
             {config.label}
             <ChevronDown className="w-4 h-4" />
           </button>
         </div>
-        <h1 className="text-2xl font-bold mb-1">{companyName}</h1>
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <h1 className="text-2xl font-bold">{companyName}</h1>
+          {/* Tariff Badge */}
+          {tariff === 'premium' && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gradient-to-r from-purple-500/40 to-blue-500/40 text-sky-100 border border-purple-400/50">
+              PREMIUM
+            </span>
+          )}
+        </div>
         {businessType && <p className="opacity-70 text-sm">{businessType}</p>}
         {resultUrl && (
           <a
@@ -556,14 +556,20 @@ export default function RequestDetailPage() {
                   </button>
                 ))}
               </div>
-              <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" className="hidden" />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="btn btn-primary w-full"
-              >
+              <label className={clsx(
+                "btn btn-primary w-full cursor-pointer",
+                uploadingPhoto && "opacity-50 pointer-events-none"
+              )}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handlePhotoUpload}
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={uploadingPhoto}
+                />
                 {uploadingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Выбрать фото'}
-              </button>
+              </label>
             </motion.div>
           </>
         )}
@@ -596,13 +602,24 @@ export default function RequestDetailPage() {
         )}
 
         {services.length > 0 && (
-          <Section title="Услуги">
+          <Section title="Услуга/Товар">
             <div className="divide-y divide-tg-separator">
               {services.map((service: any, i: number) => (
                 <div key={i} className="p-4">
                   <p className="font-medium">{service.name}</p>
                   {service.summary && <p className="text-sm text-tg-hint mt-1">{service.summary}</p>}
-                  {service.priceFrom && <p className="text-sm text-emerald-600 mt-1">{service.priceFrom}</p>}
+                  {service.priceFrom && <p className="text-sm text-sky-400 mt-1">{service.priceFrom}</p>}
+                  {Array.isArray(service.addons) && service.addons.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-tg-hint font-semibold">Доп. услуги / опции:</p>
+                      {service.addons.map((addon: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between text-xs text-tg-hint">
+                          <span>{addon.name || 'Без названия'}</span>
+                          {addon.price && <span className="text-sky-400 font-medium">{addon.price}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -827,48 +844,51 @@ export default function RequestDetailPage() {
                 <div className="flex gap-2">
                   {/* Sync button - always visible if deploy_id exists */}
                   {clientSite.deploy_id && (
-                    <button
-                      onClick={() => syncStatusMutation.mutate()}
-                      disabled={syncStatusMutation.isPending}
-                      className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 transition-colors disabled:opacity-50"
-                      title="Синхронизировать статус с deploy-node"
-                    >
-                      {syncStatusMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4" />
-                      )}
-                    </button>
+                    <Tooltip content="Синхронизировать статус" position="left">
+                      <button
+                        onClick={() => syncStatusMutation.mutate()}
+                        disabled={syncStatusMutation.isPending}
+                        className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                      >
+                        {syncStatusMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                      </button>
+                    </Tooltip>
                   )}
 
                   {(['none', 'stopped', 'failed', 'error'].includes(clientSite.deploy_status || '') || !clientSite.deploy_status) && clientSite.archive_s3_key && (
-                    <button
-                      onClick={() => deployMutation.mutate()}
-                      disabled={deployMutation.isPending}
-                      className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
-                      title="Запустить деплой"
-                    >
-                      {deployMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Play className="w-4 h-4" />
-                      )}
-                    </button>
+                    <Tooltip content="Запустить деплой сайта" position="left">
+                      <button
+                        onClick={() => deployMutation.mutate()}
+                        disabled={deployMutation.isPending}
+                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {deployMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Play className="w-4 h-4" />
+                        )}
+                      </button>
+                    </Tooltip>
                   )}
 
                   {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running') && (
-                    <button
-                      onClick={() => stopMutation.mutate()}
-                      disabled={stopMutation.isPending}
-                      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                      title="Остановить сайт"
-                    >
-                      {stopMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Square className="w-4 h-4" />
-                      )}
-                    </button>
+                    <Tooltip content="Остановить сайт" position="left">
+                      <button
+                        onClick={() => stopMutation.mutate()}
+                        disabled={stopMutation.isPending}
+                        className="p-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50"
+                      >
+                        {stopMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </button>
+                    </Tooltip>
                   )}
                 </div>
               </div>
@@ -909,13 +929,13 @@ export default function RequestDetailPage() {
                       <p className="text-sm text-tg-hint">{clientSite.domain}</p>
                       {clientSite.ssl_enabled && (
                         <div title="SSL включен">
-                          <Shield className="w-3 h-3 text-green-500" aria-label="SSL включен" />
+                          <Shield className="w-3 h-3 text-sky-400" aria-label="SSL включен" />
                         </div>
                       )}
                       <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        clientSite.domain_status === 'active' ? 'bg-green-100 text-green-700' :
-                        clientSite.domain_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-700'
+                        clientSite.domain_status === 'active' ? 'bg-sky-500/10 text-sky-300' :
+                        clientSite.domain_status === 'pending' ? 'bg-amber-500/10 text-amber-300' :
+                        'bg-slate-700 text-slate-200'
                       }`}>
                         {clientSite.domain_status === 'active' ? 'Активен' :
                          clientSite.domain_status === 'pending' ? 'Настраивается' : 'Неактивен'}
@@ -925,13 +945,14 @@ export default function RequestDetailPage() {
                     <p className="text-sm text-tg-hint">Не привязан</p>
                   )}
                 </div>
-                <button
-                  onClick={() => setShowDomainModal(true)}
-                  className="p-2 bg-purple-500/10 text-purple-500 rounded-lg hover:bg-purple-500/20 transition-colors"
-                  title="Подключить домен через REG.RU"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
+                <Tooltip content="Подключить домен" position="left">
+                  <button
+                    onClick={() => setShowDomainModal(true)}
+                    className="p-2 bg-purple-500/10 text-purple-500 rounded-lg hover:bg-purple-500/20 transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                </Tooltip>
               </div>
 
               {/* Hosting Info */}
@@ -1048,11 +1069,11 @@ export default function RequestDetailPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          revision.status === 'completed' ? 'bg-green-100 text-green-600' :
-                          revision.status === 'processing' ? 'bg-blue-100 text-blue-600' :
-                          revision.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
-                          revision.status === 'failed' ? 'bg-red-100 text-red-600' :
-                          'bg-gray-100 text-gray-600'
+                          revision.status === 'completed' ? 'bg-sky-500/10 text-sky-300' :
+                          revision.status === 'processing' ? 'bg-blue-500/10 text-blue-400' :
+                          revision.status === 'pending' ? 'bg-amber-500/10 text-amber-300' :
+                          revision.status === 'failed' ? 'bg-red-500/10 text-red-400' :
+                          'bg-slate-700 text-slate-200'
                         }`}>
                           {revision.status === 'completed' && <CheckCircle2 className="w-4 h-4" />}
                           {revision.status === 'processing' && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -1304,7 +1325,7 @@ export default function RequestDetailPage() {
                   {/* Info */}
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
                     <p className="text-sm text-blue-600 dark:text-blue-400">
-                      💡 <strong>Совет:</strong> Приложите скриншот и обведите элемент, который нужно изменить — так правки будут обработаны точнее!
+                      <strong>Совет:</strong> Приложите скриншот и обведите элемент, который нужно изменить — так правки будут обработаны точнее!
                     </p>
                   </div>
 
@@ -1472,42 +1493,52 @@ export default function RequestDetailPage() {
         <div className="flex gap-3">
           {/* Edit button - show for editable statuses */}
           {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
-            <button onClick={handleEdit} className="btn btn-secondary">
-              <Edit3 className="w-5 h-5" />
-            </button>
+            <Tooltip content="Редактировать заявку" position="top">
+              <button onClick={handleEdit} className="btn btn-secondary">
+                <Edit3 className="w-5 h-5" />
+              </button>
+            </Tooltip>
           )}
 
           {/* Generate button - show for statuses that can be sent to generation */}
           {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
-            <button onClick={handleGenerate} disabled={generateMutation.isPending} className="btn btn-primary flex-1 min-w-0">
-              {generateMutation.isPending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Send className="w-5 h-5 flex-shrink-0" />
-                  <span className="truncate text-sm">В разработку</span>
-                </>
-              )}
-            </button>
+            <Tooltip content="Отправить заявку в разработку" position="top">
+              <button onClick={handleGenerate} disabled={generateMutation.isPending} className="btn btn-primary flex-1 min-w-0">
+                {generateMutation.isPending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate text-sm">В разработку</span>
+                  </>
+                )}
+              </button>
+            </Tooltip>
           )}
 
           {/* Open result button */}
           {resultUrl && (
-            <a href={resultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex-1">
-              <ExternalLink className="w-5 h-5" /> Открыть
-            </a>
+            <Tooltip content="Открыть готовый сайт" position="top">
+              <a href={resultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex-1">
+                <ExternalLink className="w-5 h-5" /> Открыть
+              </a>
+            </Tooltip>
           )}
 
           {/* Archive button */}
-          <button onClick={handleArchive} className="btn btn-secondary" disabled={archiveMutation.isPending}>
-            {archiveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Archive className="w-5 h-5" />}
-          </button>
+          <Tooltip content="Переместить в архив" position="top">
+            <button onClick={handleArchive} className="btn btn-secondary" disabled={archiveMutation.isPending}>
+              {archiveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Archive className="w-5 h-5" />}
+            </button>
+          </Tooltip>
 
           {/* Delete button (available for all users on drafts/errors, or always for admins) */}
           {(isAdmin || ['draft', 'error', 'generated_error'].includes(status)) && (
-            <button onClick={handleDelete} disabled={deleteMutation.isPending} className="btn btn-destructive">
-              {deleteMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
-            </button>
+            <Tooltip content="Удалить заявку" position="top">
+              <button onClick={handleDelete} disabled={deleteMutation.isPending} className="btn btn-destructive">
+                {deleteMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -1651,6 +1682,7 @@ interface ServiceItem {
   name: string
   summary: string
   priceFrom: string
+  addons?: { name: string; price: string }[]
 }
 
 function EditRequestForm({
@@ -1886,13 +1918,13 @@ function EditRequestForm({
         </div>
       )}
 
-      {/* Services Tab */}
+      {/* Services / Products Tab */}
       {activeTab === 'services' && (
         <div className="space-y-4">
           {formData.services.map((service: ServiceItem, i: number) => (
             <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-tg-text">Услуга {i + 1}</span>
+                <span className="text-sm font-medium text-tg-text">Услуга/Товар {i + 1}</span>
                 {formData.services.length > 1 && (
                   <button
                     onClick={() => removeService(i)}
@@ -1921,6 +1953,100 @@ function EditRequestForm({
                   placeholder="от 10 000 ₽"
                   className="input"
                 />
+                {/* Add-ons editor */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-tg-hint font-semibold">Доп. услуги / опции</span>
+                  </div>
+                  {service.addons?.length ? (
+                    <div className="space-y-2">
+                      {service.addons.map((addon, addonIndex) => (
+                        <div key={addonIndex} className="flex items-center gap-2">
+                          <input
+                            value={addon.name}
+                            onChange={(e) => {
+                              const name = e.target.value
+                              setFormData(prev => ({
+                                ...prev,
+                                services: prev.services.map((s, si) => {
+                                  if (si !== i) return s
+                                  const addons = s.addons ?? []
+                                  const updated = addons.map((a, ai) =>
+                                    ai === addonIndex ? { ...a, name } : a
+                                  )
+                                  return { ...s, addons: updated }
+                                })
+                              }))
+                            }}
+                            placeholder="Название доп. услуги"
+                            className="input flex-1"
+                          />
+                          <input
+                            value={addon.price}
+                            onChange={(e) => {
+                              const price = e.target.value
+                              setFormData(prev => ({
+                                ...prev,
+                                services: prev.services.map((s, si) => {
+                                  if (si !== i) return s
+                                  const addons = s.addons ?? []
+                                  const updated = addons.map((a, ai) =>
+                                    ai === addonIndex ? { ...a, price } : a
+                                  )
+                                  return { ...s, addons: updated }
+                                })
+                              }))
+                            }}
+                            placeholder="+100"
+                            className="input w-28"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                services: prev.services.map((s, si) => {
+                                  if (si !== i) return s
+                                  const addons = s.addons ?? []
+                                  return {
+                                    ...s,
+                                    addons: addons.filter((_, ai) => ai !== addonIndex)
+                                  }
+                                })
+                              }))
+                            }}
+                            className="p-2 text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-tg-hint">
+                      Здесь можно добавить доп. услуги/опции, которые увеличивают стоимость.
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        services: prev.services.map((s, si) => {
+                          if (si !== i) return s
+                          const addons = s.addons ?? []
+                          return {
+                            ...s,
+                            addons: [...addons, { name: '', price: '' }]
+                          }
+                        })
+                      }))
+                    }}
+                    className="text-xs text-tg-link mt-1"
+                  >
+                    + Добавить доп. услугу
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -1960,49 +2086,48 @@ function EditRequestForm({
           {/* Tariff Selection */}
           <div>
             <label className="text-xs text-tg-hint mb-2 block">Тариф генерации</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
+              {/* Standard tariff */}
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, tariff: 'standard' }))}
                 className={clsx(
-                  'p-4 rounded-2xl border-2 transition-all text-left',
+                  'w-full p-4 rounded-2xl border-2 transition-all text-left',
                   formData.tariff === 'standard'
                     ? 'border-blue-500 bg-blue-500/10'
                     : 'border-zinc-200 dark:border-zinc-700'
                 )}
               >
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-3">
                   <div className={clsx(
-                    'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0',
                     formData.tariff === 'standard' ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'
                   )}>
                     {formData.tariff === 'standard' && (
-                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <span className="font-semibold text-tg-text">Стандарт</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-tg-text">Стандарт</span>
+                      <span className="text-sm font-bold text-green-500 flex-shrink-0">Бесплатно</span>
+                    </div>
+                    <p className="text-xs text-tg-hint mt-0.5">Базовая генерация лендинга</p>
+                  </div>
                 </div>
-                <p className="text-xs text-tg-hint">Базовая генерация лендинга</p>
-                <p className="text-sm font-bold text-green-500 mt-2">Бесплатно</p>
               </button>
 
+              {/* Premium tariff */}
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, tariff: 'premium' }))}
                 className={clsx(
-                  'p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden',
+                  'w-full p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden',
                   formData.tariff === 'premium'
                     ? 'border-purple-500 bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-blue-500/10 shadow-lg shadow-purple-500/20'
                     : 'border-zinc-200 dark:border-zinc-700 hover:border-purple-300 dark:hover:border-purple-600'
                 )}
               >
-                {/* Premium badge */}
-                <div className="absolute top-2 right-2">
-                  <span className="text-xs bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2.5 py-1 rounded-full font-bold shadow-md">
-                    ⭐ PRO
-                  </span>
-                </div>
-
                 {/* Shine effect when selected */}
                 {formData.tariff === 'premium' && (
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
@@ -2011,32 +2136,33 @@ function EditRequestForm({
                   }} />
                 )}
 
-                <div className="flex items-center gap-2 mb-2 relative z-10">
+                <div className="flex items-center gap-3 relative z-10">
                   <div className={clsx(
-                    'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all',
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
                     formData.tariff === 'premium'
-                      ? 'border-purple-500 bg-purple-500/20 shadow-md'
+                      ? 'border-purple-500 bg-purple-500/20'
                       : 'border-zinc-300 dark:border-zinc-600'
                   )}>
                     {formData.tariff === 'premium' && (
-                      <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 shadow-sm" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500" />
                     )}
                   </div>
-                  <span className={clsx(
-                    'font-bold text-base',
-                    formData.tariff === 'premium'
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
-                      : 'text-tg-text'
-                  )}>
-                    Премиум лендинг
-                  </span>
-                </div>
-                <p className="text-xs text-tg-hint mb-2">Профессиональный дизайн и качество</p>
-                <div className="flex items-center gap-1 mt-2">
-                  <span className="text-sm font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                    Платно
-                  </span>
-                  <span className="text-xs text-tg-hint">• Премиум качество</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={clsx(
+                        'font-semibold',
+                        formData.tariff === 'premium'
+                          ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
+                          : 'text-tg-text'
+                      )}>
+                        Премиум
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white flex-shrink-0">
+                        ⭐ PRO
+                      </span>
+                    </div>
+                    <p className="text-xs text-tg-hint mt-0.5">Профессиональный дизайн и качество</p>
+                  </div>
                 </div>
               </button>
             </div>

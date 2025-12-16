@@ -216,7 +216,7 @@ async def sync_deploy_statuses():
                         'rollback': 'failed',
                     }
                     deploy_status = status_map.get(deploy_status_raw, deploy_status_raw)
-                    
+
                     if deploy_status_raw and deploy_status_raw not in status_map:
                         log.warning(f"Unknown status from deploy-node: {deploy_status_raw}")
 
@@ -241,9 +241,9 @@ async def sync_deploy_statuses():
                             if preview_slug:
                                 # Try to get preview_url from deployment, or construct it
                                 preview_url = deployment.get('preview_url')
-                                if not preview_url:
+                                if not preview_url and settings.PREVIEW_DOMAIN:
                                     # Construct from preview_slug
-                                    preview_url = f"https://{preview_slug}.autosites.ru"
+                                    preview_url = f"https://{preview_slug}.{settings.PREVIEW_DOMAIN}"
                                 update_data['preview_url'] = preview_url
 
                         # Update server info

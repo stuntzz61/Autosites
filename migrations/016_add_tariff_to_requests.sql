@@ -15,3 +15,5 @@ COMMENT ON COLUMN requests.tariff IS 'Generation tariff: standard (free) or prem
 UPDATE requests SET tariff = 'standard' WHERE tariff IS NULL;
 
 
+
+

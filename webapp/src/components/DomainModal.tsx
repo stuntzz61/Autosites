@@ -244,20 +244,20 @@ export default function DomainModal({
           )}
 
           {status === 'available' && (
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+            <div className="p-4 bg-blue-950/40 border border-blue-700/60 rounded-xl">
               <div className="flex items-center gap-3 mb-3">
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
+                <CheckCircle2 className="w-6 h-6 text-sky-400" />
                 <div>
-                  <p className="font-medium text-green-700 dark:text-green-400">
-                    Домен свободен!
+                  <p className="font-medium text-sky-100">
+                    Домен свободен
                   </p>
-                  <p className="text-sm text-green-600 dark:text-green-500">
+                  <p className="text-sm text-sky-200/80">
                     {domainInput}
                   </p>
                 </div>
               </div>
               {price && (
-                <div className="flex items-center justify-between p-3 bg-white dark:bg-black/20 rounded-lg mb-3">
+                <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg mb-3">
                   <span className="text-sm text-tg-hint">Стоимость регистрации:</span>
                   <span className="font-bold text-lg text-tg-text">
                     {price.amount} {price.currency === 'RUB' ? '₽' : price.currency}/год
@@ -267,7 +267,7 @@ export default function DomainModal({
               <button
                 onClick={handleRegister}
                 disabled={registerMutation.isPending}
-                className="w-full btn btn-primary bg-green-500 hover:bg-green-600"
+                className="w-full btn btn-primary"
               >
                 {registerMutation.isPending ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -303,7 +303,7 @@ export default function DomainModal({
                         className="w-full flex items-center justify-between p-3 bg-tg-secondary-bg hover:bg-tg-hint/10 rounded-xl transition-colors text-left"
                       >
                         <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          <CheckCircle2 className="w-4 h-4 text-sky-400" />
                           <span className="font-medium text-tg-text">{alt.domain}</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -446,7 +446,7 @@ export default function DomainModal({
           {status === 'idle' && (
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
               <p className="text-sm text-blue-600 dark:text-blue-400">
-                💡 <strong>Как это работает:</strong>
+                <strong>Как это работает:</strong>
                 <br />1. Введите желаемый домен и нажмите «Проверить»
                 <br />2. Если домен свободен — оформите регистрацию
                 <br />3. Если занят — выберите из предложенных вариантов

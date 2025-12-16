@@ -12,11 +12,11 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 const categories = [
-  { id: 'general', label: 'Общий', icon: '💬' },
-  { id: 'bug', label: 'Баг', icon: '🐛' },
-  { id: 'feature', label: 'Идея', icon: '💡' },
-  { id: 'complaint', label: 'Жалоба', icon: '😤' },
-  { id: 'question', label: 'Вопрос', icon: '❓' },
+  { id: 'general', label: 'Общий', icon: '' },
+  { id: 'bug', label: 'Баг', icon: '' },
+  { id: 'feature', label: 'Идея', icon: '' },
+  { id: 'complaint', label: 'Жалоба', icon: '' },
+  { id: 'question', label: 'Вопрос', icon: '' },
 ]
 
 const priorities = [

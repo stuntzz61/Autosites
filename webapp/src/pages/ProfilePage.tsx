@@ -11,12 +11,12 @@ import { profileApi } from '@/api/client'
 import toast from 'react-hot-toast'
 
 const ranks = [
-  { min: 0, name: 'Новичок', emoji: '🌱', color: 'from-zinc-400 to-zinc-500' },
-  { min: 5, name: 'Начинающий', emoji: '🌿', color: 'from-emerald-400 to-emerald-600' },
-  { min: 15, name: 'Опытный', emoji: '🌲', color: 'from-green-400 to-green-600' },
-  { min: 30, name: 'Профессионал', emoji: '⭐', color: 'from-amber-400 to-orange-500' },
-  { min: 50, name: 'Эксперт', emoji: '💎', color: 'from-cyan-400 to-blue-500' },
-  { min: 100, name: 'Мастер', emoji: '👑', color: 'from-amber-300 to-amber-500' },
+  { min: 0, name: 'Новичок', emoji: '', color: 'from-slate-600 to-slate-400' },
+  { min: 5, name: 'Начинающий', emoji: '', color: 'from-sky-500 to-blue-500' },
+  { min: 15, name: 'Опытный', emoji: '', color: 'from-indigo-500 to-sky-500' },
+  { min: 30, name: 'Профессионал', emoji: '', color: 'from-amber-400 to-orange-500' },
+  { min: 50, name: 'Эксперт', emoji: '', color: 'from-cyan-400 to-blue-500' },
+  { min: 100, name: 'Мастер', emoji: '', color: 'from-amber-300 to-amber-500' },
 ]
 
 export default function ProfilePage() {
@@ -106,7 +106,9 @@ export default function ProfilePage() {
           <div className={`bg-gradient-to-r ${rank.color} p-4`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{rank.emoji}</span>
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <span className="text-xs font-semibold tracking-wide uppercase text-white/80">LVL</span>
+                </div>
                 <div>
                   <p className="text-white/70 text-xs font-medium">Ваш ранг</p>
                   <p className="text-white text-lg font-bold">{rank.name}</p>
@@ -118,12 +120,12 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-          
+
           {nextRank && (
             <div className="p-4 bg-white dark:bg-zinc-900">
               <div className="flex justify-between text-xs font-medium mb-2">
                 <span className="text-tg-hint">{rank.name}</span>
-                <span className="text-tg-text">{nextRank.name} {nextRank.emoji}</span>
+                <span className="text-tg-text">{nextRank.name}</span>
               </div>
               <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                 <motion.div
@@ -147,27 +149,27 @@ export default function ProfilePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <StatCard 
-            icon={<FileText className="w-4 h-4" />} 
-            value={stats?.total_requests || 0} 
-            label="Всего" 
+          <StatCard
+            icon={<FileText className="w-4 h-4" />}
+            value={stats?.total_requests || 0}
+            label="Всего"
           />
-          <StatCard 
-            icon={<CheckCircle className="w-4 h-4" />} 
-            value={stats?.completed_requests || 0} 
-            label="Готово" 
-            accent="emerald" 
+          <StatCard
+            icon={<CheckCircle className="w-4 h-4" />}
+            value={stats?.completed_requests || 0}
+            label="Готово"
+            accent="emerald"
           />
-          <StatCard 
-            icon={<Clock className="w-4 h-4" />} 
-            value={stats?.pending_requests || 0} 
-            label="В работе" 
-            accent="blue" 
+          <StatCard
+            icon={<Clock className="w-4 h-4" />}
+            value={stats?.pending_requests || 0}
+            label="В работе"
+            accent="blue"
           />
-          <StatCard 
-            icon={<TrendingUp className="w-4 h-4" />} 
-            value={stats?.this_week || 0} 
-            label="За неделю" 
+          <StatCard
+            icon={<TrendingUp className="w-4 h-4" />}
+            value={stats?.this_week || 0}
+            label="За неделю"
             accent="amber"
           />
         </motion.div>
@@ -217,7 +219,7 @@ export default function ProfilePage() {
                 <p className="font-mono text-sm text-tg-text">{user?.tg_id}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 p-4">
               <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                 {user?.role === 'admin' ? (
@@ -233,9 +235,9 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
-            
-            <button 
-              onClick={handleLogout} 
+
+            <button
+              onClick={handleLogout}
               className="flex items-center gap-3 p-4 w-full text-left"
             >
               <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
@@ -267,21 +269,21 @@ export default function ProfilePage() {
             >
               <div className="p-5">
                 <div className="w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-5" />
-                
+
                 <div className="flex justify-between items-center mb-5">
                   <h3 className="text-lg font-bold text-tg-text">Контакт для связи</h3>
-                  <button 
-                    onClick={() => setEditContact(false)} 
+                  <button
+                    onClick={() => setEditContact(false)}
                     className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center"
                   >
                     <X className="w-4 h-4 text-tg-hint" />
                   </button>
                 </div>
-                
+
                 <p className="text-sm text-tg-hint mb-4">
                   Укажите телефон или email для связи
                 </p>
-                
+
                 <input
                   type="text"
                   value={contactValue}
@@ -290,7 +292,7 @@ export default function ProfilePage() {
                   className="input mb-4"
                   autoFocus
                 />
-                
+
                 <button
                   onClick={() => updateMutation.mutate({ contact: contactValue })}
                   disabled={updateMutation.isPending}

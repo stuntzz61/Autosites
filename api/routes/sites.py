@@ -47,6 +47,20 @@ def serialize_site(site: dict) -> dict:
     return {key: serialize_value(value) for key, value in site.items()}
 
 
+def get_preview_url(preview_slug: Optional[str]) -> Optional[str]:
+    """Generate preview URL from slug using PREVIEW_DOMAIN from settings."""
+    if not preview_slug or not settings.PREVIEW_DOMAIN:
+        return None
+    return f"https://{preview_slug}.{settings.PREVIEW_DOMAIN}"
+
+
+def is_preview_domain(domain: Optional[str]) -> bool:
+    """Check if domain is a preview domain."""
+    if not domain or not settings.PREVIEW_DOMAIN:
+        return False
+    return f".{settings.PREVIEW_DOMAIN}" in domain
+
+
 # ==================== DTOs ====================
 
 class CreateSiteRequest(BaseModel):
@@ -185,7 +199,7 @@ async def trigger_deploy(site: dict, archive_path: str = None, user_id: str = No
             files = {'archive': (filename, archive_content, 'application/zip')}
             data = {
                 'auto_select': 'true',
-                'enable_ssl': 'true',  # SSL включён по умолчанию для preview доменов (*.autosites.ru)
+                'enable_ssl': 'true',  # SSL включён по умолчанию для preview доменов
                 'request_id': str(site.get('request_id')) if site.get('request_id') else '',  # Convert UUID to string
                 'client_site_id': str(site['id']),  # Pass client_site_id for callback
             }
@@ -1195,8 +1209,8 @@ async def admin_import_from_deploy_node(
                         'deploy_id': deploy_id,
                         'deploy_status': status_map.get(deploy.get('status', ''), deploy.get('status', 'none')),
                         'preview_slug': preview_slug,
-                        'preview_url': f"https://{preview_slug}.autosites.ru" if preview_slug else None,
-                        'domain': domain if domain and '.autosites.ru' not in domain else None,
+                        'preview_url': get_preview_url(preview_slug),
+                        'domain': domain if domain and not is_preview_domain(domain) else None,
                         'server_id': deploy.get('server_id'),
                         'server_name': deploy.get('server_name'),
                         'server_host': deploy.get('server_host'),
@@ -1316,8 +1330,7 @@ async def sync_site_status(
                 preview_url = deployment.get('preview_url')
                 if not preview_url:
                     preview_slug = deployment.get('preview_slug', '')
-                    if preview_slug:
-                        preview_url = f"https://{preview_slug}.autosites.ru"
+                    preview_url = get_preview_url(preview_slug)
                 if preview_url:
                     update_data['preview_url'] = preview_url
 

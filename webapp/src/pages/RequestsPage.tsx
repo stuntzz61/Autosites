@@ -9,14 +9,15 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { requestsApi } from '@/api/client'
+import Tooltip from '@/components/Tooltip'
 import clsx from 'clsx'
 
 const statusFilters = [
   { value: 'all', label: 'Все', count: null },
-  { value: 'draft', label: 'Черновик', emoji: '📝' },
-  { value: 'ready_to_generate', label: 'Готов', emoji: '✅' },
-  { value: 'generating', label: 'Генерация', emoji: '⚡' },
-  { value: 'success', label: 'Готово', emoji: '🎉' },
+  { value: 'draft', label: 'Черновик' },
+  { value: 'ready_to_generate', label: 'Готов' },
+  { value: 'generating', label: 'Генерация' },
+  { value: 'success', label: 'Готово' },
 ]
 
 const statusConfig: Record<string, {
@@ -162,18 +163,20 @@ export default function RequestsPage() {
               {requests.length} {requests.length === 1 ? 'заявка' : requests.length < 5 ? 'заявки' : 'заявок'}
             </p>
           </div>
-          <motion.button
-            onClick={() => {
-              haptic?.impactOccurred('medium')
-              navigate('/requests/new')
-            }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white font-semibold text-sm shadow-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Plus className="w-4 h-4" />
-            Новая
-          </motion.button>
+          <Tooltip content="Создать новую заявку" position="bottom">
+            <motion.button
+              onClick={() => {
+                haptic?.impactOccurred('medium')
+                navigate('/requests/new')
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white font-semibold text-sm shadow-lg"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus className="w-4 h-4" />
+              Новая
+            </motion.button>
+          </Tooltip>
         </motion.div>
 
         {/* Search in header */}
@@ -215,7 +218,7 @@ export default function RequestsPage() {
       {/* Filters - Floating */}
       <div className="px-4 -mt-8 mb-4 relative z-10">
         <motion.div
-          className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+          className="flex gap-2 overflow-x-auto pb-2 scroll-x-container"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -238,7 +241,6 @@ export default function RequestsPage() {
               transition={{ delay: 0.1 + idx * 0.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              {filter.emoji && <span>{filter.emoji}</span>}
               {filter.label}
             </motion.button>
           ))}

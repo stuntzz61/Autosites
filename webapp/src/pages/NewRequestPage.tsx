@@ -10,6 +10,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { requestsApi } from '@/api/client'
+import Tooltip from '@/components/Tooltip'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -19,18 +20,18 @@ const steps = [
   { id: 'company', title: 'Компания', icon: Building2 },
   { id: 'client', title: 'Клиент', icon: User },
   { id: 'contacts', title: 'Контакты', icon: Phone },
-  { id: 'services', title: 'Услуги', icon: Briefcase },
+  { id: 'services', title: 'Услуга/Товар', icon: Briefcase },
   { id: 'photos', title: 'Фото', icon: Camera },
   { id: 'details', title: 'Детали', icon: Palette },
-]
+]*** End Patch```} />
 
 const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты']
 
 const photoCategories = [
-  { id: 'hero', label: 'Баннер', icon: '🏠' },
-  { id: 'services', label: 'Услуги', icon: '🛠' },
-  { id: 'portfolio', label: 'Портфолио', icon: '📁' },
-  { id: 'gallery', label: 'Галерея', icon: '🖼' },
+  { id: 'hero', label: 'Баннер', icon: '' },
+  { id: 'services', label: 'Услуги', icon: '' },
+  { id: 'portfolio', label: 'Портфолио', icon: '' },
+  { id: 'gallery', label: 'Галерея', icon: '' },
 ]
 
 interface ServiceItem {
@@ -39,6 +40,12 @@ interface ServiceItem {
   priceFrom: string
   subcategory?: string
   photo?: string
+  addons?: AddonItem[]
+}
+
+interface AddonItem {
+  name: string
+  price: string
 }
 
 const defaultServiceCategories = [
@@ -53,6 +60,7 @@ interface PhotoItem {
   file: File
   preview: string
   category: string
+  serviceIndex?: number
 }
 
 interface DraftFormData {
@@ -110,7 +118,7 @@ const getInitialFormData = (): FormData => ({
   email: '',
   address: '',
   work_hours: '',
-  services: [{ name: '', summary: '', priceFrom: '' }],
+  services: [{ name: '', summary: '', priceFrom: '', addons: [] }],
   photos: [],
   color_palette: 'На усмотрение дизайнера',
   tariff: 'standard',
@@ -202,6 +210,7 @@ export default function NewRequestPage() {
 
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState('hero')
+  const [selectedServiceIndexForPhoto, setSelectedServiceIndexForPhoto] = useState<number | null>(null)
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [formData, setFormData] = useState<FormData>(getInitialFormData())
@@ -288,6 +297,13 @@ export default function NewRequestPage() {
             const photoFormData = new FormData()
             photoFormData.append('file', photo.file)
             photoFormData.append('category', photo.category)
+            if (typeof photo.serviceIndex === 'number') {
+              const service = formData.services[photo.serviceIndex]
+              if (service?.name) {
+                photoFormData.append('service_name', service.name)
+                photoFormData.append('service_index', String(photo.serviceIndex))
+              }
+            }
             await requestsApi.uploadPhotos(requestId, photoFormData)
           } catch (e) {
             console.error('Failed to upload photo:', e)
@@ -322,7 +338,7 @@ export default function NewRequestPage() {
   const addService = () => {
     setFormData(prev => ({
       ...prev,
-      services: [...prev.services, { name: '', summary: '', priceFrom: '' }],
+      services: [...prev.services, { name: '', summary: '', priceFrom: '', addons: [] }],
     }))
   }
 
@@ -350,26 +366,33 @@ export default function NewRequestPage() {
     const files = e.target.files
     if (!files) return
 
+    addPhotosFromFileList(files)
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const addPhotosFromFileList = (files: FileList | File[]) => {
     const newPhotos: PhotoItem[] = []
     for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      if (file.type.startsWith('image/')) {
+      const file = (files as FileList)[i] ?? (files as File[])[i]
+      if (file && file.type.startsWith('image/')) {
         newPhotos.push({
           file,
           preview: URL.createObjectURL(file),
           category: selectedCategory,
+          serviceIndex: selectedServiceIndexForPhoto ?? undefined,
         })
       }
     }
+
+    if (newPhotos.length === 0) return
 
     setFormData(prev => ({
       ...prev,
       photos: [...prev.photos, ...newPhotos],
     }))
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
   }
 
   const removePhoto = (index: number) => {
@@ -414,14 +437,35 @@ export default function NewRequestPage() {
     updateField('phone', formatPhone(e.target.value))
   }
 
-  const validatePhone = (phone: string) => {
-    if (!phone) return true
-    return phone.replace(/\D/g, '').length === 11
+  const validatePhone = (phone: string): { valid: boolean; error?: string } => {
+    if (!phone || !phone.trim()) {
+      return { valid: false, error: 'Поле обязательно для заполнения' }
+    }
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 11) {
+      return { valid: false, error: `Введите полный номер (ещё ${11 - digits.length} цифр)` }
+    }
+    if (digits.length > 11) {
+      return { valid: false, error: 'Слишком много цифр в номере' }
+    }
+    if (!digits.startsWith('7') && !digits.startsWith('8')) {
+      return { valid: false, error: 'Номер должен начинаться с +7 или 8' }
+    }
+    return { valid: true }
   }
 
-  const validateEmail = (email: string) => {
-    if (!email) return true
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const validateEmail = (email: string): { valid: boolean; error?: string } => {
+    if (!email || !email.trim()) {
+      return { valid: false, error: 'Поле обязательно для заполнения' }
+    }
+    if (!email.includes('@')) {
+      return { valid: false, error: 'Email должен содержать @' }
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/
+    if (!emailRegex.test(email)) {
+      return { valid: false, error: 'Введите корректный email (например: example@mail.ru)' }
+    }
+    return { valid: true }
   }
 
   const validateStep = (): boolean => {
@@ -429,19 +473,22 @@ export default function NewRequestPage() {
 
     switch (currentStep) {
       case 0:
-        if (!formData.company.trim()) newErrors.company = 'Введите название'
-        if (!formData.business_type.trim()) newErrors.business_type = 'Укажите сферу'
+        if (!formData.company.trim()) newErrors.company = 'Поле обязательно для заполнения'
+        if (!formData.business_type.trim()) newErrors.business_type = 'Поле обязательно для заполнения'
         break
       case 1:
-        if (!formData.client_name.trim()) newErrors.client_name = 'Введите имя'
+        if (!formData.client_name.trim()) newErrors.client_name = 'Поле обязательно для заполнения'
         break
-      case 2:
-        if (!formData.phone.trim()) newErrors.phone = 'Введите телефон'
-        else if (!validatePhone(formData.phone)) newErrors.phone = 'Неверный формат'
-        if (formData.email && !validateEmail(formData.email)) newErrors.email = 'Неверный email'
+      case 2: {
+        const phoneValidation = validatePhone(formData.phone)
+        if (!phoneValidation.valid) newErrors.phone = phoneValidation.error
+
+        const emailValidation = validateEmail(formData.email)
+        if (!emailValidation.valid) newErrors.email = emailValidation.error
         break
+      }
       case 3:
-        if (!formData.services.some(s => s.name.trim())) newErrors.services = 'Добавьте услугу'
+        if (!formData.services.some(s => s.name.trim())) newErrors.services = 'Добавьте хотя бы одну услугу'
         break
     }
 
@@ -453,7 +500,7 @@ export default function NewRequestPage() {
     switch (currentStep) {
       case 0: return formData.company.trim() && formData.business_type.trim()
       case 1: return formData.client_name.trim()
-      case 2: return validatePhone(formData.phone) && validateEmail(formData.email) && formData.phone.trim()
+      case 2: return validatePhone(formData.phone).valid && validateEmail(formData.email).valid
       case 3: return formData.services.some(s => s.name.trim())
       default: return true
     }
@@ -483,6 +530,32 @@ export default function NewRequestPage() {
   const getPhotosByCategory = (category: string) => {
     return formData.photos.filter(p => p.category === category)
   }
+
+  // Paste handler for images (Ctrl+V)
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      if (currentStep !== 4) return
+      const items = event.clipboardData?.items
+      if (!items) return
+
+      const files: File[] = []
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) files.push(file)
+        }
+      }
+
+      if (files.length > 0) {
+        event.preventDefault()
+        addPhotosFromFileList(files)
+      }
+    }
+
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [currentStep, selectedCategory, selectedServiceIndexForPhoto])
 
   return (
     <div className="min-h-screen flex flex-col bg-tg-bg">
@@ -557,8 +630,11 @@ export default function NewRequestPage() {
               key={i}
               className={clsx(
                 'flex-1 h-1.5 rounded-full transition-all duration-300',
-                i < currentStep ? 'bg-emerald-500' :
-                i === currentStep ? 'bg-zinc-900 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-700'
+                i < currentStep
+                  ? 'bg-blue-500'
+                  : i === currentStep
+                    ? 'bg-sky-400'
+                    : 'bg-zinc-700'
               )}
             />
           ))}
@@ -580,49 +656,48 @@ export default function NewRequestPage() {
                 {/* Tariff Selection */}
                 <div>
                   <label className="text-sm text-tg-hint mb-2 block">Тариф генерации</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
+                    {/* Standard tariff */}
                     <button
                       type="button"
                       onClick={() => updateField('tariff', 'standard')}
                       className={clsx(
-                        'p-4 rounded-2xl border-2 transition-all text-left',
+                        'w-full p-4 rounded-2xl border-2 transition-all text-left',
                         formData.tariff === 'standard'
                           ? 'border-blue-500 bg-blue-500/10'
                           : 'border-zinc-200 dark:border-zinc-700'
                       )}
                     >
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-3">
                         <div className={clsx(
-                          'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0',
                           formData.tariff === 'standard' ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'
                         )}>
                           {formData.tariff === 'standard' && (
-                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                           )}
                         </div>
-                        <span className="font-semibold text-tg-text">Стандарт</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-tg-text">Стандарт</span>
+                    <span className="text-sm font-bold text-sky-400 flex-shrink-0">Бесплатно</span>
+                          </div>
+                          <p className="text-xs text-tg-hint mt-0.5">Базовая генерация лендинга</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-tg-hint">Базовая генерация лендинга</p>
-                      <p className="text-sm font-bold text-green-500 mt-2">Бесплатно</p>
                     </button>
 
+                    {/* Premium tariff */}
                     <button
                       type="button"
                       onClick={() => updateField('tariff', 'premium')}
                       className={clsx(
-                        'p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden',
+                        'w-full p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden',
                         formData.tariff === 'premium'
                           ? 'border-purple-500 bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-blue-500/10 shadow-lg shadow-purple-500/20'
                           : 'border-zinc-200 dark:border-zinc-700 hover:border-purple-300 dark:hover:border-purple-600'
                       )}
                     >
-                      {/* Premium badge */}
-                      <div className="absolute top-2 right-2">
-                        <span className="text-xs bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2.5 py-1 rounded-full font-bold shadow-md">
-                          ⭐ PRO
-                        </span>
-                      </div>
-
                       {/* Shine effect when selected */}
                       {formData.tariff === 'premium' && (
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
@@ -631,32 +706,33 @@ export default function NewRequestPage() {
                         }} />
                       )}
 
-                      <div className="flex items-center gap-2 mb-2 relative z-10">
+                      <div className="flex items-center gap-3 relative z-10">
                         <div className={clsx(
-                          'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all',
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
                           formData.tariff === 'premium'
-                            ? 'border-purple-500 bg-purple-500/20 shadow-md'
+                            ? 'border-purple-500 bg-purple-500/20'
                             : 'border-zinc-300 dark:border-zinc-600'
                         )}>
                           {formData.tariff === 'premium' && (
-                            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 shadow-sm" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500" />
                           )}
                         </div>
-                        <span className={clsx(
-                          'font-bold text-base',
-                          formData.tariff === 'premium'
-                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
-                            : 'text-tg-text'
-                        )}>
-                          Премиум лендинг
-                        </span>
-                      </div>
-                      <p className="text-xs text-tg-hint mb-2">Профессиональный дизайн и качество</p>
-                      <div className="flex items-center gap-1 mt-2">
-                        <span className="text-sm font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                          Платно
-                        </span>
-                        <span className="text-xs text-tg-hint">• Премиум качество</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={clsx(
+                              'font-semibold',
+                              formData.tariff === 'premium'
+                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent'
+                                : 'text-tg-text'
+                            )}>
+                              Премиум
+                            </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-purple-500 to-blue-500 text-white flex-shrink-0">
+                              PRO
+                            </span>
+                          </div>
+                          <p className="text-xs text-tg-hint mt-0.5">Профессиональный дизайн и качество</p>
+                        </div>
                       </div>
                     </button>
                   </div>
@@ -669,9 +745,14 @@ export default function NewRequestPage() {
                     value={formData.company}
                     onChange={(e) => updateField('company', e.target.value)}
                     placeholder="Webly"
-                    className={clsx('input', errors.company && 'border-red-500')}
+                    className={clsx('input', errors.company && 'input-error field-error-shake')}
                   />
-                  {errors.company && <p className="text-xs text-red-500 mt-1">{errors.company}</p>}
+                  {errors.company && (
+                    <p className="error-message">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.company}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm text-tg-hint mb-1 block">Сфера деятельности *</label>
@@ -680,9 +761,14 @@ export default function NewRequestPage() {
                     value={formData.business_type}
                     onChange={(e) => updateField('business_type', e.target.value)}
                     placeholder="Создание сайтов"
-                    className={clsx('input', errors.business_type && 'border-red-500')}
+                    className={clsx('input', errors.business_type && 'input-error field-error-shake')}
                   />
-                  {errors.business_type && <p className="text-xs text-red-500 mt-1">{errors.business_type}</p>}
+                  {errors.business_type && (
+                    <p className="error-message">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.business_type}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm text-tg-hint mb-1 block">Описание</label>
@@ -705,10 +791,15 @@ export default function NewRequestPage() {
                     value={formData.client_name}
                     onChange={(e) => updateField('client_name', e.target.value)}
                     placeholder="Иванов Иван"
-                    className={clsx('input', errors.client_name && 'border-red-500')}
+                    className={clsx('input', errors.client_name && 'input-error field-error-shake')}
                     autoFocus
                   />
-                  {errors.client_name && <p className="text-xs text-red-500 mt-1">{errors.client_name}</p>}
+                  {errors.client_name && (
+                    <p className="error-message">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.client_name}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm text-tg-hint mb-1 block">Компания</label>
@@ -744,21 +835,32 @@ export default function NewRequestPage() {
                     onChange={handlePhoneChange}
                     placeholder="+7 (XXX) XXX-XX-XX"
                     maxLength={18}
-                    className={clsx('input', errors.phone && 'border-red-500')}
+                    className={clsx('input', errors.phone && 'input-error field-error-shake')}
                     autoFocus
                   />
-                  {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+                  {errors.phone && (
+                    <p className="error-message">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.phone}
+                    </p>
+                  )}
+                  <p className="text-xs text-tg-hint/70 mt-1">Формат: +7 (XXX) XXX-XX-XX</p>
                 </div>
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">Email</label>
+                  <label className="text-sm text-tg-hint mb-1 block">Email *</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => updateField('email', e.target.value)}
                     placeholder="info@company.ru"
-                    className={clsx('input', errors.email && 'border-red-500')}
+                    className={clsx('input', errors.email && 'input-error field-error-shake')}
                   />
-                  {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="error-message">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.email}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm text-tg-hint mb-1 block">Адрес</label>
@@ -792,9 +894,9 @@ export default function NewRequestPage() {
                   </p>
                 )}
                 {formData.services.map((service, i) => (
-                  <div key={i} className="bg-tg-secondary-bg rounded-xl p-4">
+                  <div key={i} className="bg-tg-secondary-bg rounded-xl p-4 space-y-3">
                     <div className="flex justify-between mb-3">
-                      <span className="text-sm font-medium">Услуга {i + 1}</span>
+                      <span className="text-sm font-medium">Услуга/Товар {i + 1}</span>
                       {formData.services.length > 1 && (
                         <button onClick={() => removeService(i)} className="text-red-500">
                           <X className="w-4 h-4" />
@@ -840,9 +942,106 @@ export default function NewRequestPage() {
                       <input
                         value={service.priceFrom}
                         onChange={(e) => updateService(i, 'priceFrom', e.target.value)}
-                        placeholder="Цена (например: от 10 000 ₽)"
+                        placeholder="Цена (например: 1500 или от 10 000 ₽)"
                         className="input"
                       />
+                      {/* Add-ons for this service */}
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-tg-hint">Доп. услуги / опции</span>
+                        </div>
+                        {service.addons?.length ? (
+                          <div className="space-y-2">
+                            {service.addons.map((addon, addonIndex) => (
+                              <div
+                                key={addonIndex}
+                                className="flex items-center gap-2"
+                              >
+                                <input
+                                  value={addon.name}
+                                  onChange={(e) => {
+                                    const name = e.target.value
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      services: prev.services.map((s, si) => {
+                                        if (si !== i) return s
+                                        const addons = s.addons ?? []
+                                        const updated = addons.map((a, ai) =>
+                                          ai === addonIndex ? { ...a, name } : a
+                                        )
+                                        return { ...s, addons: updated }
+                                      })
+                                    }))
+                                  }}
+                                  placeholder="Название доп. услуги"
+                                  className="input flex-1"
+                                />
+                                <input
+                                  value={addon.price}
+                                  onChange={(e) => {
+                                    const price = e.target.value
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      services: prev.services.map((s, si) => {
+                                        if (si !== i) return s
+                                        const addons = s.addons ?? []
+                                        const updated = addons.map((a, ai) =>
+                                          ai === addonIndex ? { ...a, price } : a
+                                        )
+                                        return { ...s, addons: updated }
+                                      })
+                                    }))
+                                  }}
+                                  placeholder="+100"
+                                  className="input w-28"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      services: prev.services.map((s, si) => {
+                                        if (si !== i) return s
+                                        const addons = s.addons ?? []
+                                        return {
+                                          ...s,
+                                          addons: addons.filter((_, ai) => ai !== addonIndex)
+                                        }
+                                      })
+                                    }))
+                                  }}
+                                  className="p-2 text-red-500"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-tg-hint">
+                            Добавьте доп. услуги/опции, которые увеличивают стоимость основной услуги.
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              services: prev.services.map((s, si) => {
+                                if (si !== i) return s
+                                const addons = s.addons ?? []
+                                return {
+                                  ...s,
+                                  addons: [...addons, { name: '', price: '' }]
+                                }
+                              })
+                            }))
+                          }}
+                          className="text-xs text-tg-link mt-1"
+                        >
+                          + Добавить доп. услугу
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -854,10 +1053,44 @@ export default function NewRequestPage() {
 
             {currentStep === 4 && (
               <div className="space-y-4">
+                {/* Bind photos to specific service/product */}
+                <div>
+                  <label className="text-sm text-tg-hint mb-2 block">Привязать фото к услуге/товару (опционально)</label>
+                  <div className="flex gap-2 overflow-x-auto scroll-x-container pb-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedServiceIndexForPhoto(null)}
+                      className={clsx(
+                        'px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap',
+                        selectedServiceIndexForPhoto === null
+                          ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                          : 'bg-tg-secondary-bg text-tg-text'
+                      )}
+                    >
+                      Без привязки
+                    </button>
+                    {formData.services.map((s, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setSelectedServiceIndexForPhoto(i)}
+                        className={clsx(
+                          'px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap',
+                          selectedServiceIndexForPhoto === i
+                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                            : 'bg-tg-secondary-bg text-tg-text'
+                        )}
+                      >
+                        {s.name || `Услуга/Товар ${i + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Category selector with improved visibility */}
                 <div>
                   <label className="text-sm text-tg-hint mb-2 block">Выберите категорию для новых фото:</label>
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  <div className="flex gap-2 overflow-x-auto pb-2 scroll-x-container">
                     {photoCategories.map(cat => (
                       <button
                         key={cat.id}
@@ -872,7 +1105,7 @@ export default function NewRequestPage() {
                             : 'bg-tg-secondary-bg text-tg-text hover:bg-zinc-200 dark:hover:bg-zinc-700'
                         )}
                       >
-                        <span className="mr-1">{cat.icon}</span> {cat.label}
+                        <span>{cat.label}</span>
                         {getPhotosByCategory(cat.id).length > 0 && (
                           <span className="ml-1.5 px-1.5 py-0.5 bg-white/20 dark:bg-black/20 rounded-md text-xs">
                             {getPhotosByCategory(cat.id).length}
@@ -883,21 +1116,36 @@ export default function NewRequestPage() {
                   </div>
                 </div>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePhotoSelect}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-tg-accent hover:text-tg-accent transition-colors"
+                {/* Photo upload button with label for better mobile support + drag & drop */}
+                <label
+                  className="block w-full p-4 border-2 border-dashed border-tg-separator rounded-xl text-tg-hint hover:border-tg-accent hover:text-tg-accent transition-colors cursor-pointer active:bg-tg-secondary-bg"
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      addPhotosFromFileList(e.dataTransfer.files)
+                      e.dataTransfer.clearData()
+                    }
+                  }}
                 >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoSelect}
+                    className="sr-only"
+                  />
                   <Upload className="w-5 h-5 mx-auto mb-2" />
-                  Добавить фото в "{photoCategories.find(c => c.id === selectedCategory)?.label}"
-                </button>
+                  <span className="block text-center">Добавить фото в «{photoCategories.find(c => c.id === selectedCategory)?.label}»</span>
+                  <span className="block text-center text-[11px] text-tg-hint mt-1">
+                    Можно перетащить файлы сюда или вставить из буфера (Ctrl+V)
+                  </span>
+                </label>
 
                 {/* Photos grid with category labels */}
                 {formData.photos.length > 0 && (
@@ -970,9 +1218,36 @@ export default function NewRequestPage() {
                   <div className="space-y-1 text-sm text-tg-hint">
                     <p>Компания: <span className="text-tg-text">{formData.company || '—'}</span></p>
                     <p>Клиент: <span className="text-tg-text">{formData.client_name || '—'}</span></p>
-                    <p>Услуг: <span className="text-tg-text">{formData.services.filter(s => s.name.trim()).length}</span></p>
+                    <p>Услуга/Товаров: <span className="text-tg-text">{formData.services.filter(s => s.name.trim()).length}</span></p>
                     <p>Фото: <span className="text-tg-text">{formData.photos.length}</span></p>
                   </div>
+
+                  {/* Price summary with add-ons */}
+                  {(() => {
+                    const parsePrice = (value: string): number => {
+                      if (!value) return 0
+                      const cleaned = value.replace(/[^\d]/g, '')
+                      const num = parseInt(cleaned || '0', 10)
+                      return isNaN(num) ? 0 : num
+                    }
+
+                    const servicesTotal = formData.services.reduce((sum, s) => {
+                      const base = parsePrice(s.priceFrom)
+                      const addonsTotal = (s.addons ?? []).reduce((aSum, a) => aSum + parsePrice(a.price), 0)
+                      return sum + base + addonsTotal
+                    }, 0)
+
+                    if (!servicesTotal) return null
+
+                    return (
+                      <div className="mt-3 pt-3 border-t border-tg-separator space-y-1 text-sm">
+                        <p className="flex items-center justify-between">
+                          <span className="text-tg-hint">Оценочная стоимость с допами</span>
+                          <span className="font-semibold text-tg-text">{servicesTotal.toLocaleString('ru-RU')} ₽</span>
+                        </p>
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             )}
@@ -982,32 +1257,55 @@ export default function NewRequestPage() {
 
       {/* Bottom Actions */}
       <div className="sticky bottom-0 bg-tg-bg border-t border-tg-separator p-4 safe-bottom">
+        {/* Show validation hint when button is disabled */}
+        {!canGoNext() && Object.keys(errors).length === 0 && (
+          <p className="text-xs text-amber-500 text-center mb-2 flex items-center justify-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            Заполните обязательные поля для продолжения
+          </p>
+        )}
         <div className="flex gap-3">
           {currentStep > 0 && (
-            <button onClick={goBack} className="btn btn-secondary">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+            <Tooltip content="Вернуться назад" position="top">
+              <button onClick={goBack} className="btn btn-secondary">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Tooltip>
           )}
-          <button
-            onClick={goNext}
-            disabled={!canGoNext() || createMutation.isPending}
-            className="btn btn-primary flex-1"
+          <Tooltip
+            content={
+              createMutation.isPending
+                ? 'Подождите...'
+                : currentStep === steps.length - 1
+                  ? 'Создать заявку'
+                  : 'Перейти к следующему шагу'
+            }
+            position="top"
           >
-            {createMutation.isPending ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                {uploadingPhotos ? 'Загрузка...' : 'Создание...'}
-              </>
-            ) : currentStep === steps.length - 1 ? (
-              <>
-                <Check className="w-5 h-5" /> Создать
-              </>
-            ) : (
-              <>
-                Далее <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
+            <button
+              onClick={goNext}
+              disabled={createMutation.isPending}
+              className={clsx(
+                "btn btn-primary flex-1",
+                !canGoNext() && !createMutation.isPending && "opacity-50"
+              )}
+            >
+              {createMutation.isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {uploadingPhotos ? 'Загрузка...' : 'Создание...'}
+                </>
+              ) : currentStep === steps.length - 1 ? (
+                <>
+                  <Check className="w-5 h-5" /> Создать
+                </>
+              ) : (
+                <>
+                  Далее <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>

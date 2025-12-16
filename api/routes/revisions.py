@@ -174,8 +174,8 @@ async def stop_site_preview(site: dict) -> bool:
                 log.warning(f"Failed to stop by deploy_id {deploy_id}: {response.status_code}")
 
             # Fallback to domain
-            if preview_slug:
-                domain = f"{preview_slug}.autosites.ru"
+            if preview_slug and settings.PREVIEW_DOMAIN:
+                domain = f"{preview_slug}.{settings.PREVIEW_DOMAIN}"
                 response = await client.post(
                     f"{settings.DEPLOY_NODE_URL}/api/sites/{domain}/stop"
                 )
@@ -213,8 +213,8 @@ async def start_site_preview(site: dict) -> bool:
                     return True
 
             # Fallback to domain
-            if preview_slug:
-                domain = f"{preview_slug}.autosites.ru"
+            if preview_slug and settings.PREVIEW_DOMAIN:
+                domain = f"{preview_slug}.{settings.PREVIEW_DOMAIN}"
                 response = await client.post(
                     f"{settings.DEPLOY_NODE_URL}/api/sites/{domain}/start"
                 )

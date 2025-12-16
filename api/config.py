@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     DEPLOY_NODE_URL: str = ""  # e.g. https://deploy.autosites.ru
     AUTO_DEPLOY_ENABLED: bool = True  # Auto-deploy after generation (default: enabled)
 
+    # Preview Domain для автоматических поддоменов
+    PREVIEW_DOMAIN: str = ""  # e.g. autosites.ru или wenlix.ru
+
     # Callback secret for secure webhooks
     DEPLOY_CALLBACK_SECRET: str = ""
 
