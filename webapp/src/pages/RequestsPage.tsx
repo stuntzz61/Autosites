@@ -165,9 +165,9 @@ export default function RequestsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6 relative z-10"
+          className="flex items-start justify-between mb-6 relative z-10 gap-4"
         >
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
               Заявки
             </h1>
@@ -181,7 +181,7 @@ export default function RequestsPage() {
                 haptic?.impactOccurred('medium')
                 navigate('/requests/new')
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white ml-4"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white flex-shrink-0"
               style={{
                 background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
                 boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
@@ -233,12 +233,14 @@ export default function RequestsPage() {
       </div>
 
       {/* Filters - Horizontal Scroll */}
-      <div className="px-4 mb-4 relative z-10 -mx-4">
+      <div className="mb-4 relative z-10">
         <motion.div
           className="flex gap-2 px-4 pb-2 overflow-x-auto scrollbar-hide"
           style={{
             scrollSnapType: 'x proximity',
-            WebkitOverflowScrolling: 'touch'
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
           }}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

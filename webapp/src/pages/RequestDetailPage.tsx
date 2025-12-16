@@ -122,6 +122,12 @@ export default function RequestDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   // const revisionScreenshotRef = useRef<HTMLInputElement>(null) // Unused for now
 
+  // Drag and drop state
+  const [isDragging, setIsDragging] = useState(false)
+  const [pendingDragFiles, setPendingDragFiles] = useState<File[]>([])
+  const [showCategorySelectModal, setShowCategorySelectModal] = useState(false)
+  const dragCounter = useRef(0)
+
   // Check if user is admin
   const isAdmin = user?.role === 'admin'
 
@@ -412,6 +418,72 @@ export default function RequestDetailPage() {
     }
   }
 
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current === 0) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    dragCounter.current = 0
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const filesArray = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+      if (filesArray.length > 0) {
+        setPendingDragFiles(filesArray)
+        setShowCategorySelectModal(true)
+        haptic?.impactOccurred('light')
+      }
+    }
+    e.dataTransfer.clearData()
+  }
+
+  // Upload photos with selected category
+  const uploadPhotosWithCategory = async (category: string) => {
+    if (!id || pendingDragFiles.length === 0) return
+
+    setUploadingPhoto(true)
+    try {
+      for (const file of pendingDragFiles) {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('category', category)
+        await requestsApi.uploadPhotos(id, formData)
+      }
+      queryClient.invalidateQueries({ queryKey: ['request', id] })
+      toast.success(`Добавлено ${pendingDragFiles.length} фото в категорию "${photoCategories.find(c => c.id === category)?.label}"`)
+      haptic?.notificationOccurred('success')
+      setPendingDragFiles([])
+      setShowCategorySelectModal(false)
+    } catch {
+      toast.error('Ошибка загрузки')
+      haptic?.notificationOccurred('error')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="p-4 space-y-4">
@@ -663,6 +735,92 @@ export default function RequestDetailPage() {
         )}
       </AnimatePresence>
 
+      {/* Category Selection Modal for Drag & Drop */}
+      <AnimatePresence>
+        {showCategorySelectModal && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-[10002]"
+              style={{ background: 'rgba(0, 0, 0, 0.7)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setPendingDragFiles([])
+                setShowCategorySelectModal(false)
+              }}
+            />
+            <motion.div
+              className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-[10003] safe-bottom"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderBottom: 'none'
+              }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+            >
+              <div className="p-5">
+                <div
+                  className="w-10 h-1 rounded-full mx-auto mb-5"
+                  style={{ background: 'var(--bg-tertiary)' }}
+                />
+
+                <div className="text-center mb-5">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+                      boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
+                    }}
+                  >
+                    <Camera className="w-7 h-7 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                    Выберите категорию
+                  </h3>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Добавление {pendingDragFiles.length} {pendingDragFiles.length === 1 ? 'фото' : 'фото'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {photoCategories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => uploadPhotosWithCategory(cat.id)}
+                      disabled={uploadingPhoto}
+                      className="p-4 rounded-xl text-left transition-all active:scale-[0.98] hover:scale-[1.01] disabled:opacity-50"
+                      style={{
+                        background: 'var(--bg-surface)',
+                        border: '1px solid var(--border-default)'
+                      }}
+                    >
+                      <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                        {cat.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setPendingDragFiles([])
+                    setShowCategorySelectModal(false)
+                  }}
+                  disabled={uploadingPhoto}
+                  className="btn btn-secondary w-full"
+                >
+                  Отмена
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Content */}
       <div className="px-4 space-y-4">
         {clientName && (
@@ -780,23 +938,81 @@ export default function RequestDetailPage() {
 
         <Section title={`Фото (${images.length})`}>
           <div className="p-4 space-y-4">
-            {/* Upload button */}
-            <button
-              onClick={() => setShowPhotoUpload(true)}
-              className="flex flex-col items-center justify-center w-full min-h-[100px] p-4 border-2 border-dashed rounded-xl text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-all border"
+            {/* Upload area with drag and drop */}
+            <div
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              className={clsx(
+                "flex flex-col items-center justify-center w-full min-h-[140px] p-6 border-2 border-dashed rounded-2xl transition-all cursor-pointer",
+                isDragging ? "scale-[1.01]" : "hover:border-blue-400/50"
+              )}
               style={{
-                borderColor: 'rgba(100, 116, 139, 0.2)',
-                background: 'rgba(100, 116, 139, 0.03)'
+                borderColor: isDragging ? 'var(--accent-primary)' : 'var(--border-default)',
+                background: isDragging
+                  ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)'
+                  : 'var(--bg-surface)',
+                boxShadow: isDragging
+                  ? '0 0 30px -5px rgba(59, 130, 246, 0.3), inset 0 0 20px -10px rgba(59, 130, 246, 0.2)'
+                  : 'none'
               }}
+              onClick={() => setShowPhotoUpload(true)}
             >
-              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-2 border" style={{
-                background: 'rgba(100, 116, 139, 0.1)',
-                borderColor: 'rgba(148, 163, 184, 0.2)'
-              }}>
-                <Camera className="w-5 h-5" />
+              {/* Animated background effect when dragging */}
+              {isDragging && (
+                <div
+                  className="absolute inset-0 pointer-events-none rounded-2xl"
+                  style={{
+                    background: 'linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.1) 50%, transparent 70%)',
+                    backgroundSize: '200% 200%',
+                    animation: 'shimmer 1.5s ease-in-out infinite'
+                  }}
+                />
+              )}
+
+              <div
+                className={clsx(
+                  "w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all relative z-10",
+                  isDragging && "scale-110"
+                )}
+                style={{
+                  background: isDragging
+                    ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)'
+                    : 'rgba(59, 130, 246, 0.12)',
+                  border: `1px solid ${isDragging ? 'var(--accent-primary)' : 'var(--border-accent)'}`,
+                  boxShadow: isDragging ? '0 4px 20px -4px rgba(59, 130, 246, 0.5)' : 'none'
+                }}
+              >
+                <Camera
+                  className={clsx(
+                    "w-6 h-6 transition-all",
+                    isDragging && "animate-bounce"
+                  )}
+                  style={{
+                    color: isDragging ? 'white' : 'var(--accent-primary-light)'
+                  }}
+                />
               </div>
-              <span className="text-sm font-medium">Добавить фото</span>
-            </button>
+
+              <span
+                className="text-center font-semibold mb-1 transition-colors relative z-10"
+                style={{
+                  color: isDragging ? 'var(--accent-primary-light)' : 'var(--text-primary)'
+                }}
+              >
+                {isDragging ? 'Отпустите для загрузки' : 'Добавить фото'}
+              </span>
+
+              <span
+                className="text-center text-xs transition-colors relative z-10"
+                style={{ color: 'var(--text-subtle)' }}
+              >
+                {isDragging
+                  ? 'Выберите категорию после загрузки'
+                  : 'Нажмите или перетащите файлы сюда'}
+              </span>
+            </div>
 
             {images.length > 0 ? (
               <div className="space-y-3">
