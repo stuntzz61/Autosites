@@ -30,57 +30,57 @@ const statusConfig: Record<string, {
   draft: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Черновик',
-    bg: 'rgba(100, 116, 139, 0.08)',
+    bg: 'rgba(100, 116, 139, 0.15)',
     text: '#94a3b8'
   },
   collecting_info: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Сбор данных',
-    bg: 'rgba(100, 116, 139, 0.08)',
-    text: '#94a3b8'
+    bg: 'rgba(59, 130, 246, 0.15)',
+    text: '#60a5fa'
   },
   collecting_photos: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Сбор фото',
-    bg: 'rgba(245, 158, 11, 0.1)',
+    bg: 'rgba(245, 158, 11, 0.15)',
     text: '#fbbf24'
   },
   awaiting_photos: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Ожидание фото',
-    bg: 'rgba(245, 158, 11, 0.1)',
+    bg: 'rgba(245, 158, 11, 0.15)',
     text: '#fbbf24'
   },
   ready_to_generate: {
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     label: 'Готов',
-    bg: 'rgba(148, 163, 184, 0.1)',
-    text: '#cbd5e1'
+    bg: 'rgba(16, 185, 129, 0.15)',
+    text: '#34d399'
   },
   generating: {
     icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
     label: 'Генерация...',
-    bg: 'rgba(203, 213, 225, 0.12)',
-    text: '#e2e8f0',
-    glow: 'shadow-slate-500/20'
+    bg: 'rgba(139, 92, 246, 0.15)',
+    text: '#a78bfa',
+    glow: 'shadow-purple-500/20'
   },
   in_queue: {
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'В очереди',
-    bg: 'rgba(148, 163, 184, 0.08)',
-    text: '#cbd5e1'
+    bg: 'rgba(139, 92, 246, 0.15)',
+    text: '#a78bfa'
   },
   success: {
     icon: <Sparkles className="w-3.5 h-3.5" />,
     label: 'Готов!',
-    bg: 'rgba(226, 232, 240, 0.12)',
-    text: '#f1f5f9',
-    glow: 'shadow-slate-500/20'
+    bg: 'rgba(16, 185, 129, 0.15)',
+    text: '#34d399',
+    glow: 'shadow-emerald-500/20'
   },
   error: {
     icon: <AlertCircle className="w-3.5 h-3.5" />,
     label: 'Ошибка',
-    bg: 'rgba(239, 68, 68, 0.1)',
+    bg: 'rgba(239, 68, 68, 0.15)',
     text: '#f87171'
   },
 }
@@ -337,15 +337,22 @@ export default function RequestsPage() {
                   >
                     <div
                       className={clsx(
-                        "rounded-3xl p-4 border transition-all duration-300",
+                        "rounded-3xl p-4 border transition-all duration-300 relative overflow-hidden",
                         "hover:shadow-xl hover:-translate-y-1",
                         config.glow && `shadow-lg ${config.glow}`
                       )}
                       style={{
-                        background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
-                        borderColor: 'rgba(100, 116, 139, 0.15)'
+                        background: request.tariff === 'premium'
+                          ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 50%, rgba(139, 92, 246, 0.15) 100%)'
+                          : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)',
+                        borderColor: request.tariff === 'premium'
+                          ? 'rgba(139, 92, 246, 0.3)'
+                          : 'rgba(100, 116, 139, 0.15)'
                       }}
                     >
+                      {request.tariff === 'premium' && (
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-full blur-2xl" />
+                      )}
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
                         <div className="relative flex-shrink-0">
@@ -366,11 +373,22 @@ export default function RequestsPage() {
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 relative z-10">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h3 className="font-bold text-slate-100 truncate text-[15px]">
-                              {request.company_name || 'Без названия'}
-                            </h3>
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                              <h3 className="font-bold text-slate-100 truncate text-[15px]">
+                                {request.company_name || 'Без названия'}
+                              </h3>
+                              {request.tariff === 'premium' && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide text-white flex-shrink-0" style={{
+                                  background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+                                  boxShadow: '0 2px 8px -2px rgba(139, 92, 246, 0.4)'
+                                }}>
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  PRO
+                                </span>
+                              )}
+                            </div>
                             <ArrowUpRight className="w-4 h-4 text-slate-600 flex-shrink-0 opacity-0 group-hover:opacity-100 group-hover:text-blue-400 transition-all" />
                           </div>
 

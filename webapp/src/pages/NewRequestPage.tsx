@@ -707,39 +707,54 @@ export default function NewRequestPage() {
                       className={clsx(
                         'w-full p-4 rounded-2xl border transition-all text-left relative overflow-hidden',
                         formData.tariff === 'premium'
-                          ? 'border-slate-400'
+                          ? 'border-purple-500/40'
                           : 'border-slate-700/50'
                       )}
-                      style={{
-                        background: formData.tariff === 'premium'
-                          ? 'linear-gradient(145deg, #475569 0%, #334155 100%)'
-                          : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                      style={formData.tariff === 'premium' ? {
+                        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.15) 50%, rgba(139, 92, 246, 0.2) 100%)',
+                        backgroundSize: '200% 200%',
+                        animation: 'gradientShift 3s ease infinite',
+                        boxShadow: '0 8px 32px -8px rgba(139, 92, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+                      } : {
+                        background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
                       }}
                     >
+                      {/* Shine effect when selected */}
+                      {formData.tariff === 'premium' && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
+                          backgroundSize: '200% 100%',
+                          animation: 'shimmer 2s ease-in-out infinite'
+                        }} />
+                      )}
                       <div className="flex items-start gap-3 relative z-10">
                         <div className={clsx(
                           'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                           formData.tariff === 'premium'
-                            ? 'border-slate-300'
+                            ? 'border-purple-400'
                             : 'border-slate-600'
                         )}>
                           {formData.tariff === 'premium' && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-blue-400" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-slate-100">
+                            <span className={clsx(
+                              'font-semibold',
+                              formData.tariff === 'premium'
+                                ? 'bg-gradient-to-r from-purple-300 via-blue-300 to-purple-300 bg-clip-text text-transparent'
+                                : 'text-slate-100'
+                            )}>
                               Премиум лендинг
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-100 ml-auto whitespace-nowrap border" style={{
-                              background: 'rgba(226, 232, 240, 0.15)',
-                              borderColor: 'rgba(226, 232, 240, 0.25)'
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white ml-auto whitespace-nowrap" style={{
+                              background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+                              boxShadow: '0 2px 8px -2px rgba(139, 92, 246, 0.4)'
                             }}>
                               PRO
                             </span>
                           </div>
-                          <p className="text-xs text-slate-400 mt-1">Профессиональный дизайн и качество</p>
+                          <p className="text-xs text-slate-300 mt-1">Профессиональный дизайн и качество</p>
                         </div>
                       </div>
                     </button>

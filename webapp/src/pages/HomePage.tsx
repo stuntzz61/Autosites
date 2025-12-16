@@ -125,7 +125,7 @@ export default function HomePage() {
             icon={<CheckCircle className="w-5 h-5" />}
             value={stats?.completed_requests || 0}
             label="Завершено"
-            accent="blue"
+            accent="emerald"
           />
           <StatsCard
             icon={<TrendingUp className="w-5 h-5" />}
@@ -157,8 +157,8 @@ export default function HomePage() {
             <div className="h-px ml-[68px]" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(100, 116, 139, 0.2) 50%, transparent 100%)' }} />
             <QuickAction
               icon={<Zap className="w-5 h-5" />}
-              iconBg="rgba(203, 213, 225, 0.12)"
-              iconColor="#e2e8f0"
+              iconBg="rgba(59, 130, 246, 0.15)"
+              iconColor="#60a5fa"
               title="Активные"
               subtitle={`${stats?.pending_requests || 0} в работе`}
               onClick={() => navigate('/requests?status=generating')}
@@ -216,20 +216,26 @@ function StatsCard({
   value: number
   label: string
   onClick?: () => void
-  accent?: 'blue' | 'amber'
+  accent?: 'blue' | 'amber' | 'emerald'
 }) {
   const colors = {
     blue: {
-      bg: 'rgba(148, 163, 184, 0.12)',
-      text: '#cbd5e1',
-      value: '#e2e8f0',
-      border: 'rgba(148, 163, 184, 0.2)',
+      bg: 'rgba(59, 130, 246, 0.15)',
+      text: '#60a5fa',
+      value: '#93c5fd',
+      border: 'rgba(59, 130, 246, 0.25)',
     },
     amber: {
-      bg: 'rgba(245, 158, 11, 0.12)',
+      bg: 'rgba(245, 158, 11, 0.15)',
       text: '#fbbf24',
       value: '#fcd34d',
-      border: 'rgba(245, 158, 11, 0.2)',
+      border: 'rgba(245, 158, 11, 0.25)',
+    },
+    emerald: {
+      bg: 'rgba(16, 185, 129, 0.15)',
+      text: '#34d399',
+      value: '#6ee7b7',
+      border: 'rgba(16, 185, 129, 0.25)',
     },
   }
 

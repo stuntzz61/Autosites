@@ -19,17 +19,72 @@ import Tooltip from '@/components/Tooltip'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
-const statusConfig: Record<string, { icon: React.ReactNode; label: string }> = {
-  draft: { icon: <Clock className="w-4 h-4" />, label: 'Черновик' },
-  awaiting_photos: { icon: <Image className="w-4 h-4" />, label: 'Ожидание фото' },
-  collecting_info: { icon: <Clock className="w-4 h-4" />, label: 'Сбор данных' },
-  collecting_photos: { icon: <Image className="w-4 h-4" />, label: 'Сбор фото' },
-  ready_to_generate: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Готов к отправке' },
-  generating: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: 'Генерация...' },
-  in_queue: { icon: <Clock className="w-4 h-4" />, label: 'В очереди' },
-  success: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Сайт готов!' },
-  error: { icon: <AlertCircle className="w-4 h-4" />, label: 'Ошибка генерации' },
-  archived: { icon: <Archive className="w-4 h-4" />, label: 'В архиве' },
+const statusConfig: Record<string, {
+  icon: React.ReactNode
+  label: string
+  bg: string
+  text: string
+}> = {
+  draft: {
+    icon: <Clock className="w-4 h-4" />,
+    label: 'Черновик',
+    bg: 'rgba(100, 116, 139, 0.15)',
+    text: '#94a3b8'
+  },
+  awaiting_photos: {
+    icon: <Image className="w-4 h-4" />,
+    label: 'Ожидание фото',
+    bg: 'rgba(245, 158, 11, 0.15)',
+    text: '#fbbf24'
+  },
+  collecting_info: {
+    icon: <Clock className="w-4 h-4" />,
+    label: 'Сбор данных',
+    bg: 'rgba(59, 130, 246, 0.15)',
+    text: '#60a5fa'
+  },
+  collecting_photos: {
+    icon: <Image className="w-4 h-4" />,
+    label: 'Сбор фото',
+    bg: 'rgba(245, 158, 11, 0.15)',
+    text: '#fbbf24'
+  },
+  ready_to_generate: {
+    icon: <CheckCircle2 className="w-4 h-4" />,
+    label: 'Готов к отправке',
+    bg: 'rgba(16, 185, 129, 0.15)',
+    text: '#34d399'
+  },
+  generating: {
+    icon: <Loader2 className="w-4 h-4 animate-spin" />,
+    label: 'Генерация...',
+    bg: 'rgba(139, 92, 246, 0.15)',
+    text: '#a78bfa'
+  },
+  in_queue: {
+    icon: <Clock className="w-4 h-4" />,
+    label: 'В очереди',
+    bg: 'rgba(139, 92, 246, 0.15)',
+    text: '#a78bfa'
+  },
+  success: {
+    icon: <CheckCircle2 className="w-4 h-4" />,
+    label: 'Сайт готов!',
+    bg: 'rgba(16, 185, 129, 0.15)',
+    text: '#34d399'
+  },
+  error: {
+    icon: <AlertCircle className="w-4 h-4" />,
+    label: 'Ошибка генерации',
+    bg: 'rgba(239, 68, 68, 0.15)',
+    text: '#f87171'
+  },
+  archived: {
+    icon: <Archive className="w-4 h-4" />,
+    label: 'В архиве',
+    bg: 'rgba(100, 116, 139, 0.15)',
+    text: '#94a3b8'
+  },
 }
 
 const photoCategories = [
@@ -460,10 +515,11 @@ export default function RequestDetailPage() {
           </div>
           <button
             onClick={() => setShowStatusMenu(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 text-slate-200 border"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium flex-shrink-0 border"
             style={{
-              background: 'rgba(100, 116, 139, 0.1)',
-              borderColor: 'rgba(148, 163, 184, 0.2)'
+              background: config.bg,
+              color: config.text,
+              borderColor: config.text + '30'
             }}
           >
             {config.icon}
@@ -475,12 +531,17 @@ export default function RequestDetailPage() {
           <h1 className="text-2xl font-bold text-slate-100">{companyName}</h1>
           {/* Tariff Badge */}
           {tariff === 'premium' && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide text-slate-100 border shadow-sm whitespace-nowrap flex-shrink-0" style={{
-              background: 'rgba(226, 232, 240, 0.12)',
-              borderColor: 'rgba(226, 232, 240, 0.25)'
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide text-white border shadow-sm whitespace-nowrap flex-shrink-0 relative overflow-hidden" style={{
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(59, 130, 246, 0.25) 100%)',
+              borderColor: 'rgba(139, 92, 246, 0.4)',
+              boxShadow: '0 4px 16px -4px rgba(139, 92, 246, 0.4)'
             }}>
-              <Sparkles className="w-3 h-3" />
-              Premium
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" style={{
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 2s ease-in-out infinite'
+              }} />
+              <Sparkles className="w-3 h-3 relative z-10" />
+              <span className="relative z-10">Premium</span>
             </span>
           )}
         </div>
@@ -1551,9 +1612,12 @@ export default function RequestDetailPage() {
       </div>
 
       {/* Bottom Actions - positioned above bottom nav */}
-      <div className="fixed bottom-16 left-0 right-0 bg-tg-bg/95 backdrop-blur-lg border-t border-tg-separator z-20">
+      <div className="fixed bottom-16 left-0 right-0 backdrop-blur-lg border-t z-20" style={{
+        background: 'rgba(15, 20, 25, 0.95)',
+        borderColor: 'rgba(100, 116, 139, 0.15)'
+      }}>
         <div className="p-4 max-w-2xl mx-auto">
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center justify-center gap-2 sm:gap-3">
             {/* Edit button - show for editable statuses */}
             {!['in_queue', 'generating', 'success', 'generated_ok', 'archived', 'closed'].includes(status) && (
               <Tooltip content="Редактировать заявку" position="top">
@@ -2255,39 +2319,53 @@ function EditRequestForm({
                 className={clsx(
                   'w-full p-4 rounded-2xl border transition-all text-left relative overflow-hidden',
                   formData.tariff === 'premium'
-                    ? 'border-slate-400'
+                    ? 'border-purple-500/40'
                     : 'border-slate-700/50'
                 )}
-                style={{
-                  background: formData.tariff === 'premium'
-                    ? 'linear-gradient(145deg, #475569 0%, #334155 100%)'
-                    : 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
+                style={formData.tariff === 'premium' ? {
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.15) 50%, rgba(139, 92, 246, 0.2) 100%)',
+                  backgroundSize: '200% 200%',
+                  animation: 'gradientShift 3s ease infinite',
+                  boxShadow: '0 8px 32px -8px rgba(139, 92, 246, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1)'
+                } : {
+                  background: 'linear-gradient(145deg, #1e293b 0%, #1a1f2e 100%)'
                 }}
               >
+                {formData.tariff === 'premium' && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" style={{
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 2s ease-in-out infinite'
+                  }} />
+                )}
                 <div className="flex items-start gap-3 relative z-10">
                   <div className={clsx(
                     'w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all',
                     formData.tariff === 'premium'
-                      ? 'border-slate-300'
+                      ? 'border-purple-400'
                       : 'border-slate-600'
                   )}>
                     {formData.tariff === 'premium' && (
-                      <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-blue-400" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-100">
+                      <span className={clsx(
+                        'font-semibold',
+                        formData.tariff === 'premium'
+                          ? 'bg-gradient-to-r from-purple-300 via-blue-300 to-purple-300 bg-clip-text text-transparent'
+                          : 'text-slate-100'
+                      )}>
                         Премиум лендинг
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-100 ml-auto whitespace-nowrap border" style={{
-                        background: 'rgba(226, 232, 240, 0.15)',
-                        borderColor: 'rgba(226, 232, 240, 0.25)'
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white ml-auto whitespace-nowrap" style={{
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+                        boxShadow: '0 2px 8px -2px rgba(139, 92, 246, 0.4)'
                       }}>
                         PRO
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">Профессиональный дизайн и качество</p>
+                    <p className="text-xs text-slate-300 mt-1">Профессиональный дизайн и качество</p>
                   </div>
                 </div>
               </button>
