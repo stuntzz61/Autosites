@@ -89,6 +89,7 @@ const statusConfig: Record<string, {
 
 const photoCategories = [
   { id: 'hero', label: 'Баннер' },
+  { id: 'services', label: 'Услуги/Товары' },
   { id: 'portfolio', label: 'Портфолио' },
   { id: 'team', label: 'Команда' },
   { id: 'gallery', label: 'Галерея' },
