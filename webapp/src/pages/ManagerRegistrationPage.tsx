@@ -1,24 +1,27 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, Phone, Mail, CheckCircle2, AlertCircle, Loader2,
-  ArrowRight
+  User, Phone, Mail, AlertCircle, Loader2,
+  ArrowRight, Check
 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { managerApi } from '@/api/client'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/stores/authStore'
 import { useNavigate } from 'react-router-dom'
+import { useTelegram } from '@/contexts/TelegramContext'
 
 export default function ManagerRegistrationPage() {
   const navigate = useNavigate()
   const { user, refreshUser } = useAuthStore()
+  const { haptic } = useTelegram()
 
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [agreeTerms, setAgreeTerms] = useState(true)
   const [errors, setErrors] = useState<{ fullName?: string; phone?: string; email?: string }>({})
+  const [focusedField, setFocusedField] = useState<string | null>(null)
 
   // Check if user needs registration
   useEffect(() => {
@@ -49,8 +52,8 @@ export default function ManagerRegistrationPage() {
     onMutate: () => {
       setErrors({})
     },
-    onSuccess: async (res) => {
-      const data = res.data
+    onSuccess: async () => {
+      haptic?.notificationOccurred('success')
       toast.success('Регистрация успешно завершена!')
       // Refresh user data
       await refreshUser()
@@ -58,6 +61,7 @@ export default function ManagerRegistrationPage() {
       navigate('/')
     },
     onError: (err: unknown) => {
+      haptic?.notificationOccurred('error')
       const error = err as { response?: { data?: { detail?: string | Array<{ loc?: string[]; msg?: string }> } } }
       const detail = error.response?.data?.detail
       if (typeof detail === 'string') {
@@ -81,7 +85,7 @@ export default function ManagerRegistrationPage() {
         toast.error('Ошибка регистрации. Попробуйте ещё раз.')
       }
       console.error('Registration error:', err)
-    }
+    },
   })
 
   // Phone formatting
@@ -139,6 +143,7 @@ export default function ManagerRegistrationPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    haptic?.impactOccurred('medium')
     if (validateForm()) {
       registerMutation.mutate()
     }
@@ -147,10 +152,17 @@ export default function ManagerRegistrationPage() {
   // Loading state
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-indigo-950 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-deep)' }}>
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mx-auto mb-4" />
-          <p className="text-zinc-600 dark:text-zinc-400">Загрузка...</p>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 mx-auto mb-4"
+            style={{ color: 'var(--accent-primary)' }}
+          >
+            <Loader2 className="w-full h-full" />
+          </motion.div>
+          <p style={{ color: 'var(--text-muted)' }}>Загрузка...</p>
         </div>
       </div>
     )
@@ -158,156 +170,432 @@ export default function ManagerRegistrationPage() {
 
   // Registration form
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-indigo-950 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white dark:bg-zinc-800 rounded-3xl shadow-2xl overflow-hidden"
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-deep)' }}>
+      {/* Background decorative elements */}
+      <div
+        className="fixed inset-0 pointer-events-none overflow-hidden"
+        style={{ zIndex: 0 }}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-6 text-white text-center">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", delay: 0.2 }}
-            className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mx-auto mb-4"
+        <div
+          className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-20"
+          style={{ background: 'var(--accent-primary)' }}
+        />
+        <div
+          className="absolute bottom-0 left-0 w-96 h-96 rounded-full blur-3xl opacity-20"
+          style={{ background: 'var(--info)' }}
+        />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        className="max-w-md w-full relative z-10"
+      >
+        {/* Premium Card */}
+        <div
+          className="rounded-3xl overflow-hidden"
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset'
+          }}
+        >
+          {/* Premium Header with gradient */}
+          <div
+            className="relative overflow-hidden px-6 pt-8 pb-6"
+            style={{
+              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 50%, var(--info) 100%)',
+            }}
           >
-            <User className="w-8 h-8" />
-          </motion.div>
-          <h1 className="text-2xl font-bold mb-2">Завершите регистрацию</h1>
-          <p className="text-white/80 text-sm">
-            Ваша заявка одобрена! Заполните форму для доступа к системе
-          </p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Full Name */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              ФИО *
-            </label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Иванов Иван Иванович"
-                className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${
-                  errors.fullName
-                    ? 'border-red-300 dark:border-red-600 focus:border-red-500'
-                    : 'border-zinc-200 dark:border-zinc-600 focus:border-indigo-500'
-                } bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none transition-colors`}
-                disabled={registerMutation.isPending}
-              />
-            </div>
-            {errors.fullName && (
-              <p className="mt-1 text-sm text-red-500">{errors.fullName}</p>
-            )}
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Телефон *
-            </label>
-            <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-              <input
-                type="tel"
-                value={phone}
-                onChange={handlePhoneChange}
-                placeholder="+7 (999) 123-45-67"
-                className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${
-                  errors.phone
-                    ? 'border-red-300 dark:border-red-600 focus:border-red-500'
-                    : 'border-zinc-200 dark:border-zinc-600 focus:border-indigo-500'
-                } bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none transition-colors`}
-                disabled={registerMutation.isPending}
-              />
-            </div>
-            {errors.phone && (
-              <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Email *
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ivan@example.com"
-                className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 ${
-                  errors.email
-                    ? 'border-red-300 dark:border-red-600 focus:border-red-500'
-                    : 'border-zinc-200 dark:border-zinc-600 focus:border-indigo-500'
-                } bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none transition-colors`}
-                disabled={registerMutation.isPending}
-              />
-            </div>
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-500">{errors.email}</p>
-            )}
-          </div>
-
-          {/* Terms */}
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={agreeTerms}
-              onChange={(e) => setAgreeTerms(e.target.checked)}
-              className="mt-1 w-5 h-5 rounded border-zinc-300 dark:border-zinc-600 text-indigo-500 focus:ring-indigo-500"
-              disabled={registerMutation.isPending}
+            {/* Shimmer effect */}
+            <motion.div
+              className="absolute inset-0"
+              animate={{
+                backgroundPosition: ['0% 0%', '100% 100%'],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: 'linear'
+              }}
+              style={{
+                background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%)',
+                backgroundSize: '200% 200%',
+              }}
             />
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
-              Я соглашаюсь с{' '}
-              <a href="#" className="text-indigo-500 hover:underline">условиями использования</a>
-              {' '}и{' '}
-              <a href="#" className="text-indigo-500 hover:underline">политикой конфиденциальности</a>
-            </span>
-          </label>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={registerMutation.isPending || !agreeTerms}
-            className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-bold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {registerMutation.isPending ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Регистрация...
-              </>
-            ) : (
-              <>
-                Завершить регистрацию
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
+            {/* Premium glow */}
+            <div
+              className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-30"
+              style={{ background: 'var(--accent-primary)' }}
+            />
 
-          {/* Help */}
-          <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-            Проблемы с регистрацией?{' '}
-            <a
-              href="https://t.me/wenlix_bot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-indigo-500 hover:underline"
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", delay: 0.2, stiffness: 200 }}
+              className="relative z-10 w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+              style={{
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+              }}
             >
-              Напишите нам
-            </a>
-          </p>
-        </form>
+              <User className="w-10 h-10 text-white" strokeWidth={2} />
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-2xl font-bold text-center text-white mb-2 relative z-10"
+            >
+              Завершите регистрацию
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-center text-white/90 text-sm relative z-10"
+            >
+              Ваша заявка одобрена! Заполните форму для доступа к системе
+            </motion.p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-5" style={{ background: 'var(--bg-surface)' }}>
+            {/* Full Name */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <label
+                className="block text-sm font-semibold mb-2"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                ФИО *
+              </label>
+              <div className="relative">
+                <div
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                    focusedField === 'fullName' ? 'text-blue-500' : 'text-gray-400'
+                  }`}
+                >
+                  <User className="w-5 h-5" />
+                </div>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  onFocus={() => {
+                    setFocusedField('fullName')
+                    haptic?.impactOccurred('light')
+                  }}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Иванов Иван Иванович"
+                  className={`w-full pl-12 pr-4 py-3.5 rounded-xl transition-all ${
+                    errors.fullName
+                      ? 'border-2 border-red-500/50 focus:border-red-500'
+                      : focusedField === 'fullName'
+                      ? 'border-2 border-blue-500/50 focus:border-blue-500'
+                      : 'border border-gray-300/30 focus:border-blue-500/50'
+                  }`}
+                  style={{
+                    background: errors.fullName
+                      ? 'rgba(239, 68, 68, 0.05)'
+                      : focusedField === 'fullName'
+                      ? 'rgba(59, 130, 246, 0.05)'
+                      : 'var(--bg-elevated)',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                  }}
+                  disabled={registerMutation.isPending}
+                />
+              </div>
+              <AnimatePresence>
+                {errors.fullName && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className="mt-1.5 text-sm flex items-center gap-1.5 text-red-500"
+                  >
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.fullName}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Phone */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <label
+                className="block text-sm font-semibold mb-2"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Телефон *
+              </label>
+              <div className="relative">
+                <div
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                    focusedField === 'phone' ? 'text-blue-500' : 'text-gray-400'
+                  }`}
+                >
+                  <Phone className="w-5 h-5" />
+                </div>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  onFocus={() => {
+                    setFocusedField('phone')
+                    haptic?.impactOccurred('light')
+                  }}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="+7 (999) 123-45-67"
+                  className={`w-full pl-12 pr-4 py-3.5 rounded-xl transition-all ${
+                    errors.phone
+                      ? 'border-2 border-red-500/50 focus:border-red-500'
+                      : focusedField === 'phone'
+                      ? 'border-2 border-blue-500/50 focus:border-blue-500'
+                      : 'border border-gray-300/30 focus:border-blue-500/50'
+                  }`}
+                  style={{
+                    background: errors.phone
+                      ? 'rgba(239, 68, 68, 0.05)'
+                      : focusedField === 'phone'
+                      ? 'rgba(59, 130, 246, 0.05)'
+                      : 'var(--bg-elevated)',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                  }}
+                  disabled={registerMutation.isPending}
+                />
+              </div>
+              <AnimatePresence>
+                {errors.phone && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className="mt-1.5 text-sm flex items-center gap-1.5 text-red-500"
+                  >
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.phone}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Email */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <label
+                className="block text-sm font-semibold mb-2"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Email *
+              </label>
+              <div className="relative">
+                <div
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                    focusedField === 'email' ? 'text-blue-500' : 'text-gray-400'
+                  }`}
+                >
+                  <Mail className="w-5 h-5" />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => {
+                    setFocusedField('email')
+                    haptic?.impactOccurred('light')
+                  }}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="ivan@example.com"
+                  className={`w-full pl-12 pr-4 py-3.5 rounded-xl transition-all ${
+                    errors.email
+                      ? 'border-2 border-red-500/50 focus:border-red-500'
+                      : focusedField === 'email'
+                      ? 'border-2 border-blue-500/50 focus:border-blue-500'
+                      : 'border border-gray-300/30 focus:border-blue-500/50'
+                  }`}
+                  style={{
+                    background: errors.email
+                      ? 'rgba(239, 68, 68, 0.05)'
+                      : focusedField === 'email'
+                      ? 'rgba(59, 130, 246, 0.05)'
+                      : 'var(--bg-elevated)',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                  }}
+                  disabled={registerMutation.isPending}
+                />
+              </div>
+              <AnimatePresence>
+                {errors.email && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className="mt-1.5 text-sm flex items-center gap-1.5 text-red-500"
+                  >
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.email}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Terms */}
+            <motion.label
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.25 }}
+              className="flex items-start gap-3 cursor-pointer group"
+            >
+              <div className="relative flex-shrink-0 mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={agreeTerms}
+                  onChange={(e) => {
+                    setAgreeTerms(e.target.checked)
+                    haptic?.impactOccurred('light')
+                  }}
+                  className="sr-only"
+                  disabled={registerMutation.isPending}
+                />
+                <div
+                  className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
+                    agreeTerms
+                      ? 'bg-blue-500 border-blue-500'
+                      : 'border-gray-300/50 bg-transparent'
+                  }`}
+                >
+                  {agreeTerms && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    >
+                      <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+              <span
+                className="text-sm leading-relaxed"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Я соглашаюсь с{' '}
+                <a
+                  href="#"
+                  className="font-medium hover:underline transition-colors"
+                  style={{ color: 'var(--accent-primary)' }}
+                  onClick={(e) => e.preventDefault()}
+                >
+                  условиями использования
+                </a>
+                {' '}и{' '}
+                <a
+                  href="#"
+                  className="font-medium hover:underline transition-colors"
+                  style={{ color: 'var(--accent-primary)' }}
+                  onClick={(e) => e.preventDefault()}
+                >
+                  политикой конфиденциальности
+                </a>
+              </span>
+            </motion.label>
+
+            {/* Submit Button */}
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              type="submit"
+              disabled={registerMutation.isPending || !agreeTerms}
+              className="w-full py-4 rounded-xl font-bold text-lg text-white relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: agreeTerms && !registerMutation.isPending
+                  ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 50%, var(--info) 100%)'
+                  : 'var(--bg-elevated)',
+                boxShadow: agreeTerms && !registerMutation.isPending
+                  ? '0 8px 24px -4px rgba(59, 130, 246, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) inset'
+                  : 'none',
+              }}
+              whileHover={agreeTerms && !registerMutation.isPending ? { scale: 1.02 } : {}}
+              whileTap={agreeTerms && !registerMutation.isPending ? { scale: 0.98 } : {}}
+            >
+              {/* Shimmer effect on button */}
+              {agreeTerms && !registerMutation.isPending && (
+                <motion.div
+                  className="absolute inset-0"
+                  animate={{
+                    backgroundPosition: ['-100% 0%', '100% 0%'],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    repeatType: 'reverse',
+                    ease: 'linear'
+                  }}
+                  style={{
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)',
+                    backgroundSize: '200% 100%',
+                  }}
+                />
+              )}
+
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {registerMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Регистрация...
+                  </>
+                ) : (
+                  <>
+                    Завершить регистрацию
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </span>
+            </motion.button>
+
+            {/* Help */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.35 }}
+              className="text-center text-sm"
+              style={{ color: 'var(--text-subtle)' }}
+            >
+              Проблемы с регистрацией?{' '}
+              <a
+                href="https://t.me/wenlix_bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium hover:underline transition-colors"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Напишите нам
+              </a>
+            </motion.p>
+          </form>
+        </div>
       </motion.div>
     </div>
   )
 }
-

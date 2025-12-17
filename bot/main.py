@@ -400,11 +400,12 @@ async def cb_register(callback: types.CallbackQuery, state: FSMContext):
         try:
             await bot.send_message(
                 admin["tg_id"],
-                f"🆕 Новая заявка на регистрацию!\n\n"
+                f"🆕 <b>Новая заявка на регистрацию!</b>\n\n"
                 f"👤 {callback.from_user.first_name} {callback.from_user.last_name or ''}\n"
                 f"📱 @{callback.from_user.username or 'нет username'}\n"
-                f"🆔 {tg_id}",
-                reply_markup=get_admin_pending_keyboard(tg_id)
+                f"🆔 {tg_id}\n\n"
+                f"📲 Перейдите в приложение для рассмотрения заявки.",
+                parse_mode="HTML"
             )
         except Exception as e:
             logger.error(f"Failed to notify admin {admin['tg_id']}: {e}")
@@ -535,9 +536,9 @@ async def cb_register_with_invite(callback: types.CallbackQuery, state: FSMConte
                         f"👤 {callback.from_user.first_name} {callback.from_user.last_name or ''}\n"
                         f"📱 @{callback.from_user.username or 'нет username'}\n"
                         f"🔗 Код: <code>{invite_code}</code>\n"
-                        f"📁 Группа: {invite.get('group_name', 'Без группы')}",
-                        parse_mode="HTML",
-                        reply_markup=get_admin_pending_keyboard(tg_id)
+                        f"📁 Группа: {invite.get('group_name', 'Без группы')}\n\n"
+                        f"📲 Перейдите в приложение для рассмотрения заявки.",
+                        parse_mode="HTML"
                     )
             except Exception as e:
                 logger.error(f"Failed to notify invite creator: {e}")
@@ -550,13 +551,13 @@ async def cb_register_with_invite(callback: types.CallbackQuery, state: FSMConte
             try:
                 await bot.send_message(
                     admin["tg_id"],
-                    f"🆕 Новая заявка на регистрацию!\n\n"
+                    f"🆕 <b>Новая заявка на регистрацию!</b>\n\n"
                     f"👤 {callback.from_user.first_name} {callback.from_user.last_name or ''}\n"
                     f"📱 @{callback.from_user.username or 'нет username'}\n"
                     f"🔗 Инвайт: <code>{invite_code}</code>\n"
-                    f"📁 Группа: {invite.get('group_name', 'Без группы')}",
-                    parse_mode="HTML",
-                    reply_markup=get_admin_pending_keyboard(tg_id)
+                    f"📁 Группа: {invite.get('group_name', 'Без группы')}\n\n"
+                    f"📲 Перейдите в приложение для рассмотрения заявки.",
+                    parse_mode="HTML"
                 )
             except Exception as e:
                 logger.error(f"Failed to notify admin {admin['tg_id']}: {e}")
