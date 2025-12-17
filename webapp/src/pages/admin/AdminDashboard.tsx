@@ -2,33 +2,45 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { adminApi } from '@/api/client'
 import {
-  Users, FileText, Clock, CheckCircle2, TrendingUp,
+  Users, FileText, CheckCircle2, TrendingUp,
   Crown, Shield, Users2, ChevronRight, AlertCircle, Plus
 } from 'lucide-react'
-import { useAuthStore, isOwnerRole, isDirectorRole, isSupervisorRole, getRoleLabel } from '@/stores/authStore'
+import { useAuthStore, isOwnerRole, isDirectorRole } from '@/stores/authStore'
 import { motion } from 'framer-motion'
+
+interface Director {
+  id: string
+  first_name: string
+  last_name?: string
+}
+
+interface Supervisor {
+  id: string
+  first_name: string
+  last_name?: string
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const isOwner = user && isOwnerRole(user.role)
-  const isDirector = user && isDirectorRole(user.role)
+  const isOwner = !!(user && isOwnerRole(user.role))
+  const isDirector = !!(user && isDirectorRole(user.role))
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: () => adminApi.stats.overview().then(res => res.data),
   })
 
-  const { data: directors = [] } = useQuery({
+  const { data: directors = [] } = useQuery<Director[]>({
     queryKey: ['admin', 'directors'],
     queryFn: () => adminApi.directors.list().then(res => res.data),
     enabled: isOwner,
   })
 
-  const { data: supervisors = [] } = useQuery({
+  const { data: supervisors = [] } = useQuery<Supervisor[]>({
     queryKey: ['admin', 'supervisors'],
     queryFn: () => adminApi.supervisors.list().then(res => res.data),
-    enabled: isDirector,
+    enabled: isDirector || isOwner,
   })
 
   const { data: pending = [] } = useQuery({

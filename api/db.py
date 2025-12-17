@@ -2578,7 +2578,8 @@ async def create_invite_code(
     max_uses: int = None,
     expires_at: datetime = None,
     auto_approve: bool = False,
-    notes: str = None
+    notes: str = None,
+    target_role: str = 'manager'
 ) -> Dict:
     """Create a new invite code."""
     code = generate_invite_code()
@@ -2595,10 +2596,10 @@ async def create_invite_code(
 
             await cur.execute(
                 """INSERT INTO invite_codes
-                   (code, group_id, created_by, name, max_uses, expires_at, auto_approve, notes)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                   (code, group_id, created_by, name, max_uses, expires_at, auto_approve, notes, target_role)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                    RETURNING *""",
-                (code, group_id, created_by, name, max_uses, expires_at, auto_approve, notes)
+                (code, group_id, created_by, name, max_uses, expires_at, auto_approve, notes, target_role)
             )
             await conn.commit()
             return await cur.fetchone()
@@ -2825,7 +2826,7 @@ async def create_user_with_invite(
     last_name: str,
     invite_code: str = None
 ) -> Dict:
-    """Create user and optionally apply invite code."""
+    """Create user and optionally apply invite code with target role."""
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             # Check if invite code is valid
@@ -2833,6 +2834,7 @@ async def create_user_with_invite(
             group_id = None
             invite_id = None
             invite_creator = None
+            target_role = 'manager'  # Default role
 
             if invite_code:
                 is_valid, result = await validate_invite_code(invite_code)
@@ -2842,18 +2844,20 @@ async def create_user_with_invite(
                     group_id = invite['group_id']
                     invite_id = invite['id']
                     invite_creator = invite['created_by']
+                    # Get target role from invite, default to 'manager' if not set
+                    target_role = invite.get('target_role') or 'manager'
 
             # Determine approval status
             approval_status = 'approved' if auto_approve else 'pending'
 
-            # Create user
+            # Create user with the target role from invite code
             await cur.execute(
                 """INSERT INTO users (tg_id, username, first_name, last_name, role,
                                      approval_status, registered_via_code, admin_group_id)
-                   VALUES (%s, %s, %s, %s, 'manager', %s, %s, %s)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                    RETURNING id, tg_id, username, first_name, last_name, contact, role,
                              approval_status, created_at, admin_group_id""",
-                (tg_id, username, first_name, last_name, approval_status, invite_id, group_id)
+                (tg_id, username, first_name, last_name, target_role, approval_status, invite_id, group_id)
             )
             user = await cur.fetchone()
             user_id = str(user['id'])

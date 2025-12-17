@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
 import {
-  Link2, Plus, Copy, Trash2, Users, Clock, CheckCircle2,
-  XCircle, ChevronRight, X, QrCode, Share2, Eye, EyeOff,
-  Sparkles, Shield, Calendar, Hash, ToggleLeft, ToggleRight,
-  ExternalLink
+  Link2, Plus, Copy, Trash2, Users, CheckCircle2,
+  ChevronRight, Share2, Eye, EyeOff,
+  Sparkles, Shield, Calendar,
+  ExternalLink, Crown
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { useAuthStore, isOwnerRole, isDirectorRole } from '@/stores/authStore'
 
 interface InviteCode {
   id: string
@@ -26,14 +27,43 @@ interface InviteCode {
   created_at: string
   creator_first_name?: string
   creator_last_name?: string
+  target_role?: string
+}
+
+const roleLabels: Record<string, string> = {
+  manager: 'Менеджер',
+  supervisor: 'Супервайзер',
+  director: 'Директор',
+}
+
+const roleColors: Record<string, { bg: string; text: string }> = {
+  manager: { bg: 'bg-blue-500/10', text: 'text-blue-500' },
+  supervisor: { bg: 'bg-purple-500/10', text: 'text-purple-500' },
+  director: { bg: 'bg-amber-500/10', text: 'text-amber-500' },
 }
 
 export default function AdminInviteCodes() {
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedCode, setSelectedCode] = useState<InviteCode | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [codeToDelete, setCodeToDelete] = useState<InviteCode | null>(null)
+
+  const isOwner = user && isOwnerRole(user.role)
+  const isDirector = user && isDirectorRole(user.role)
+
+  // Get available roles based on current user's role
+  const getAvailableRoles = () => {
+    const roles = [{ value: 'manager', label: 'Менеджер' }]
+    if (isDirector || isOwner) {
+      roles.push({ value: 'supervisor', label: 'Супервайзер' })
+    }
+    if (isOwner) {
+      roles.push({ value: 'director', label: 'Директор' })
+    }
+    return roles
+  }
 
   // Form state
   const [formData, setFormData] = useState({
@@ -43,6 +73,7 @@ export default function AdminInviteCodes() {
     expires_in_days: '',
     auto_approve: false,
     notes: '',
+    target_role: 'manager',
   })
 
   // Queries
@@ -65,6 +96,7 @@ export default function AdminInviteCodes() {
       expires_in_days?: number
       auto_approve?: boolean
       notes?: string
+      target_role?: string
     }) => adminApi.inviteCodes.create(data),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'invite-codes'] })
@@ -77,12 +109,14 @@ export default function AdminInviteCodes() {
         expires_in_days: '',
         auto_approve: false,
         notes: '',
+        target_role: 'manager',
       })
       // Show the new code
       setSelectedCode(res.data)
     },
-    onError: () => {
-      toast.error('Ошибка создания')
+    onError: (error: any) => {
+      const message = error.response?.data?.detail || 'Ошибка создания'
+      toast.error(message)
     },
   })
 
@@ -119,9 +153,11 @@ export default function AdminInviteCodes() {
       expires_in_days?: number
       auto_approve?: boolean
       notes?: string
+      target_role?: string
     } = {
       group_id: formData.group_id,
       auto_approve: formData.auto_approve,
+      target_role: formData.target_role,
     }
 
     if (formData.name) data.name = formData.name
@@ -265,7 +301,7 @@ export default function AdminInviteCodes() {
                   <ChevronRight className="w-5 h-5 text-tg-hint" />
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-tg-hint">
+                <div className="flex items-center gap-3 text-xs text-tg-hint flex-wrap">
                   <span className="flex items-center gap-1">
                     <Users className="w-3 h-3" />
                     {code.uses_count}{code.max_uses !== null && code.max_uses !== undefined ? `/${code.max_uses}` : ''}
@@ -275,6 +311,18 @@ export default function AdminInviteCodes() {
                     <span className="flex items-center gap-1">
                       <Shield className="w-3 h-3" />
                       {code.group_name}
+                    </span>
+                  )}
+
+                  {/* Target Role Badge */}
+                  {code.target_role && code.target_role !== 'manager' && (
+                    <span className={clsx(
+                      'flex items-center gap-1 px-1.5 py-0.5 rounded',
+                      roleColors[code.target_role]?.bg,
+                      roleColors[code.target_role]?.text
+                    )}>
+                      <Crown className="w-3 h-3" />
+                      {roleLabels[code.target_role]}
                     </span>
                   )}
 
@@ -365,7 +413,28 @@ export default function AdminInviteCodes() {
                       </p>
                     )}
                     <p className="text-xs text-tg-hint/70 mt-1">
-                      Менеджер будет автоматически добавлен в эту группу
+                      Пользователь будет автоматически добавлен в эту группу
+                    </p>
+                  </div>
+
+                  {/* Target Role */}
+                  <div>
+                    <label className="text-xs text-tg-hint mb-1 block">
+                      Роль нового пользователя
+                    </label>
+                    <select
+                      value={formData.target_role}
+                      onChange={(e) => setFormData(prev => ({ ...prev, target_role: e.target.value }))}
+                      className="input"
+                    >
+                      {getAvailableRoles().map(role => (
+                        <option key={role.value} value={role.value}>{role.label}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-tg-hint/70 mt-1">
+                      {formData.target_role === 'manager' && 'Обычный менеджер с доступом к созданию заявок'}
+                      {formData.target_role === 'supervisor' && 'Супервайзер с правами управления группой'}
+                      {formData.target_role === 'director' && 'Директор с расширенными правами администрирования'}
                     </p>
                   </div>
 
@@ -538,6 +607,16 @@ export default function AdminInviteCodes() {
                       <span className="font-medium text-tg-text">{selectedCode.group_name}</span>
                     </div>
                   )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-tg-hint">Роль</span>
+                    <span className={clsx(
+                      'font-medium px-2 py-0.5 rounded',
+                      roleColors[selectedCode.target_role || 'manager']?.bg,
+                      roleColors[selectedCode.target_role || 'manager']?.text
+                    )}>
+                      {roleLabels[selectedCode.target_role || 'manager']}
+                    </span>
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-tg-hint">Авто-одобрение</span>
                     <span className={clsx(

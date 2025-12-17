@@ -67,7 +67,7 @@ export function getRoleLabel(role: UserRole): string {
   return labels[role] || role
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
   isAdmin: false,

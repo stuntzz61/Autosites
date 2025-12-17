@@ -1,15 +1,34 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Home, FileText, User, Shield, MessageSquare, Crown } from 'lucide-react'
-import { useAuthStore, isOwnerRole, isDirectorRole } from '@/stores/authStore'
+import { Home, FileText, User, Shield, MessageSquare, LayoutDashboard, Users, BarChart3, Users2, LucideIcon } from 'lucide-react'
+import { useAuthStore, isOwnerRole, isDirectorRole, isSupervisorRole } from '@/stores/authStore'
 import { useTelegram } from '@/contexts/TelegramContext'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
-const navItems = [
+// Navigation for regular managers
+const managerNavItems = [
   { path: '/', icon: Home, label: 'Главная' },
   { path: '/requests', icon: FileText, label: 'Заявки' },
   { path: '/feedback', icon: MessageSquare, label: 'Связь' },
   { path: '/profile', icon: User, label: 'Профиль' },
+]
+
+// Navigation for supervisors
+const supervisorNavItems = [
+  { path: '/', icon: Home, label: 'Главная' },
+  { path: '/admin', icon: LayoutDashboard, label: 'Панель' },
+  { path: '/admin/managers', icon: Users, label: 'Менеджеры' },
+  { path: '/admin/stats', icon: BarChart3, label: 'Статистика' },
+  { path: '/profile', icon: User, label: 'Профиль' },
+]
+
+// Navigation for directors and owners
+const directorNavItems = [
+  { path: '/admin', icon: LayoutDashboard, label: 'Дашборд' },
+  { path: '/admin/overview', icon: FileText, label: 'Заявки' },
+  { path: '/admin/managers', icon: Users, label: 'Менеджеры' },
+  { path: '/admin/groups', icon: Users2, label: 'Группы' },
+  { path: '/admin/stats', icon: BarChart3, label: 'Аналитика' },
 ]
 
 export default function MainLayout() {
@@ -18,8 +37,20 @@ export default function MainLayout() {
   const { isAdmin, user } = useAuthStore()
   const { backButton, haptic } = useTelegram()
 
-  const isOwner = user && isOwnerRole(user.role)
-  const isDirector = user && isDirectorRole(user.role)
+  const isOwner = !!(user && isOwnerRole(user.role))
+  const isDirector = !!(user && isDirectorRole(user.role))
+  const isSupervisor = !!(user && isSupervisorRole(user.role) && !isDirectorRole(user.role))
+
+  // Get navigation items based on role
+  const navItems = useMemo(() => {
+    if (isOwner || isDirector) {
+      return directorNavItems
+    }
+    if (isSupervisor) {
+      return supervisorNavItems
+    }
+    return managerNavItems
+  }, [isOwner, isDirector, isSupervisor])
 
   // Handle back button
   useEffect(() => {
@@ -64,8 +95,9 @@ export default function MainLayout() {
       <nav className="bottom-nav">
         <div className="flex items-center justify-around w-full px-2">
           {navItems.map(({ path, icon: Icon, label }) => {
-            const isActive = location.pathname === path ||
-              (path !== '/' && location.pathname.startsWith(path))
+            const isActive = path === '/'
+              ? location.pathname === path
+              : location.pathname === path || location.pathname.startsWith(path + '/')
 
             return (
               <NavButton
@@ -77,21 +109,24 @@ export default function MainLayout() {
                 icon={Icon}
                 label={label}
                 isActive={isActive}
+                isHighlighted={isOwner || isDirector}
               />
             )
           })}
 
-          {/* Admin button - styled based on role */}
-          <NavButton
-            onClick={() => {
-              haptic?.selectionChanged()
-              navigate(isAdmin ? '/admin' : '/admin-login')
-            }}
-            icon={isOwner || isDirector ? Crown : Shield}
-            label={isOwner ? 'Владелец' : isDirector ? 'Директор' : isAdmin ? 'Супервайзер' : 'Админ'}
-            isActive={location.pathname.startsWith('/admin')}
-            isHighlighted={isOwner || isDirector}
-          />
+          {/* Admin button - only for managers (not for owner/director/supervisor who have admin in nav) */}
+          {!isOwner && !isDirector && !isSupervisor && (
+            <NavButton
+              onClick={() => {
+                haptic?.selectionChanged()
+                navigate(isAdmin ? '/admin' : '/admin-login')
+              }}
+              icon={Shield}
+              label="Админ"
+              isActive={location.pathname.startsWith('/admin')}
+              isHighlighted={false}
+            />
+          )}
         </div>
       </nav>
     </div>
@@ -100,7 +135,7 @@ export default function MainLayout() {
 
 interface NavButtonProps {
   onClick: () => void
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  icon: LucideIcon
   label: string
   isActive: boolean
   isHighlighted?: boolean

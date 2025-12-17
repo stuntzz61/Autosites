@@ -55,6 +55,7 @@ class CreateInviteCodeRequest(BaseModel):
     expires_in_days: Optional[int] = None
     auto_approve: Optional[bool] = False
     notes: Optional[str] = None
+    target_role: Optional[str] = 'manager'  # Role to assign: manager, supervisor, director
 
 
 class UpdateInviteCodeRequest(BaseModel):
@@ -64,6 +65,7 @@ class UpdateInviteCodeRequest(BaseModel):
     is_active: Optional[bool] = None
     notes: Optional[str] = None
     group_id: Optional[str] = None
+    target_role: Optional[str] = None  # Role to assign: manager, supervisor, director
 
 
 # ==================== Dashboard ====================
@@ -278,30 +280,35 @@ async def reject_registration(
     data: RejectRequest,
     user: dict = Depends(get_supervisor_user)
 ):
-    """Reject a pending registration. Only accessible if user belongs to admin's groups."""
+    """Reject a pending registration. Owner/Director can reject any. Supervisor only from their groups."""
     # Check current status first
     current_status = await db.get_user_approval_status(user_id)
     if not current_status:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if user is a manager and if they belong to admin's groups
-    user_data = await db.get_user_by_id(user_id)
-    if user_data and user_data.get('role') == 'manager':
-        # Check if user is registered via invite code that belongs to admin's groups
-        if user_data.get('registered_via_code'):
-            async with await db.get_conn() as conn:
-                async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(
-                        """SELECT ic.group_id, ag.created_by
-                           FROM invite_codes ic
-                           LEFT JOIN admin_groups ag ON ag.id = ic.group_id
-                           WHERE ic.id = %s""",
-                        (user_data['registered_via_code'],)
-                    )
-                    invite_data = await cur.fetchone()
-                    if invite_data and invite_data.get('created_by'):
-                        if str(invite_data['created_by']) != str(user['id']):
-                            raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете отклонять только менеджеров из своих групп")
+    user_role = user.get('role')
+
+    # Owner and Director can reject ANY pending registration
+    # Supervisor can only reject from their groups
+    if user_role not in ('owner', 'director'):
+        # Check if user is a manager and if they belong to admin's groups
+        user_data = await db.get_user_by_id(user_id)
+        if user_data and user_data.get('role') == 'manager':
+            # Check if user is registered via invite code that belongs to admin's groups
+            if user_data.get('registered_via_code'):
+                async with await db.get_conn() as conn:
+                    async with conn.cursor(row_factory=dict_row) as cur:
+                        await cur.execute(
+                            """SELECT ic.group_id, ag.created_by
+                               FROM invite_codes ic
+                               LEFT JOIN admin_groups ag ON ag.id = ic.group_id
+                               WHERE ic.id = %s""",
+                            (user_data['registered_via_code'],)
+                        )
+                        invite_data = await cur.fetchone()
+                        if invite_data and invite_data.get('created_by'):
+                            if str(invite_data['created_by']) != str(user['id']):
+                                raise HTTPException(status_code=403, detail="Доступ запрещен. Вы можете отклонять только менеджеров из своих групп")
 
     if current_status == 'rejected':
         return {"success": True, "message": "Already rejected"}
@@ -609,6 +616,22 @@ async def create_invite_code(data: CreateInviteCodeRequest, user: dict = Depends
     """Create a new invite code. Group is required."""
     from datetime import timedelta
 
+    user_role = user.get('role')
+    target_role = data.target_role or 'manager'
+
+    # Validate target_role based on creator's role
+    valid_roles = ['manager']
+    if user_role in ('director', 'owner'):
+        valid_roles.append('supervisor')
+    if user_role == 'owner':
+        valid_roles.append('director')
+
+    if target_role not in valid_roles:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Вы не можете создавать инвайты для роли '{target_role}'. Доступные роли: {', '.join(valid_roles)}"
+        )
+
     # Group is required
     if not data.group_id:
         raise HTTPException(status_code=400, detail="Группа обязательна для создания инвайт-кода")
@@ -632,7 +655,8 @@ async def create_invite_code(data: CreateInviteCodeRequest, user: dict = Depends
         max_uses=data.max_uses,
         expires_at=expires_at,
         auto_approve=data.auto_approve or False,
-        notes=data.notes
+        notes=data.notes,
+        target_role=target_role
     )
 
     return {

@@ -139,6 +139,7 @@ export const adminApi = {
       expires_in_days?: number
       auto_approve?: boolean
       notes?: string
+      target_role?: string
     }) => api.post('/admin/invite-codes', data),
     get: (id: string) => api.get(`/admin/invite-codes/${id}`),
     update: (id: string, data: {

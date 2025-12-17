@@ -2,10 +2,10 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, FileText, Clock, CheckCircle, ChevronRight,
-  Sparkles, TrendingUp, ArrowRight, Crown, Zap, Shield, Users, Settings
+  Sparkles, TrendingUp, ArrowRight, Crown, Zap, Shield
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuthStore, isOwnerRole, isDirectorRole, isSupervisorRole, getRoleLabel } from '@/stores/authStore'
+import { useAuthStore, isOwnerRole, isDirectorRole, getRoleLabel } from '@/stores/authStore'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { profileApi } from '@/api/client'
 
@@ -16,7 +16,6 @@ export default function HomePage() {
 
   const isOwner = user && isOwnerRole(user.role)
   const isDirector = user && isDirectorRole(user.role)
-  const isSupervisor = user && isSupervisorRole(user.role)
 
   const { data: stats } = useQuery({
     queryKey: ['profile-stats'],

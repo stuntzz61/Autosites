@@ -23,6 +23,7 @@ import AdminDirectors from './pages/admin/AdminDirectors'
 import AdminSupervisors from './pages/admin/AdminSupervisors'
 import AdminGroups from './pages/admin/AdminGroups'
 import AdminRequests from './pages/admin/AdminRequests'
+import AdminOverview from './pages/admin/AdminOverview'
 import AdminStats from './pages/admin/AdminStats'
 import AdminBroadcast from './pages/admin/AdminBroadcast'
 import AdminFeedback from './pages/admin/AdminFeedback'
@@ -44,7 +45,7 @@ import LoadingScreen from './components/LoadingScreen'
 
 function App() {
   const location = useLocation()
-  const { isReady, webApp } = useTelegram()
+  const { isReady } = useTelegram()
   const { user, isLoading, isAdmin } = useAuthStore()
 
   // Check if running in browser (not Telegram)
@@ -219,6 +220,7 @@ function App() {
             <Route path="supervisors" element={<AdminSupervisors />} />
             <Route path="groups" element={<AdminGroups />} />
             <Route path="requests" element={<AdminRequests />} />
+            <Route path="overview" element={<AdminOverview />} />
             <Route path="stats" element={<AdminStats />} />
             <Route path="broadcast" element={<AdminBroadcast />} />
             <Route path="feedback" element={<AdminFeedback />} />
