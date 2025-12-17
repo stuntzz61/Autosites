@@ -109,7 +109,7 @@ export default function MainLayout() {
                 icon={Icon}
                 label={label}
                 isActive={isActive}
-                isHighlighted={isOwner || isDirector}
+                isHighlighted={isOwner || isDirector || isSupervisor}
                 isOwner={isOwner}
               />
             )
@@ -144,11 +144,15 @@ interface NavButtonProps {
 }
 
 function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted, isOwner }: NavButtonProps) {
-  // Cold color for Owner, gold for Director
+  // For Owner/Supervisor/Director: white icons
+  const isHighRole = isHighlighted || isOwner
+  const iconColor = isHighRole
+    ? (isActive ? 'rgb(255, 255, 255)' : 'rgba(255, 255, 255, 0.8)')
+    : (isActive ? 'var(--accent-primary-light)' : 'var(--text-subtle)')
+
+  // Cold color for Owner, gold for Director (for highlights/glows)
   const highlightColor = isOwner ? 'rgb(59, 130, 246)' : 'rgb(251, 191, 36)' // blue-500 for owner, yellow-400 for director
-  const highlightColorAlpha = isOwner ? 'rgba(59, 130, 246, 0.7)' : 'rgba(251, 191, 36, 0.7)'
   const highlightGlow = isOwner ? 'rgba(59, 130, 246, 0.2)' : 'rgba(251, 191, 36, 0.2)'
-  const highlightGlowAlpha = isOwner ? 'rgba(59, 130, 246, 0.8)' : 'rgba(251, 191, 36, 0.8)'
 
   return (
     <motion.button
@@ -156,9 +160,7 @@ function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted, isOwne
       className="relative flex flex-col items-center gap-1 px-3 py-2 min-w-[60px] rounded-xl transition-colors"
       whileTap={{ scale: 0.92 }}
       style={{
-        color: isActive
-          ? (isHighlighted ? highlightColor : 'var(--accent-primary-light)')
-          : (isHighlighted ? highlightColorAlpha : 'var(--text-subtle)')
+        color: iconColor
       }}
     >
       {/* Active indicator glow */}
@@ -195,9 +197,9 @@ function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted, isOwne
       <span
         className="text-[10px] font-semibold transition-colors truncate max-w-[48px]"
         style={{
-          color: isActive
-            ? (isHighlighted ? highlightColor : 'var(--accent-primary-light)')
-            : (isHighlighted ? highlightGlowAlpha : 'var(--text-subtle)'),
+          color: isHighRole
+            ? (isActive ? 'rgb(255, 255, 255)' : 'rgba(255, 255, 255, 0.8)')
+            : (isActive ? 'var(--accent-primary-light)' : 'var(--text-subtle)'),
           opacity: isActive ? 1 : 0.8
         }}
       >

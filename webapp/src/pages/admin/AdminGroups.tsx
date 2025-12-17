@@ -285,16 +285,17 @@ export default function AdminGroups() {
               onClick={() => setShowCreateModal(false)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
+              className="fixed inset-x-0 bottom-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
+              style={{ top: 'auto' }}
             >
               <div className="flex-shrink-0 pt-3 pb-2">
                 <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto" />
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 pb-2">
+              <div className="flex-1 overflow-y-auto px-4 pb-2 min-h-0">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-tg-text">Новая группа</h2>
                   <button
@@ -369,16 +370,17 @@ export default function AdminGroups() {
               onClick={() => setEditingGroup(null)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
+              className="fixed inset-x-0 bottom-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
+              style={{ top: 'auto' }}
             >
               <div className="flex-shrink-0 pt-3 pb-2">
                 <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto" />
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 pb-2">
+              <div className="flex-1 overflow-y-auto px-4 pb-2 min-h-0">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-tg-text">Редактировать группу</h2>
                   <button
@@ -520,16 +522,17 @@ export default function AdminGroups() {
               }}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
+              className="fixed inset-x-0 bottom-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
+              style={{ top: 'auto' }}
             >
               <div className="flex-shrink-0 pt-3 pb-2">
                 <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto" />
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 pb-2">
+              <div className="flex-1 overflow-y-auto px-4 pb-2 min-h-0">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-bold text-tg-text">{viewingGroup.name}</h2>

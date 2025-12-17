@@ -89,7 +89,6 @@ const statusConfig: Record<string, {
 
 const photoCategories = [
   { id: 'hero', label: 'Баннер' },
-  { id: 'services', label: 'Услуги/Товары' },
   { id: 'portfolio', label: 'Портфолио' },
   { id: 'team', label: 'Команда' },
   { id: 'gallery', label: 'Галерея' },
@@ -692,8 +691,10 @@ export default function RequestDetailPage() {
             />
             <motion.div
               className="fixed bottom-0 left-0 right-0 rounded-t-3xl p-4 z-[10001] safe-bottom max-h-[80vh] overflow-y-auto"
-              style={{ background: '#1E222B' }}
-              style={{ paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0) + 80px)` }}
+              style={{
+                background: '#1E222B',
+                paddingBottom: `calc(1rem + env(safe-area-inset-bottom, 0) + 80px)`
+              }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -2095,6 +2096,7 @@ interface ServiceItem {
   summary: string
   priceFrom: string
   addons?: { name: string; price: string }[]
+  photos?: string[] // URLs of photos attached to this service
 }
 
 function EditRequestForm({
@@ -2133,6 +2135,12 @@ function EditRequestForm({
   })
 
   const [saving, setSaving] = useState(false)
+  const [uploadingPhotos, setUploadingPhotos] = useState<{ [serviceIndex: number]: boolean }>({})
+  const [draggingServiceIndex, setDraggingServiceIndex] = useState<number | null>(null)
+  const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({})
+
+  const { haptic } = useTelegram()
+  const queryClient = useQueryClient()
 
   const addService = () => {
     setFormData(prev => ({
@@ -2153,6 +2161,111 @@ function EditRequestForm({
       ...prev,
       services: prev.services.filter((_: ServiceItem, i: number) => i !== index),
     }))
+  }
+
+  // Photo upload handlers
+  const handlePhotoSelect = async (serviceIndex: number, files: FileList | null) => {
+    if (!files || files.length === 0) return
+
+    const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'))
+    if (fileArray.length === 0) {
+      toast.error('Выберите изображения')
+      return
+    }
+
+    setUploadingPhotos(prev => ({ ...prev, [serviceIndex]: true }))
+    haptic?.impactOccurred('light')
+
+    try {
+      const uploadedUrls: string[] = []
+
+      // Get service name before loop
+      const currentService = formData.services[serviceIndex]
+      const serviceName = currentService?.name || `Service ${serviceIndex + 1}`
+
+      for (const file of fileArray) {
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', file)
+        uploadFormData.append('category', 'services')
+        uploadFormData.append('service_index', String(serviceIndex))
+        uploadFormData.append('service_name', serviceName)
+
+        const response = await requestsApi.uploadPhotos(request.id, uploadFormData)
+        if (response.data?.urls?.[0]) {
+          uploadedUrls.push(response.data.urls[0])
+        }
+      }
+
+      // Update service with new photos
+      setFormData(prev => ({
+        ...prev,
+        services: prev.services.map((s: ServiceItem, i: number) =>
+          i === serviceIndex
+            ? { ...s, photos: [...(s.photos || []), ...uploadedUrls] }
+            : s
+        )
+      }))
+
+      toast.success(`Добавлено ${uploadedUrls.length} фото`)
+      haptic?.notificationOccurred('success')
+      queryClient.invalidateQueries({ queryKey: ['request', request.id] })
+    } catch (error) {
+      console.error('Failed to upload photos:', error)
+      toast.error('Ошибка загрузки фото')
+      haptic?.notificationOccurred('error')
+    } finally {
+      setUploadingPhotos(prev => ({ ...prev, [serviceIndex]: false }))
+    }
+  }
+
+  const handleDeletePhoto = async (serviceIndex: number, photoUrl: string) => {
+    try {
+      await requestsApi.deletePhoto(request.id, photoUrl)
+
+      setFormData(prev => ({
+        ...prev,
+        services: prev.services.map((s: ServiceItem, i: number) =>
+          i === serviceIndex
+            ? { ...s, photos: (s.photos || []).filter((url: string) => url !== photoUrl) }
+            : s
+        )
+      }))
+
+      toast.success('Фото удалено')
+      haptic?.notificationOccurred('success')
+      queryClient.invalidateQueries({ queryKey: ['request', request.id] })
+    } catch (error) {
+      console.error('Failed to delete photo:', error)
+      toast.error('Ошибка удаления фото')
+      haptic?.notificationOccurred('error')
+    }
+  }
+
+  const handleDragEnter = (e: React.DragEvent, serviceIndex: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDraggingServiceIndex(serviceIndex)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDraggingServiceIndex(null)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent, serviceIndex: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDraggingServiceIndex(null)
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handlePhotoSelect(serviceIndex, e.dataTransfer.files)
+    }
   }
 
   const handleSave = async () => {
@@ -2214,7 +2327,7 @@ function EditRequestForm({
             activeTab === 'services' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-tg-hint'
           }`}
         >
-          Товары ({formData.services.filter((s: ServiceItem) => s.name.trim()).length})
+          Товары/Услуги ({formData.services.filter((s: ServiceItem) => s.name.trim()).length})
         </button>
         <button
           onClick={() => setActiveTab('details')}
@@ -2339,7 +2452,7 @@ function EditRequestForm({
               borderColor: 'rgba(100, 116, 139, 0.15)'
             }}>
               <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-tg-text">Услуга/Товар {i + 1}</span>
+                <span className="text-sm font-medium text-tg-text">Товар/Услуга {i + 1}</span>
                 {formData.services.length > 1 && (
                   <button
                     onClick={() => removeService(i)}
@@ -2368,6 +2481,85 @@ function EditRequestForm({
                   placeholder="от 10 000 ₽"
                   className="input"
                 />
+
+                {/* Photo upload section */}
+                <div className="space-y-2">
+                  <label className="text-xs text-tg-hint font-semibold">Фото товара/услуги</label>
+
+                  {/* Photo thumbnails */}
+                  {service.photos && service.photos.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {service.photos.map((photoUrl, photoIndex) => (
+                        <div key={photoIndex} className="relative group">
+                          <img
+                            src={photoUrl}
+                            alt={`Фото ${photoIndex + 1}`}
+                            className="w-16 h-16 rounded-lg object-cover cursor-pointer"
+                            onClick={() => {
+                              // Open full size view
+                              window.open(photoUrl, '_blank')
+                            }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
+                            }}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeletePhoto(i, photoUrl)
+                            }}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Compact drag-and-drop zone */}
+                  <div
+                    onDragEnter={(e) => handleDragEnter(e, i)}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, i)}
+                    className={clsx(
+                      "relative border-2 border-dashed rounded-lg p-2 transition-all cursor-pointer",
+                      draggingServiceIndex === i
+                        ? "border-blue-400 bg-blue-500/10 scale-[1.02]"
+                        : "border-tg-separator hover:border-blue-400/50"
+                    )}
+                  >
+                    <input
+                      ref={(el) => { fileInputRefs.current[i] = el }}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => handlePhotoSelect(i, e.target.files)}
+                      disabled={uploadingPhotos[i]}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRefs.current[i]?.click()}
+                      disabled={uploadingPhotos[i]}
+                      className="w-full flex items-center justify-center gap-2 py-2 text-xs text-tg-hint hover:text-tg-text transition-colors disabled:opacity-50"
+                    >
+                      {uploadingPhotos[i] ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Загрузка...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="w-4 h-4" />
+                          <span>Добавить фото (перетащите или нажмите)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Add-ons editor */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -2383,10 +2575,10 @@ function EditRequestForm({
                               const name = e.target.value
                               setFormData(prev => ({
                                 ...prev,
-                                services: prev.services.map((s, si) => {
+                                services: prev.services.map((s: ServiceItem, si: number) => {
                                   if (si !== i) return s
                                   const addons = s.addons ?? []
-                                  const updated = addons.map((a, ai) =>
+                                  const updated = addons.map((a: { name: string; price: string }, ai: number) =>
                                     ai === addonIndex ? { ...a, name } : a
                                   )
                                   return { ...s, addons: updated }
@@ -2402,10 +2594,10 @@ function EditRequestForm({
                               const price = e.target.value
                               setFormData(prev => ({
                                 ...prev,
-                                services: prev.services.map((s, si) => {
+                                services: prev.services.map((s: ServiceItem, si: number) => {
                                   if (si !== i) return s
                                   const addons = s.addons ?? []
-                                  const updated = addons.map((a, ai) =>
+                                  const updated = addons.map((a: { name: string; price: string }, ai: number) =>
                                     ai === addonIndex ? { ...a, price } : a
                                   )
                                   return { ...s, addons: updated }
@@ -2420,12 +2612,12 @@ function EditRequestForm({
                             onClick={() => {
                               setFormData(prev => ({
                                 ...prev,
-                                services: prev.services.map((s, si) => {
+                                services: prev.services.map((s: ServiceItem, si: number) => {
                                   if (si !== i) return s
                                   const addons = s.addons ?? []
                                   return {
                                     ...s,
-                                    addons: addons.filter((_, ai) => ai !== addonIndex)
+                                    addons: addons.filter((_: { name: string; price: string }, ai: number) => ai !== addonIndex)
                                   }
                                 })
                               }))
@@ -2447,7 +2639,7 @@ function EditRequestForm({
                     onClick={() => {
                       setFormData(prev => ({
                         ...prev,
-                        services: prev.services.map((s, si) => {
+                        services: prev.services.map((s: ServiceItem, si: number) => {
                           if (si !== i) return s
                           const addons = s.addons ?? []
                           return {
