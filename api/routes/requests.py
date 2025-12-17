@@ -318,9 +318,15 @@ async def upload_photos(
     category: str = Form(...),
     files: List[UploadFile] = File(None),
     file: UploadFile = File(None),
+    service_index: Optional[str] = Form(None),
+    service_name: Optional[str] = Form(None),
     user: dict = Depends(get_current_user)
 ):
-    """Upload photos for a request."""
+    """Upload photos for a request.
+
+    If service_index and service_name are provided, photos are attached to a specific service.
+    Otherwise, photos are stored as general category photos in assets.images.
+    """
     request = await db.get_request(request_id)
 
     if not request:
@@ -360,28 +366,62 @@ async def upload_photos(
     payload = request.get('payload', {}) or {}
     site = payload.get('site', {}) or {}
 
-    # Store photos in assets.images for consistency
-    assets = site.get('assets', {}) or {}
-    images = assets.get('images', []) or []
+    # If service_index is provided, attach photos to specific service
+    if service_index is not None and service_name is not None:
+        try:
+            service_idx = int(service_index)
+            services = site.get('services', []) or []
 
-    for url in uploaded_urls:
-        images.append({
-            'url': url,
-            'category': category,
-            'alt': category
-        })
+            # Ensure services is a list
+            if not isinstance(services, list):
+                services = []
 
-    assets['images'] = images
-    site['assets'] = assets
+            # Ensure service exists at this index
+            while len(services) <= service_idx:
+                services.append({})
+
+            # Get or create service object
+            service = services[service_idx]
+            if isinstance(service, str):
+                service = {'name': service}
+
+            # Initialize photos array if not exists
+            if 'photos' not in service:
+                service['photos'] = []
+
+            # Add photos to service
+            service['photos'].extend(uploaded_urls)
+
+            # Update service in list
+            services[service_idx] = service
+            site['services'] = services
+
+            log.info(f"Attached {len(uploaded_urls)} photos to service {service_idx} ({service_name})")
+        except (ValueError, IndexError) as e:
+            log.warning(f"Failed to attach photos to service: {e}, storing as general category photos")
+            # Fall through to general category storage
+
+    # Store photos in assets.images for general category photos
+    # (or if service attachment failed)
+    if service_index is None or service_name is None:
+        assets = site.get('assets', {}) or {}
+        images = assets.get('images', []) or []
+
+        for url in uploaded_urls:
+            images.append({
+                'url': url,
+                'category': category,
+                'alt': category
+            })
+
+        assets['images'] = images
+        site['assets'] = assets
+        log.info(f"Stored {len(uploaded_urls)} photos as general category '{category}' photos")
+
     payload['site'] = site
 
-    log.info(f"Updating request {request_id} with {len(images)} images")
+    log.info(f"Updating request {request_id} with photos")
     await db.update_request(request_id, {'payload': payload})
-
-    # Verify update
-    updated = await db.get_request(request_id)
-    updated_images = updated.get('payload', {}).get('site', {}).get('assets', {}).get('images', [])
-    log.info(f"Request {request_id} now has {len(updated_images)} images")
 
     return {"urls": uploaded_urls}
 
