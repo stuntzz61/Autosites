@@ -172,7 +172,8 @@ export default function AdminSupervisors() {
         {selectedSupervisor && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -281,7 +282,8 @@ export default function AdminSupervisors() {
         {showAssignModal && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

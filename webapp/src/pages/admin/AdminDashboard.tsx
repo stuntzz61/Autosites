@@ -74,7 +74,7 @@ export default function AdminDashboard() {
         animate={{ opacity: 1, y: 0 }}
       >
         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-          isOwner ? 'bg-gradient-to-br from-yellow-400 to-orange-500' :
+          isOwner ? 'bg-gradient-to-br from-blue-500 to-indigo-600' :
           isDirector ? 'bg-gradient-to-br from-yellow-400 to-amber-500' :
           'bg-gradient-to-br from-purple-500 to-indigo-600'
         }`}>
@@ -126,12 +126,12 @@ export default function AdminDashboard() {
         >
           <button
             onClick={() => navigate('/admin/directors')}
-            className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-2xl p-4 text-left hover:scale-[1.02] transition-transform"
+            className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-2xl p-4 text-left hover:scale-[1.02] transition-transform"
           >
-            <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center text-yellow-500 mb-3">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-500 mb-3">
               <Crown className="w-5 h-5" />
             </div>
-            <p className="text-2xl font-bold text-yellow-400">{directors.length}</p>
+            <p className="text-2xl font-bold text-blue-400">{directors.length}</p>
             <p className="text-sm text-tg-hint">Директоров</p>
           </button>
           <button

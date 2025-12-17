@@ -67,7 +67,7 @@ export default function HomePage() {
             <motion.span
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
                 isOwner
-                  ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border border-yellow-500/30'
+                  ? 'bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30'
                   : isDirector
                   ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border border-yellow-500/30'
                   : 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-400 border border-purple-500/30'
@@ -117,7 +117,7 @@ export default function HomePage() {
                   <div
                     className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                       isOwner || isDirector
-                        ? 'bg-gradient-to-br from-yellow-500 to-orange-500'
+                        ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
                         : 'bg-gradient-to-br from-purple-500 to-indigo-600'
                     }`}
                   >

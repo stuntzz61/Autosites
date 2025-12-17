@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
 import {
   User, CheckCircle, XCircle, Ban, Unlock, Trash2,
-  ChevronRight, Shield, UserCog, X, FileText, BarChart3, Users2, ArrowRight, Download, Info, Crown, Sparkles
+  ChevronRight, Shield, X, FileText, BarChart3, Users2, ArrowRight, Download, Info, Crown
 } from 'lucide-react'
 import { getRoleLabel } from '@/stores/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -60,13 +60,18 @@ export default function AdminManagers() {
   const { data: managers, isLoading, error: managersError } = useQuery({
     queryKey: ['admin', 'managers'],
     queryFn: () => adminApi.managers.list().then(res => res.data),
-    onError: (error: any) => {
-      console.error('Error fetching managers:', error)
-      toast.error(error.response?.data?.detail || 'Ошибка загрузки менеджеров')
-    },
   })
 
-  const { data: detailedManagerData, refetch: refetchDetailed } = useQuery({
+  // Handle error separately
+  useEffect(() => {
+    if (managersError) {
+      const error = managersError as any
+      console.error('Error fetching managers:', error)
+      toast.error(error.response?.data?.detail || 'Ошибка загрузки менеджеров')
+    }
+  }, [managersError])
+
+  const { data: detailedManagerData } = useQuery({
     queryKey: ['admin', 'managers', detailedManager?.id],
     queryFn: () => detailedManager ? adminApi.managers.get(detailedManager.id).then(res => res.data) : null,
     enabled: !!detailedManager && showDetailedInfo,
@@ -186,7 +191,7 @@ export default function AdminManagers() {
               : 'bg-tg-secondary-bg text-tg-text'
           }`}
         >
-          Все ({managers?.length || 0})
+          Все ({Array.isArray(managers) ? managers.length : 0})
         </button>
         <button
           onClick={() => setTab('pending')}
@@ -255,13 +260,13 @@ export default function AdminManagers() {
             <div className="text-center text-red-500 py-8">
               <p>Ошибка загрузки менеджеров</p>
               <p className="text-sm text-tg-hint mt-2">
-                {managersError.response?.data?.detail || managersError.message}
+                {(managersError as any)?.response?.data?.detail || (managersError as Error)?.message || 'Неизвестная ошибка'}
               </p>
             </div>
-          ) : !managers || managers.length === 0 ? (
+          ) : !managers || (Array.isArray(managers) && managers.length === 0) ? (
             <p className="text-center text-tg-hint py-8">Нет менеджеров</p>
           ) : (
-            managers.map((manager: Manager) => (
+            (Array.isArray(managers) ? managers : []).map((manager: Manager) => (
               <button
                 key={manager.id}
                 onClick={() => setSelectedManager(manager)}
@@ -329,7 +334,8 @@ export default function AdminManagers() {
         {selectedManager && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -560,7 +566,8 @@ export default function AdminManagers() {
         {showDeleteConfirm && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/80 z-[100]"
+              className="fixed inset-0 z-[100] backdrop-blur-md"
+              style={{ background: 'rgba(0, 0, 0, 0.6)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -616,7 +623,8 @@ export default function AdminManagers() {
         {showMoveGroupModal && managerToMove && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -716,7 +724,8 @@ export default function AdminManagers() {
         {showDetailedInfo && (detailedManagerData || detailedManager) && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

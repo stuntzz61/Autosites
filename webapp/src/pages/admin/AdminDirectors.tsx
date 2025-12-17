@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
 import { Crown, Trash2, UserPlus, XCircle, Search, User, Shield, ChevronRight, Loader2 } from 'lucide-react'
 import { getRoleLabel } from '@/stores/authStore'
-import { useAuthStore } from '@/stores/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 
@@ -22,7 +21,6 @@ interface UserInfo {
 }
 
 export default function AdminDirectors() {
-  const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [selectedDirector, setSelectedDirector] = useState<UserInfo | null>(null)
   const [showAssignModal, setShowAssignModal] = useState(false)
@@ -109,7 +107,7 @@ export default function AdminDirectors() {
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'director':
-        return <Crown className="w-5 h-5 text-yellow-400" />
+        return <Crown className="w-5 h-5 text-blue-400" />
       case 'supervisor':
         return <Shield className="w-5 h-5 text-purple-500" />
       default:
@@ -174,7 +172,7 @@ export default function AdminDirectors() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                     <Crown className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -241,7 +239,8 @@ export default function AdminDirectors() {
         {selectedDirector && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -270,7 +269,7 @@ export default function AdminDirectors() {
 
                 {/* Director Info */}
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                     <Crown className="w-8 h-8 text-white" />
                   </div>
                   <div>
@@ -311,7 +310,7 @@ export default function AdminDirectors() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-tg-hint">Роль</span>
-                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm">
+                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-sm">
                       <Crown className="w-3.5 h-3.5" />
                       {getRoleLabel(selectedDirector.role as any)}
                     </span>
@@ -350,7 +349,8 @@ export default function AdminDirectors() {
         {showAssignModal && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -393,7 +393,7 @@ export default function AdminDirectors() {
                       onClick={() => setAssignRole('director')}
                       className={`flex-1 p-3 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors ${
                         assignRole === 'director'
-                          ? 'bg-yellow-500/20 text-yellow-500 border-2 border-yellow-500'
+                          ? 'bg-blue-500/20 text-blue-500 border-2 border-blue-500'
                           : 'bg-tg-secondary-bg text-tg-hint'
                       }`}
                     >

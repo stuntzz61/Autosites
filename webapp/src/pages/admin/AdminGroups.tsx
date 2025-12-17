@@ -31,7 +31,6 @@ interface Group {
 export default function AdminGroups() {
   const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null)
   const [editingGroup, setEditingGroup] = useState<Group | null>(null)
@@ -89,7 +88,6 @@ export default function AdminGroups() {
       toast.success('Группа удалена')
       setShowDeleteConfirm(false)
       setGroupToDelete(null)
-      setSelectedGroup(null)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.detail || 'Ошибка удаления группы')
@@ -134,7 +132,6 @@ export default function AdminGroups() {
 
   const handleDelete = (group: Group) => {
     setGroupToDelete(group)
-    setSelectedGroup(null)
     setTimeout(() => setShowDeleteConfirm(true), 150)
   }
 
@@ -263,7 +260,7 @@ export default function AdminGroups() {
                       handleDelete(group)
                     }}
                     className="p-2 rounded-xl bg-red-500/20 text-red-500"
-                    disabled={group.member_count && group.member_count > 0}
+                    disabled={!!(group.member_count && group.member_count > 0)}
                     title="Удалить"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -280,7 +277,8 @@ export default function AdminGroups() {
         {showCreateModal && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -363,7 +361,8 @@ export default function AdminGroups() {
         {editingGroup && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -449,7 +448,8 @@ export default function AdminGroups() {
         {showDeleteConfirm && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/80 z-[100]"
+              className="fixed inset-0 z-[100] backdrop-blur-md"
+              style={{ background: 'rgba(0, 0, 0, 0.6)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -509,7 +509,8 @@ export default function AdminGroups() {
         {showMembersModal && viewingGroup && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

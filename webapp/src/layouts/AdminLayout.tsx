@@ -9,22 +9,25 @@ import { useAuthStore, isOwnerRole, isDirectorRole } from '@/stores/authStore'
 // Base nav items available to all supervisors
 const baseNavItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Панель', exact: true },
+  // Users management - grouped together
   { path: '/admin/managers', icon: Users, label: 'Менеджеры' },
   { path: '/admin/groups', icon: Users2, label: 'Группы' },
   { path: '/admin/invite-codes', icon: Link2, label: 'Инвайты' },
+  // Content management
   { path: '/admin/requests', icon: FileText, label: 'Заявки' },
   { path: '/admin/sites', icon: Globe, label: 'Сайты' },
+  // Communication & Analytics
   { path: '/admin/feedback', icon: MessageSquare, label: 'Обращения' },
   { path: '/admin/stats', icon: BarChart3, label: 'Статистика' },
   { path: '/admin/broadcast', icon: Radio, label: 'Рассылка' },
 ]
 
-// Additional nav items for director (can manage supervisors)
+// Additional nav items for director (can manage supervisors) - inserted after managers
 const directorNavItems = [
   { path: '/admin/supervisors', icon: Shield, label: 'Супервайзеры' },
 ]
 
-// Additional nav items for owner (can manage directors and supervisors)
+// Additional nav items for owner (can manage directors and supervisors) - inserted after supervisors
 const ownerNavItems = [
   { path: '/admin/directors', icon: Crown, label: 'Директоры' },
 ]
@@ -38,14 +41,24 @@ export default function AdminLayout() {
   // Get nav items based on role
   const getNavItems = () => {
     const items = [...baseNavItems]
-    // Director can see supervisors management
-    if (user && isDirectorRole(user.role)) {
-      items.push(...directorNavItems)
+    const managersIndex = items.findIndex(item => item.path === '/admin/managers')
+
+    // Insert supervisors after managers (for director and owner)
+    if (user && (isDirectorRole(user.role) || isOwnerRole(user.role))) {
+      items.splice(managersIndex + 1, 0, ...directorNavItems)
     }
-    // Owner can see directors management
+
+    // Insert directors after supervisors (for owner only)
     if (user && isOwnerRole(user.role)) {
-      items.push(...ownerNavItems)
+      const supervisorsIndex = items.findIndex(item => item.path === '/admin/supervisors')
+      if (supervisorsIndex !== -1) {
+        items.splice(supervisorsIndex + 1, 0, ...ownerNavItems)
+      } else {
+        // If no supervisors, insert after managers
+        items.splice(managersIndex + 1, 0, ...ownerNavItems)
+      }
     }
+
     return items
   }
 

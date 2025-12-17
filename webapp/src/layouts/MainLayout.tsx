@@ -110,6 +110,7 @@ export default function MainLayout() {
                 label={label}
                 isActive={isActive}
                 isHighlighted={isOwner || isDirector}
+                isOwner={isOwner}
               />
             )
           })}
@@ -139,11 +140,15 @@ interface NavButtonProps {
   label: string
   isActive: boolean
   isHighlighted?: boolean
+  isOwner?: boolean
 }
 
-function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted }: NavButtonProps) {
-  // Gold color for highlighted admin roles
-  const highlightColor = 'rgb(251, 191, 36)' // yellow-400
+function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted, isOwner }: NavButtonProps) {
+  // Cold color for Owner, gold for Director
+  const highlightColor = isOwner ? 'rgb(59, 130, 246)' : 'rgb(251, 191, 36)' // blue-500 for owner, yellow-400 for director
+  const highlightColorAlpha = isOwner ? 'rgba(59, 130, 246, 0.7)' : 'rgba(251, 191, 36, 0.7)'
+  const highlightGlow = isOwner ? 'rgba(59, 130, 246, 0.2)' : 'rgba(251, 191, 36, 0.2)'
+  const highlightGlowAlpha = isOwner ? 'rgba(59, 130, 246, 0.8)' : 'rgba(251, 191, 36, 0.8)'
 
   return (
     <motion.button
@@ -153,7 +158,7 @@ function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted }: NavB
       style={{
         color: isActive
           ? (isHighlighted ? highlightColor : 'var(--accent-primary-light)')
-          : (isHighlighted ? 'rgba(251, 191, 36, 0.7)' : 'var(--text-subtle)')
+          : (isHighlighted ? highlightColorAlpha : 'var(--text-subtle)')
       }}
     >
       {/* Active indicator glow */}
@@ -165,7 +170,7 @@ function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted }: NavB
           transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           style={{
             background: isHighlighted
-              ? 'radial-gradient(ellipse at center bottom, rgba(251, 191, 36, 0.2) 0%, transparent 70%)'
+              ? `radial-gradient(ellipse at center bottom, ${highlightGlow} 0%, transparent 70%)`
               : 'radial-gradient(ellipse at center bottom, rgba(59, 130, 246, 0.15) 0%, transparent 70%)'
           }}
         />
@@ -192,7 +197,7 @@ function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted }: NavB
         style={{
           color: isActive
             ? (isHighlighted ? highlightColor : 'var(--accent-primary-light)')
-            : (isHighlighted ? 'rgba(251, 191, 36, 0.8)' : 'var(--text-subtle)'),
+            : (isHighlighted ? highlightGlowAlpha : 'var(--text-subtle)'),
           opacity: isActive ? 1 : 0.8
         }}
       >

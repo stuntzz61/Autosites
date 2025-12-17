@@ -356,7 +356,8 @@ export default function AdminInviteCodes() {
         {showCreateModal && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -520,7 +521,8 @@ export default function AdminInviteCodes() {
         {selectedCode && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: 'rgba(0, 0, 0, 0.4)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -724,7 +726,8 @@ export default function AdminInviteCodes() {
         {showDeleteConfirm && codeToDelete && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/80 z-[100]"
+              className="fixed inset-0 z-[100] backdrop-blur-md"
+              style={{ background: 'rgba(0, 0, 0, 0.6)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

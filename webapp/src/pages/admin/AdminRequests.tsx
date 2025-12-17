@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { adminApi } from '@/api/client'
-import { Search, FileText, Archive, Trash2, ChevronRight, AlertTriangle, X } from 'lucide-react'
+import { Search, FileText, Archive, Trash2, ChevronRight, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 
@@ -139,7 +139,8 @@ export default function AdminRequests() {
         {showDeleteConfirm && (
           <>
             <motion.div
-              className="fixed inset-0 bg-black/80 z-[100]"
+              className="fixed inset-0 z-[100] backdrop-blur-md"
+              style={{ background: 'rgba(0, 0, 0, 0.6)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
