@@ -207,7 +207,7 @@ async def delete_request(request_id: str, user: dict = Depends(get_current_user)
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Managers can only delete drafts or error requests
-    if user['role'] != 'admin':
+    if user['role'] not in ('supervisor', 'director', 'owner'):
         status = request.get('payload', {}).get('site', {}).get('meta', {}).get('status') or request.get('status', 'draft')
         if status not in ['draft', 'error', 'generated_error']:
             raise HTTPException(status_code=403, detail="Можно удалить только черновики или заявки с ошибками")

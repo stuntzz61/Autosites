@@ -369,9 +369,9 @@ async def list_payments(
 
 @router.post("/{payment_id}/complete")
 async def admin_complete_payment(payment_id: str, user: dict = Depends(get_current_user)):
-    """Manually mark payment as completed (admin only)."""
-    if user['role'] != 'admin':
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Manually mark payment as completed (supervisor/director/owner only)."""
+    if user['role'] not in ('supervisor', 'director', 'owner'):
+        raise HTTPException(status_code=403, detail="Supervisor access required")
 
     payment = await db.get_hosting_transaction(payment_id)
 

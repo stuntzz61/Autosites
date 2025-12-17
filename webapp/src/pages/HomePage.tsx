@@ -2,17 +2,21 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, FileText, Clock, CheckCircle, ChevronRight,
-  Sparkles, TrendingUp, ArrowRight, Crown, Zap
+  Sparkles, TrendingUp, ArrowRight, Crown, Zap, Shield, Users, Settings
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore, isOwnerRole, isDirectorRole, isSupervisorRole, getRoleLabel } from '@/stores/authStore'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { profileApi } from '@/api/client'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, isAdmin } = useAuthStore()
   const { haptic } = useTelegram()
+
+  const isOwner = user && isOwnerRole(user.role)
+  const isDirector = user && isDirectorRole(user.role)
+  const isSupervisor = user && isSupervisorRole(user.role)
 
   const { data: stats } = useQuery({
     queryKey: ['profile-stats'],
@@ -60,15 +64,21 @@ export default function HomePage() {
             {user?.first_name}
           </h1>
 
-          {user?.role === 'admin' && (
+          {user?.role && ['supervisor', 'director', 'owner'].includes(user.role) && (
             <motion.span
-              className="badge-premium inline-flex items-center gap-1.5"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                isOwner
+                  ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border border-yellow-500/30'
+                  : isDirector
+                  ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border border-yellow-500/30'
+                  : 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-400 border border-purple-500/30'
+              }`}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <Crown className="w-3.5 h-3.5" />
-              Администратор
+              {isOwner ? <Crown className="w-3.5 h-3.5" /> : isDirector ? <Crown className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+              {getRoleLabel(user.role)}
             </motion.span>
           )}
         </motion.div>
@@ -76,11 +86,92 @@ export default function HomePage() {
 
       {/* Content */}
       <div className="px-4 space-y-5 pb-8 relative z-10">
+        {/* Admin Quick Access - For Owner/Director/Supervisor */}
+        {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <button
+              onClick={() => {
+                haptic?.impactOccurred('medium')
+                navigate('/admin')
+              }}
+              className="w-full group"
+            >
+              <div
+                className="relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:scale-[1.01] active:scale-[0.98]"
+                style={{
+                  background: isOwner
+                    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.1) 100%)'
+                    : isDirector
+                    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(251, 191, 36, 0.08) 100%)'
+                    : 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%)',
+                  border: isOwner || isDirector
+                    ? '1px solid rgba(245, 158, 11, 0.3)'
+                    : '1px solid rgba(139, 92, 246, 0.3)',
+                  boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.2)'
+                }}
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      isOwner || isDirector
+                        ? 'bg-gradient-to-br from-yellow-500 to-orange-500'
+                        : 'bg-gradient-to-br from-purple-500 to-indigo-600'
+                    }`}
+                  >
+                    {isOwner ? (
+                      <Crown className="w-6 h-6 text-white" />
+                    ) : isDirector ? (
+                      <Crown className="w-6 h-6 text-white" />
+                    ) : (
+                      <Shield className="w-6 h-6 text-white" />
+                    )}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p
+                      className="font-bold text-base mb-0.5"
+                      style={{ color: 'var(--text-primary)' }}
+                    >
+                      Панель управления
+                    </p>
+                    <p
+                      className="text-sm"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      {isOwner
+                        ? 'Управление директорами и системой'
+                        : isDirector
+                        ? 'Управление супервайзерами и командами'
+                        : 'Управление менеджерами и группами'}
+                    </p>
+                  </div>
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all group-hover:translate-x-1"
+                    style={{
+                      background: isOwner || isDirector
+                        ? 'rgba(245, 158, 11, 0.15)'
+                        : 'rgba(139, 92, 246, 0.15)',
+                    }}
+                  >
+                    <ArrowRight
+                      className="w-5 h-5"
+                      style={{ color: isOwner || isDirector ? 'rgb(251, 191, 36)' : 'rgb(167, 139, 250)' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </button>
+          </motion.div>
+        )}
+
         {/* Main Action Card - Create New Request */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: isAdmin ? 0.15 : 0.1 }}
         >
           <button
             onClick={() => {

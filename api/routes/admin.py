@@ -80,12 +80,17 @@ async def get_dashboard(user: dict = Depends(get_supervisor_user)):
 async def list_managers(user: dict = Depends(get_supervisor_user)):
     """List managers. Supervisor sees only managers from their groups. Director/Owner see all managers."""
     user_role = user.get('role')
+    print(f"[DEBUG] list_managers: user_role={user_role}, user_id={user.get('id')}")
+
     if user_role in ('owner', 'director'):
         # Owner and Director see all managers
         managers = await db.list_managers()
+        print(f"[DEBUG] list_managers: returning {len(managers)} managers for {user_role}")
     else:
         # Supervisor sees only managers from their groups
         managers = await db.list_managers_by_admin(str(user['id']))
+        print(f"[DEBUG] list_managers: returning {len(managers)} managers for supervisor")
+
     return managers
 
 
@@ -249,6 +254,21 @@ async def approve_registration(user_id: str, user: dict = Depends(get_supervisor
     if not result:
         raise HTTPException(status_code=400, detail="Status already changed by another admin")
 
+    # Send notification to the approved user
+    approved_user = await db.get_user_by_id(user_id)
+    if approved_user and approved_user.get('tg_id'):
+        notification_text = (
+            "🎉 <b>Ваша заявка одобрена!</b>\n\n"
+            "Добро пожаловать в команду! Теперь вам нужно заполнить профиль для завершения регистрации.\n\n"
+            "Откройте приложение, чтобы продолжить."
+        )
+        try:
+            await send_telegram_message(approved_user['tg_id'], notification_text)
+            log.info(f"Sent approval notification to user {user_id} (tg_id: {approved_user['tg_id']})")
+        except Exception as e:
+            log.error(f"Failed to send approval notification to user {user_id}: {e}")
+            # Don't fail the request if notification fails
+
     return {"success": True}
 
 
@@ -292,6 +312,22 @@ async def reject_registration(
     result = await db.reject_user(user_id, data.reason)
     if not result:
         raise HTTPException(status_code=400, detail="Status already changed by another admin")
+
+    # Send notification to the rejected user
+    rejected_user = await db.get_user_by_id(user_id)
+    if rejected_user and rejected_user.get('tg_id'):
+        notification_text = (
+            "❌ <b>Заявка отклонена</b>\n\n"
+            f"К сожалению, ваша заявка на регистрацию была отклонена.\n\n"
+            f"<b>Причина:</b> {data.reason}\n\n"
+            "Если у вас есть вопросы, свяжитесь с администратором."
+        )
+        try:
+            await send_telegram_message(rejected_user['tg_id'], notification_text)
+            log.info(f"Sent rejection notification to user {user_id} (tg_id: {rejected_user['tg_id']})")
+        except Exception as e:
+            log.error(f"Failed to send rejection notification to user {user_id}: {e}")
+            # Don't fail the request if notification fails
 
     return {"success": True}
 
@@ -742,7 +778,7 @@ async def assign_role(
 
 @router.delete("/supervisors/{supervisor_id}")
 async def delete_supervisor(supervisor_id: str, user: dict = Depends(get_director_user)):
-    """Delete a supervisor. Only owner/director can do this."""
+    """Demote a supervisor to manager. Only owner/director can do this."""
     # Check if user can manage the target user
     if not await db.can_manage_user(str(user['id']), supervisor_id):
         raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
@@ -751,12 +787,13 @@ async def delete_supervisor(supervisor_id: str, user: dict = Depends(get_directo
     if not target_user or target_user.get('role') != 'supervisor':
         raise HTTPException(status_code=404, detail="Supervisor not found")
 
-    await db.delete_user(supervisor_id)
-    return {"success": True}
+    # Demote to manager instead of deleting
+    await db.update_user_role(supervisor_id, 'manager')
+    return {"success": True, "message": "Supervisor demoted to manager"}
 
 @router.delete("/directors/{director_id}")
 async def delete_director(director_id: str, user: dict = Depends(get_owner_user)):
-    """Delete a director. Only owner can do this."""
+    """Demote a director to manager. Only owner can do this."""
     # Check if user can manage the target user
     if not await db.can_manage_user(str(user['id']), director_id):
         raise HTTPException(status_code=403, detail="Доступ запрещен. Вы не можете управлять этим пользователем")
@@ -765,8 +802,9 @@ async def delete_director(director_id: str, user: dict = Depends(get_owner_user)
     if not target_user or target_user.get('role') != 'director':
         raise HTTPException(status_code=404, detail="Director not found")
 
-    await db.delete_user(director_id)
-    return {"success": True}
+    # Demote to manager instead of deleting
+    await db.update_user_role(director_id, 'manager')
+    return {"success": True, "message": "Director demoted to manager"}
 
 
 @router.get("/invite-codes/validate/{code}")

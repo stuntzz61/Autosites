@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '@/api/client'
-import { Crown, Trash2, UserPlus, XCircle, Search, User, Shield, ChevronRight, Loader2 } from 'lucide-react'
-import { getRoleLabel } from '@/stores/authStore'
-import { useAuthStore } from '@/stores/authStore'
+import { Shield, Trash2, UserPlus, XCircle, Search, User, ChevronRight, Loader2 } from 'lucide-react'
+import { getRoleLabel, useAuthStore, isOwnerRole } from '@/stores/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 
@@ -21,25 +20,16 @@ interface UserInfo {
   request_count?: number
 }
 
-export default function AdminDirectors() {
+export default function AdminSupervisors() {
   const { user } = useAuthStore()
+  const isOwner = user && isOwnerRole(user.role)
   const queryClient = useQueryClient()
-  const [selectedDirector, setSelectedDirector] = useState<UserInfo | null>(null)
+  const [selectedSupervisor, setSelectedSupervisor] = useState<UserInfo | null>(null)
   const [showAssignModal, setShowAssignModal] = useState(false)
-  const [assignRole, setAssignRole] = useState<'director' | 'supervisor' | 'manager'>('director')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserInfo | null>(null)
 
-  // Fetch directors
-  const { data: directors = [], isLoading: isLoadingDirectors } = useQuery({
-    queryKey: ['admin', 'directors'],
-    queryFn: async () => {
-      const response = await adminApi.directors.list()
-      return response.data
-    },
-  })
-
-  // Fetch supervisors (for role management)
+  // Fetch supervisors
   const { data: supervisors = [], isLoading: isLoadingSupervisors } = useQuery({
     queryKey: ['admin', 'supervisors'],
     queryFn: async () => {
@@ -48,84 +38,68 @@ export default function AdminDirectors() {
     },
   })
 
-  // Fetch all managers (for promoting to director/supervisor)
+  // Fetch all managers (for promoting to supervisor)
   const { data: managers = [], isLoading: isLoadingManagers } = useQuery({
     queryKey: ['admin', 'managers'],
     queryFn: async () => {
       const response = await adminApi.managers.list()
       return response.data
     },
-    enabled: showAssignModal, // Only fetch when modal is open
+    enabled: showAssignModal,
   })
 
-  // Combined list for selection (managers + supervisors that can be promoted)
-  const availableUsers = [
-    ...supervisors.filter((s: UserInfo) => s.role === 'supervisor'),
-    ...managers.filter((m: UserInfo) => m.role === 'manager'),
-  ]
-
   // Filter users by search query
-  const filteredUsers = availableUsers.filter((u: UserInfo) => {
+  const filteredManagers = managers.filter((m: UserInfo) => {
+    if (m.role !== 'manager') return false
     const searchLower = searchQuery.toLowerCase()
-    const fullName = `${u.first_name} ${u.last_name || ''}`.toLowerCase()
-    const username = (u.username || '').toLowerCase()
+    const fullName = `${m.first_name} ${m.last_name || ''}`.toLowerCase()
+    const username = (m.username || '').toLowerCase()
     return fullName.includes(searchLower) || username.includes(searchLower)
   })
 
   // Assign role mutation
   const assignRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: 'manager' | 'supervisor' | 'director' }) => {
-      return adminApi.roles.assign(userId, role)
+    mutationFn: async ({ userId }: { userId: string }) => {
+      return adminApi.roles.assign(userId, 'supervisor')
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'directors'] })
-      queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
       queryClient.invalidateQueries({ queryKey: ['admin', 'supervisors'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
       setShowAssignModal(false)
       setSelectedUser(null)
       setSearchQuery('')
-      toast.success('Роль успешно назначена')
+      toast.success('Супервайзер успешно назначен')
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.detail || 'Ошибка назначения роли')
     },
   })
 
-  // Delete director mutation
+  // Delete supervisor mutation (demote to manager)
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return adminApi.directors.delete(id)
+      return adminApi.supervisors.delete(id)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'directors'] })
-      setSelectedDirector(null)
-      toast.success('Директор удалён')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'supervisors'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'managers'] })
+      setSelectedSupervisor(null)
+      toast.success('Супервайзер удалён')
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.detail || 'Ошибка удаления')
     },
   })
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'director':
-        return <Crown className="w-5 h-5 text-yellow-400" />
-      case 'supervisor':
-        return <Shield className="w-5 h-5 text-purple-500" />
-      default:
-        return <User className="w-5 h-5 text-tg-accent" />
-    }
-  }
-
   const handleAssignRole = () => {
     if (!selectedUser) {
       toast.error('Выберите пользователя')
       return
     }
-    assignRoleMutation.mutate({ userId: selectedUser.id, role: assignRole })
+    assignRoleMutation.mutate({ userId: selectedUser.id })
   }
 
-  if (isLoadingDirectors) {
+  if (isLoadingSupervisors) {
     return (
       <div className="p-4 flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-tg-accent" />
@@ -138,9 +112,9 @@ export default function AdminDirectors() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-tg-text">Директоры</h2>
+          <h2 className="text-xl font-semibold text-tg-text">Супервайзеры</h2>
           <p className="text-sm text-tg-hint mt-1">
-            Управление директорами. Только владелец может назначать и удалять директоров.
+            Управление супервайзерами. {isOwner ? 'Владелец' : 'Директор'} может назначать супервайзеров.
           </p>
         </div>
         <button
@@ -152,37 +126,37 @@ export default function AdminDirectors() {
         </button>
       </div>
 
-      {/* Directors List */}
-      {directors.length === 0 ? (
+      {/* Supervisors List */}
+      {supervisors.length === 0 ? (
         <div className="text-center py-12">
-          <Crown className="w-16 h-16 text-tg-hint mx-auto mb-4 opacity-50" />
-          <p className="text-tg-hint mb-4">Директоры не назначены</p>
+          <Shield className="w-16 h-16 text-tg-hint mx-auto mb-4 opacity-50" />
+          <p className="text-tg-hint mb-4">Супервайзеры не назначены</p>
           <button
             onClick={() => setShowAssignModal(true)}
             className="btn btn-primary"
           >
-            Назначить первого директора
+            Назначить первого супервайзера
           </button>
         </div>
       ) : (
         <div className="space-y-2">
-          {directors.map((director: UserInfo) => (
+          {supervisors.map((supervisor: UserInfo) => (
             <button
-              key={director.id}
-              onClick={() => setSelectedDirector(director)}
+              key={supervisor.id}
+              onClick={() => setSelectedSupervisor(supervisor)}
               className="w-full p-4 bg-tg-secondary-bg rounded-xl text-left hover:bg-tg-secondary-bg/80 transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-purple-500" />
                   </div>
                   <div>
                     <div className="font-semibold text-tg-text">
-                      {director.full_name || `${director.first_name} ${director.last_name || ''}`.trim()}
+                      {supervisor.full_name || `${supervisor.first_name} ${supervisor.last_name || ''}`.trim()}
                     </div>
                     <div className="text-sm text-tg-hint">
-                      @{director.username || 'без username'}
+                      @{supervisor.username || 'без username'}
                     </div>
                   </div>
                 </div>
@@ -193,59 +167,16 @@ export default function AdminDirectors() {
         </div>
       )}
 
-      {/* Supervisors Section */}
-      <div className="pt-4">
-        <h3 className="text-lg font-semibold text-tg-text mb-3">Супервайзеры</h3>
-        {isLoadingSupervisors ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-5 h-5 animate-spin text-tg-accent" />
-          </div>
-        ) : supervisors.length === 0 ? (
-          <div className="text-center py-6 bg-tg-secondary-bg rounded-xl">
-            <Shield className="w-10 h-10 text-tg-hint mx-auto mb-2 opacity-50" />
-            <p className="text-tg-hint text-sm">Супервайзеры не назначены</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {supervisors.map((supervisor: UserInfo) => (
-              <div
-                key={supervisor.id}
-                className="p-4 bg-tg-secondary-bg rounded-xl"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                      <Shield className="w-5 h-5 text-purple-500" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-tg-text">
-                        {supervisor.full_name || `${supervisor.first_name} ${supervisor.last_name || ''}`.trim()}
-                      </div>
-                      <div className="text-sm text-tg-hint">
-                        @{supervisor.username || 'без username'}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-500 rounded">
-                    Супервайзер
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Director Detail Modal */}
+      {/* Supervisor Detail Modal */}
       <AnimatePresence>
-        {selectedDirector && (
+        {selectedSupervisor && (
           <>
             <motion.div
               className="fixed inset-0 bg-black/50 z-40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedDirector(null)}
+              onClick={() => setSelectedSupervisor(null)}
             />
             <motion.div
               className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
@@ -259,33 +190,33 @@ export default function AdminDirectors() {
 
               <div className="flex-1 overflow-y-auto px-4 pb-2">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-tg-text">Информация о директоре</h2>
+                  <h2 className="text-xl font-bold text-tg-text">Информация о супервайзере</h2>
                   <button
-                    onClick={() => setSelectedDirector(null)}
+                    onClick={() => setSelectedSupervisor(null)}
                     className="p-2 rounded-full bg-tg-secondary-bg"
                   >
                     <XCircle className="w-5 h-5 text-tg-hint" />
                   </button>
                 </div>
 
-                {/* Director Info */}
+                {/* Supervisor Info */}
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
-                    <Crown className="w-8 h-8 text-white" />
+                  <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center">
+                    <Shield className="w-8 h-8 text-purple-500" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-tg-text">
-                      {selectedDirector.full_name ||
-                       `${selectedDirector.first_name} ${selectedDirector.last_name || ''}`.trim()}
+                      {selectedSupervisor.full_name ||
+                       `${selectedSupervisor.first_name} ${selectedSupervisor.last_name || ''}`.trim()}
                     </h3>
-                    {selectedDirector.username && (
+                    {selectedSupervisor.username && (
                       <a
-                        href={`https://t.me/${selectedDirector.username}`}
+                        href={`https://t.me/${selectedSupervisor.username}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-tg-accent text-sm"
                       >
-                        @{selectedDirector.username}
+                        @{selectedSupervisor.username}
                       </a>
                     )}
                   </div>
@@ -293,33 +224,33 @@ export default function AdminDirectors() {
 
                 {/* Details */}
                 <div className="bg-tg-secondary-bg rounded-xl p-4 space-y-3">
-                  {selectedDirector.phone && (
+                  {selectedSupervisor.phone && (
                     <div className="flex justify-between">
                       <span className="text-tg-hint">Телефон</span>
-                      <span className="text-tg-text">{selectedDirector.phone}</span>
+                      <span className="text-tg-text">{selectedSupervisor.phone}</span>
                     </div>
                   )}
-                  {selectedDirector.email && (
+                  {selectedSupervisor.email && (
                     <div className="flex justify-between">
                       <span className="text-tg-hint">Email</span>
-                      <span className="text-tg-text">{selectedDirector.email}</span>
+                      <span className="text-tg-text">{selectedSupervisor.email}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span className="text-tg-hint">Telegram ID</span>
-                    <span className="text-tg-text font-mono">{selectedDirector.tg_id}</span>
+                    <span className="text-tg-text font-mono">{selectedSupervisor.tg_id}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-tg-hint">Роль</span>
-                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm">
-                      <Crown className="w-3.5 h-3.5" />
-                      {getRoleLabel(selectedDirector.role as any)}
+                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-purple-500/20 text-purple-500 rounded-lg text-sm">
+                      <Shield className="w-3.5 h-3.5" />
+                      {getRoleLabel(selectedSupervisor.role as any)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-tg-hint">Дата назначения</span>
                     <span className="text-tg-text">
-                      {new Date(selectedDirector.created_at).toLocaleDateString('ru-RU')}
+                      {new Date(selectedSupervisor.created_at).toLocaleDateString('ru-RU')}
                     </span>
                   </div>
                 </div>
@@ -329,15 +260,15 @@ export default function AdminDirectors() {
               <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t border-tg-separator bg-tg-bg">
                 <button
                   onClick={() => {
-                    if (confirm('Вы уверены, что хотите удалить этого директора? Он станет обычным менеджером.')) {
-                      deleteMutation.mutate(selectedDirector.id)
+                    if (confirm('Вы уверены, что хотите удалить этого супервайзера? Он станет обычным менеджером.')) {
+                      deleteMutation.mutate(selectedSupervisor.id)
                     }
                   }}
                   disabled={deleteMutation.isPending}
                   className="w-full p-3 rounded-xl bg-red-500/10 text-red-500 font-medium flex items-center justify-center gap-2"
                 >
                   <Trash2 className="w-5 h-5" />
-                  {deleteMutation.isPending ? 'Удаление...' : 'Удалить директора'}
+                  {deleteMutation.isPending ? 'Удаление...' : 'Удалить супервайзера'}
                 </button>
               </div>
             </motion.div>
@@ -372,7 +303,7 @@ export default function AdminDirectors() {
 
               <div className="flex-1 overflow-y-auto px-4 pb-2">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-tg-text">Назначить роль</h2>
+                  <h2 className="text-xl font-bold text-tg-text">Назначить супервайзера</h2>
                   <button
                     onClick={() => {
                       setShowAssignModal(false)
@@ -385,38 +316,9 @@ export default function AdminDirectors() {
                   </button>
                 </div>
 
-                {/* Role Selection */}
-                <div className="mb-4">
-                  <label className="text-sm font-medium text-tg-hint mb-2 block">Выберите роль</label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setAssignRole('director')}
-                      className={`flex-1 p-3 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors ${
-                        assignRole === 'director'
-                          ? 'bg-yellow-500/20 text-yellow-500 border-2 border-yellow-500'
-                          : 'bg-tg-secondary-bg text-tg-hint'
-                      }`}
-                    >
-                      <Crown className="w-4 h-4" />
-                      Директор
-                    </button>
-                    <button
-                      onClick={() => setAssignRole('supervisor')}
-                      className={`flex-1 p-3 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors ${
-                        assignRole === 'supervisor'
-                          ? 'bg-purple-500/20 text-purple-500 border-2 border-purple-500'
-                          : 'bg-tg-secondary-bg text-tg-hint'
-                      }`}
-                    >
-                      <Shield className="w-4 h-4" />
-                      Супервайзер
-                    </button>
-                  </div>
-                </div>
-
                 {/* Search */}
                 <div className="mb-4">
-                  <label className="text-sm font-medium text-tg-hint mb-2 block">Выберите пользователя</label>
+                  <label className="text-sm font-medium text-tg-hint mb-2 block">Выберите менеджера для повышения</label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-tg-hint" />
                     <input
@@ -431,13 +333,11 @@ export default function AdminDirectors() {
 
                 {/* Selected User */}
                 {selectedUser && (
-                  <div className="mb-4 p-3 bg-tg-accent/10 border-2 border-tg-accent rounded-xl">
+                  <div className="mb-4 p-3 bg-purple-500/10 border-2 border-purple-500 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          selectedUser.role === 'supervisor' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
-                        }`}>
-                          {getRoleIcon(selectedUser.role)}
+                        <div className="w-10 h-10 rounded-full bg-tg-accent/20 flex items-center justify-center">
+                          <User className="w-5 h-5 text-tg-accent" />
                         </div>
                         <div>
                           <p className="font-medium text-tg-text">
@@ -460,46 +360,42 @@ export default function AdminDirectors() {
 
                 {/* Users List */}
                 <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-                  {isLoadingManagers || isLoadingSupervisors ? (
+                  {isLoadingManagers ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin text-tg-accent" />
                     </div>
-                  ) : filteredUsers.length === 0 ? (
+                  ) : filteredManagers.length === 0 ? (
                     <div className="text-center py-8">
                       <User className="w-10 h-10 text-tg-hint mx-auto mb-2 opacity-50" />
                       <p className="text-tg-hint text-sm">
-                        {searchQuery ? 'Пользователи не найдены' : 'Нет доступных пользователей'}
+                        {searchQuery ? 'Менеджеры не найдены' : 'Нет доступных менеджеров'}
                       </p>
                     </div>
                   ) : (
-                    filteredUsers.map((u: UserInfo) => (
+                    filteredManagers.map((m: UserInfo) => (
                       <button
-                        key={u.id}
-                        onClick={() => setSelectedUser(u)}
+                        key={m.id}
+                        onClick={() => setSelectedUser(m)}
                         className={`w-full p-3 rounded-xl text-left transition-colors ${
-                          selectedUser?.id === u.id
-                            ? 'bg-tg-accent/20 border-2 border-tg-accent'
+                          selectedUser?.id === m.id
+                            ? 'bg-purple-500/20 border-2 border-purple-500'
                             : 'bg-tg-secondary-bg hover:bg-tg-secondary-bg/80'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            u.role === 'supervisor' ? 'bg-purple-500/20' : 'bg-tg-accent/20'
-                          }`}>
-                            {getRoleIcon(u.role)}
+                          <div className="w-10 h-10 rounded-full bg-tg-accent/20 flex items-center justify-center">
+                            <User className="w-5 h-5 text-tg-accent" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-tg-text truncate">
-                              {u.full_name || `${u.first_name} ${u.last_name || ''}`.trim()}
+                              {m.full_name || `${m.first_name} ${m.last_name || ''}`.trim()}
                             </p>
                             <div className="flex items-center gap-2 text-sm">
-                              {u.username && (
-                                <span className="text-tg-hint">@{u.username}</span>
+                              {m.username && (
+                                <span className="text-tg-hint">@{m.username}</span>
                               )}
-                              <span className={`text-xs px-2 py-0.5 rounded ${
-                                u.role === 'supervisor' ? 'bg-purple-500/20 text-purple-500' : 'bg-tg-accent/20 text-tg-accent'
-                              }`}>
-                                {getRoleLabel(u.role as any)}
+                              <span className="text-xs px-2 py-0.5 rounded bg-tg-accent/20 text-tg-accent">
+                                {getRoleLabel(m.role as any)}
                               </span>
                             </div>
                           </div>
@@ -526,12 +422,12 @@ export default function AdminDirectors() {
                   <button
                     onClick={handleAssignRole}
                     disabled={!selectedUser || assignRoleMutation.isPending}
-                    className="flex-1 p-3 rounded-xl bg-tg-button text-tg-button-text font-medium disabled:opacity-50"
+                    className="flex-1 p-3 rounded-xl bg-purple-500 text-white font-medium disabled:opacity-50"
                   >
                     {assignRoleMutation.isPending ? (
                       <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                     ) : (
-                      `Назначить ${assignRole === 'director' ? 'директором' : 'супервайзером'}`
+                      'Назначить супервайзером'
                     )}
                   </button>
                 </div>
@@ -543,3 +439,4 @@ export default function AdminDirectors() {
     </div>
   )
 }
+

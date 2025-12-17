@@ -1,6 +1,8 @@
 import hmac
 import hashlib
 import json
+import logging
+import httpx
 from urllib.parse import parse_qsl
 from typing import Optional
 from datetime import datetime, timedelta
@@ -13,6 +15,40 @@ from config import settings
 import db
 
 router = APIRouter()
+log = logging.getLogger(__name__)
+
+
+async def send_approval_notification(tg_id: int, auto_approve: bool = False):
+    """Send approval notification to user via Telegram."""
+    try:
+        if auto_approve:
+            text = (
+                "🎉 <b>Добро пожаловать!</b>\n\n"
+                "Ваша регистрация автоматически одобрена. "
+                "Теперь вам нужно заполнить профиль для завершения регистрации.\n\n"
+                "Откройте приложение, чтобы продолжить."
+            )
+        else:
+            text = (
+                "📝 <b>Заявка отправлена</b>\n\n"
+                "Ваша заявка на регистрацию отправлена на рассмотрение. "
+                "Мы уведомим вас, когда администратор примет решение."
+            )
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage",
+                json={
+                    "chat_id": tg_id,
+                    "text": text,
+                    "parse_mode": "HTML"
+                },
+                timeout=10.0
+            )
+            if not response.json().get('ok'):
+                log.warning(f"Failed to send notification to {tg_id}: {response.json()}")
+    except Exception as e:
+        log.error(f"Error sending notification to {tg_id}: {e}")
 
 
 class VerifyRequest(BaseModel):
@@ -154,9 +190,15 @@ async def verify_init_data(request: VerifyRequest):
                 tg_id, username, first_name, last_name,
                 invite_code=request.invite_code
             )
+
+            # Send notification for new user
+            auto_approved = user.get('approval_status') == 'approved'
+            await send_approval_notification(tg_id, auto_approve=auto_approved)
         else:
             # Create user without invite code
             user = await db.create_user(tg_id, username, first_name, last_name)
+            # Send pending notification
+            await send_approval_notification(tg_id, auto_approve=False)
     else:
         # User exists - update invite code if provided
         if request.invite_code:

@@ -20,6 +20,7 @@ import ArchivePage from './pages/ArchivePage'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminManagers from './pages/admin/AdminManagers'
 import AdminDirectors from './pages/admin/AdminDirectors'
+import AdminSupervisors from './pages/admin/AdminSupervisors'
 import AdminGroups from './pages/admin/AdminGroups'
 import AdminRequests from './pages/admin/AdminRequests'
 import AdminStats from './pages/admin/AdminStats'
@@ -215,6 +216,7 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="managers" element={<AdminManagers />} />
             <Route path="directors" element={<AdminDirectors />} />
+            <Route path="supervisors" element={<AdminSupervisors />} />
             <Route path="groups" element={<AdminGroups />} />
             <Route path="requests" element={<AdminRequests />} />
             <Route path="stats" element={<AdminStats />} />

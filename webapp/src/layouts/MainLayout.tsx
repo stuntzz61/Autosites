@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Home, FileText, User, Shield, MessageSquare } from 'lucide-react'
-import { useAuthStore } from '@/stores/authStore'
+import { Home, FileText, User, Shield, MessageSquare, Crown } from 'lucide-react'
+import { useAuthStore, isOwnerRole, isDirectorRole } from '@/stores/authStore'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useEffect } from 'react'
 
@@ -15,8 +15,11 @@ const navItems = [
 export default function MainLayout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { isAdmin } = useAuthStore()
+  const { isAdmin, user } = useAuthStore()
   const { backButton, haptic } = useTelegram()
+
+  const isOwner = user && isOwnerRole(user.role)
+  const isDirector = user && isDirectorRole(user.role)
 
   // Handle back button
   useEffect(() => {
@@ -78,15 +81,16 @@ export default function MainLayout() {
             )
           })}
 
-          {/* Admin button */}
+          {/* Admin button - styled based on role */}
           <NavButton
             onClick={() => {
               haptic?.selectionChanged()
               navigate(isAdmin ? '/admin' : '/admin-login')
             }}
-            icon={Shield}
-            label="Админ"
+            icon={isOwner || isDirector ? Crown : Shield}
+            label={isOwner ? 'Владелец' : isDirector ? 'Директор' : isAdmin ? 'Супервайзер' : 'Админ'}
             isActive={location.pathname.startsWith('/admin')}
+            isHighlighted={isOwner || isDirector}
           />
         </div>
       </nav>
@@ -99,16 +103,22 @@ interface NavButtonProps {
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
   label: string
   isActive: boolean
+  isHighlighted?: boolean
 }
 
-function NavButton({ onClick, icon: Icon, label, isActive }: NavButtonProps) {
+function NavButton({ onClick, icon: Icon, label, isActive, isHighlighted }: NavButtonProps) {
+  // Gold color for highlighted admin roles
+  const highlightColor = 'rgb(251, 191, 36)' // yellow-400
+
   return (
     <motion.button
       onClick={onClick}
       className="relative flex flex-col items-center gap-1 px-3 py-2 min-w-[60px] rounded-xl transition-colors"
       whileTap={{ scale: 0.92 }}
       style={{
-        color: isActive ? 'var(--accent-primary-light)' : 'var(--text-subtle)'
+        color: isActive
+          ? (isHighlighted ? highlightColor : 'var(--accent-primary-light)')
+          : (isHighlighted ? 'rgba(251, 191, 36, 0.7)' : 'var(--text-subtle)')
       }}
     >
       {/* Active indicator glow */}
@@ -119,7 +129,9 @@ function NavButton({ onClick, icon: Icon, label, isActive }: NavButtonProps) {
           initial={false}
           transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           style={{
-            background: 'radial-gradient(ellipse at center bottom, rgba(59, 130, 246, 0.15) 0%, transparent 70%)'
+            background: isHighlighted
+              ? 'radial-gradient(ellipse at center bottom, rgba(251, 191, 36, 0.2) 0%, transparent 70%)'
+              : 'radial-gradient(ellipse at center bottom, rgba(59, 130, 246, 0.15) 0%, transparent 70%)'
           }}
         />
       )}
@@ -135,15 +147,17 @@ function NavButton({ onClick, icon: Icon, label, isActive }: NavButtonProps) {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-            style={{ background: 'var(--accent-primary)' }}
+            style={{ background: isHighlighted ? highlightColor : 'var(--accent-primary)' }}
           />
         )}
       </div>
 
       <span
-        className="text-[10px] font-semibold transition-colors"
+        className="text-[10px] font-semibold transition-colors truncate max-w-[48px]"
         style={{
-          color: isActive ? 'var(--accent-primary-light)' : 'var(--text-subtle)',
+          color: isActive
+            ? (isHighlighted ? highlightColor : 'var(--accent-primary-light)')
+            : (isHighlighted ? 'rgba(251, 191, 36, 0.8)' : 'var(--text-subtle)'),
           opacity: isActive ? 1 : 0.8
         }}
       >

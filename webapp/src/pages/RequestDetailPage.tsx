@@ -128,8 +128,8 @@ export default function RequestDetailPage() {
   const [showCategorySelectModal, setShowCategorySelectModal] = useState(false)
   const dragCounter = useRef(0)
 
-  // Check if user is admin
-  const isAdmin = user?.role === 'admin'
+  // Check if user is supervisor/director/owner
+  const isAdmin = user?.role && ['supervisor', 'director', 'owner'].includes(user.role)
 
   const { data: request, isLoading, error } = useQuery({
     queryKey: ['request', id],

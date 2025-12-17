@@ -68,7 +68,8 @@ export default function ProfilePage() {
 
   // Determine avatar ring class based on rank
   const getAvatarRingClass = () => {
-    if (user?.role === 'admin') return 'avatar-ring-gold'
+    if (user?.role && ['owner', 'director'].includes(user.role)) return 'avatar-ring-gold'
+    if (user?.role === 'supervisor') return 'avatar-ring-premium'
     if (rank.ring === 'gold') return 'avatar-ring-gold'
     if (rank.ring === 'premium') return 'avatar-ring-premium'
     return ''
@@ -84,7 +85,7 @@ export default function ProfilePage() {
         }}
       >
         {/* Decorative background glow */}
-        {(user?.role === 'admin' || rank.ring === 'gold') && (
+        {(user?.role && ['owner', 'director', 'supervisor'].includes(user.role) || rank.ring === 'gold') && (
           <div
             className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full blur-3xl opacity-15"
             style={{ background: 'var(--gold-primary)' }}
@@ -109,8 +110,8 @@ export default function ProfilePage() {
               {user?.first_name?.[0]?.toUpperCase()}
             </div>
 
-            {/* Admin/Role badge */}
-            {user?.role === 'admin' && (
+            {/* Role badge */}
+            {user?.role && ['owner', 'director', 'supervisor'].includes(user.role) && (
               <motion.div
                 className="absolute -bottom-1 -right-1 w-8 h-8 rounded-lg flex items-center justify-center"
                 initial={{ scale: 0 }}

@@ -129,24 +129,6 @@ export const adminApi = {
     myGroups: () => api.get('/admin/my-groups'),
   },
 
-  // Role management (owner only)
-  roles: {
-    assign: (userId: string, role: 'manager' | 'supervisor' | 'director') =>
-      api.post(`/admin/users/${userId}/assign-role`, { role }),
-  },
-
-  // Director management (owner only)
-  directors: {
-    list: () => api.get('/admin/directors'),
-    delete: (id: string) => api.delete(`/admin/directors/${id}`),
-  },
-
-  // Supervisor management (owner/director)
-  supervisors: {
-    list: () => api.get('/admin/supervisors'),
-    delete: (id: string) => api.delete(`/admin/supervisors/${id}`),
-  },
-
   inviteCodes: {
     list: (groupId?: string) =>
       api.get('/admin/invite-codes', { params: groupId ? { group_id: groupId } : {} }),

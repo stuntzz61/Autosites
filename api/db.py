@@ -75,16 +75,22 @@ async def create_user(tg_id: int, username: str, first_name: str, last_name: str
 async def list_managers() -> List[Dict]:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
+            # Get managers with their group info (if assigned)
             await cur.execute(
                 """SELECT u.id, u.tg_id, u.username, u.first_name, u.last_name, u.full_name,
                           u.phone, u.email, u.contact, u.role, u.approval_status, u.created_at,
                           COALESCE(u.is_blocked, FALSE) as is_blocked,
-                          COUNT(r.id) as request_count
+                          COUNT(DISTINCT r.id) as request_count,
+                          ag.id as group_id, ag.name as group_name
                    FROM users u
                    LEFT JOIN projects p ON p.manager_id = u.id
                    LEFT JOIN requests r ON r.project_id = p.id
+                   LEFT JOIN user_group_membership ugm ON ugm.user_id = u.id
+                   LEFT JOIN admin_groups ag ON ag.id = ugm.group_id AND ag.is_active = TRUE
                    WHERE u.role = 'manager' AND u.approval_status = 'approved'
-                   GROUP BY u.id
+                   GROUP BY u.id, u.tg_id, u.username, u.first_name, u.last_name, u.full_name,
+                            u.phone, u.email, u.contact, u.role, u.approval_status, u.created_at, u.is_blocked,
+                            ag.id, ag.name
                    ORDER BY request_count DESC"""
             )
             return await cur.fetchall()
@@ -2259,7 +2265,7 @@ async def get_user_groups(user_id: str) -> List[Dict]:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                """SELECT ag.*, ugm.role as user_role
+                """SELECT ag.*, ugm.role as group_membership_role
                    FROM admin_groups ag
                    JOIN user_group_membership ugm ON ugm.group_id = ag.id
                    WHERE ugm.user_id = %s AND ag.is_active = TRUE

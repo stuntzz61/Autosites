@@ -39,7 +39,7 @@ export default function DevLoginPage() {
         // Manually set user in store (bypass Telegram init)
         useAuthStore.setState({
           user: response.data.user,
-          isAdmin: response.data.user.role === 'admin',
+          isAdmin: ['supervisor', 'director', 'owner'].includes(response.data.user.role),
           isLoading: false,
         })
 

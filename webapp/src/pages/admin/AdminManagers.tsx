@@ -54,10 +54,16 @@ export default function AdminManagers() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showMoveGroupModal, setShowMoveGroupModal] = useState(false)
   const [managerToMove, setManagerToMove] = useState<Manager | null>(null)
+  const [detailedManager, setDetailedManager] = useState<Manager | null>(null)
+  const [showDetailedInfo, setShowDetailedInfo] = useState(false)
 
-  const { data: managers, isLoading } = useQuery({
+  const { data: managers, isLoading, error: managersError } = useQuery({
     queryKey: ['admin', 'managers'],
     queryFn: () => adminApi.managers.list().then(res => res.data),
+    onError: (error: any) => {
+      console.error('Error fetching managers:', error)
+      toast.error(error.response?.data?.detail || 'Ошибка загрузки менеджеров')
+    },
   })
 
   const { data: detailedManagerData, refetch: refetchDetailed } = useQuery({
@@ -245,10 +251,17 @@ export default function AdminManagers() {
       {/* All managers */}
       {tab === 'all' && (
         <div className="space-y-3">
-          {managers?.length === 0 ? (
+          {managersError ? (
+            <div className="text-center text-red-500 py-8">
+              <p>Ошибка загрузки менеджеров</p>
+              <p className="text-sm text-tg-hint mt-2">
+                {managersError.response?.data?.detail || managersError.message}
+              </p>
+            </div>
+          ) : !managers || managers.length === 0 ? (
             <p className="text-center text-tg-hint py-8">Нет менеджеров</p>
           ) : (
-            managers?.map((manager: Manager) => (
+            managers.map((manager: Manager) => (
               <button
                 key={manager.id}
                 onClick={() => setSelectedManager(manager)}
@@ -496,15 +509,28 @@ export default function AdminManagers() {
                   )}
                 </div>
 
+                {/* View Detailed Info */}
+                <button
+                  onClick={() => {
+                    setDetailedManager(selectedManager)
+                    setSelectedManager(null)
+                    setTimeout(() => setShowDetailedInfo(true), 150)
+                  }}
+                  className="w-full p-3 rounded-xl bg-indigo-500/10 text-indigo-500 font-medium flex items-center justify-center gap-2"
+                >
+                  <Info className="w-5 h-5" />
+                  Детальная информация
+                </button>
+
                 {/* Move Group */}
-                {selectedManager.role !== 'admin' && (
+                {selectedManager.role === 'manager' && (
                   <button
                     onClick={() => {
                       setManagerToMove(selectedManager)
                       setSelectedManager(null)
                       setTimeout(() => setShowMoveGroupModal(true), 150)
                     }}
-                    className="w-full p-3 rounded-xl bg-blue-500/10 text-blue-500 font-medium flex items-center justify-center gap-2 mb-2"
+                    className="w-full p-3 rounded-xl bg-blue-500/10 text-blue-500 font-medium flex items-center justify-center gap-2"
                   >
                     <Users2 className="w-5 h-5" />
                     Переместить в группу

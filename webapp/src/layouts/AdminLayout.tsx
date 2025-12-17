@@ -19,7 +19,12 @@ const baseNavItems = [
   { path: '/admin/broadcast', icon: Radio, label: 'Рассылка' },
 ]
 
-// Additional nav items for owner
+// Additional nav items for director (can manage supervisors)
+const directorNavItems = [
+  { path: '/admin/supervisors', icon: Shield, label: 'Супервайзеры' },
+]
+
+// Additional nav items for owner (can manage directors and supervisors)
 const ownerNavItems = [
   { path: '/admin/directors', icon: Crown, label: 'Директоры' },
 ]
@@ -33,6 +38,11 @@ export default function AdminLayout() {
   // Get nav items based on role
   const getNavItems = () => {
     const items = [...baseNavItems]
+    // Director can see supervisors management
+    if (user && isDirectorRole(user.role)) {
+      items.push(...directorNavItems)
+    }
+    // Owner can see directors management
     if (user && isOwnerRole(user.role)) {
       items.push(...ownerNavItems)
     }
