@@ -342,20 +342,29 @@ export default function AdminManagers() {
               onClick={() => setSelectedManager(null)}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
+              className="fixed inset-x-0 bottom-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom flex flex-col"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
+              style={{
+                top: 'auto',
+                maxHeight: '85vh',
+                height: 'auto'
+              }}
             >
               {/* Drag handle - fixed */}
               <div className="flex-shrink-0 pt-3 pb-2">
                 <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto" />
               </div>
 
-              {/* Scrollable content */}
-              <div className="flex-1 overflow-y-auto px-4 pb-2">
+              {/* Scrollable content - адаптируется под контент, без flex-1 */}
+              <div className="px-4 pb-2" style={{
+                overflowY: 'auto',
+                maxHeight: 'calc(85vh - 120px)',
+                flex: '0 1 auto'
+              }}>
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-4 mb-4">
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
                     selectedManager.is_blocked ? 'bg-red-500/20' :
                     selectedManager.role === 'owner' ? 'bg-yellow-500/20' :
@@ -634,10 +643,14 @@ export default function AdminManagers() {
               }}
             />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom max-h-[85vh] flex flex-col"
+              className="fixed inset-x-0 bottom-0 bg-tg-bg rounded-t-3xl z-50 safe-bottom flex flex-col"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
+              style={{
+                top: 'auto',
+                maxHeight: '85vh'
+              }}
             >
               <div className="flex-shrink-0 pt-3 pb-2">
                 <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto" />
