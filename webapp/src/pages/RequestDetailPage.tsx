@@ -418,8 +418,11 @@ export default function RequestDetailPage() {
     }
   }
 
-  // Drag and drop handlers
+  // Drag and drop handlers (for main page photo upload area)
   const handleDragEnter = (e: React.DragEvent) => {
+    // Don't handle if edit modal is open - let EditRequestForm handle it
+    if (showEditModal) return
+
     e.preventDefault()
     e.stopPropagation()
     dragCounter.current++
@@ -429,6 +432,9 @@ export default function RequestDetailPage() {
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
+    // Don't handle if edit modal is open
+    if (showEditModal) return
+
     e.preventDefault()
     e.stopPropagation()
     dragCounter.current--
@@ -438,11 +444,19 @@ export default function RequestDetailPage() {
   }
 
   const handleDragOver = (e: React.DragEvent) => {
+    // Don't handle if edit modal is open
+    if (showEditModal) return
+
     e.preventDefault()
     e.stopPropagation()
   }
 
   const handleDrop = (e: React.DragEvent) => {
+    // Don't handle drop if edit modal is open - let EditRequestForm handle it
+    if (showEditModal) {
+      return
+    }
+
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
@@ -1962,6 +1976,11 @@ export default function RequestDetailPage() {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
+              // Stop drag events from propagating to page-level handlers
+              onDragEnter={(e) => e.stopPropagation()}
+              onDragLeave={(e) => e.stopPropagation()}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+              onDrop={(e) => e.stopPropagation()}
             >
               <div className="flex-shrink-0 p-4 pb-2">
                 <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
@@ -2375,13 +2394,22 @@ function EditRequestForm({
     const target = e.target as HTMLElement
     const addonZone = target.closest('[data-addon-drop-zone]')
     if (addonZone) {
-      console.log('[DROP] Drop on service zone, but addon zone detected - ignoring service drop')
-      // Don't prevent default or stop propagation - let addon handler process it
+      // Let the addon's own onDrop handler handle this event
+      console.log(`[DROP] Drop on service zone (${serviceIndex}), but addon zone detected - letting addon handler process it`)
+      return
+    }
+
+    // Also check if currentTarget is service zone but event originated from addon
+    const currentTarget = e.currentTarget as HTMLElement
+    const addonZoneInCurrent = currentTarget.querySelector('[data-addon-drop-zone]')
+    if (addonZoneInCurrent && addonZoneInCurrent.contains(target)) {
+      console.log('[DROP] Drop originated from addon zone within service zone - ignoring service drop')
       return
     }
 
     e.preventDefault()
     e.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation()
     setDraggingServiceIndex(null)
 
     console.log(`[DROP] Service drop detected: serviceIndex=${serviceIndex}`)
@@ -2815,10 +2843,31 @@ function EditRequestForm({
                             {/* Drag-and-drop zone for addon */}
                             <div
                               data-addon-drop-zone="true"
-                              onDragEnter={(e) => handleAddonDragEnter(e, i, addonIndex)}
-                              onDragLeave={handleAddonDragLeave}
-                              onDragOver={handleAddonDragOver}
-                              onDrop={(e) => handleAddonDrop(e, i, addonIndex)}
+                              data-service-index={i}
+                              data-addon-index={addonIndex}
+                              onDragEnter={(e) => {
+                                e.stopPropagation()
+                                e.nativeEvent.stopImmediatePropagation()
+                                handleAddonDragEnter(e, i, addonIndex)
+                              }}
+                              onDragLeave={(e) => {
+                                e.stopPropagation()
+                                e.nativeEvent.stopImmediatePropagation()
+                                handleAddonDragLeave(e)
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                e.nativeEvent.stopImmediatePropagation()
+                                handleAddonDragOver(e)
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                e.nativeEvent.stopImmediatePropagation()
+                                handleAddonDrop(e, i, addonIndex)
+                              }}
+                              style={{ position: 'relative', zIndex: 10 }}
                               className={clsx(
                                 "border-2 border-dashed rounded-lg p-1.5 transition-all cursor-pointer",
                                 isDragging
