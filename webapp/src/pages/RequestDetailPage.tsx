@@ -2312,27 +2312,44 @@ function EditRequestForm({
   const handleAddonDragEnter = (e: React.DragEvent, serviceIndex: number, addonIndex: number) => {
     e.preventDefault()
     e.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation()
     setDraggingAddonKey(`${serviceIndex}_${addonIndex}`)
+    // Also clear service dragging to prevent conflict
+    setDraggingServiceIndex(null)
   }
 
   const handleAddonDragLeave = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setDraggingAddonKey(null)
+    e.nativeEvent.stopImmediatePropagation()
+    // Only clear if we're actually leaving the addon zone
+    const target = e.currentTarget as HTMLElement
+    const relatedTarget = e.relatedTarget as HTMLElement
+    if (!target.contains(relatedTarget)) {
+      setDraggingAddonKey(null)
+    }
   }
 
   const handleAddonDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation()
   }
 
   const handleAddonDrop = (e: React.DragEvent, serviceIndex: number, addonIndex: number) => {
     e.preventDefault()
     e.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation()
     setDraggingAddonKey(null)
+    setDraggingServiceIndex(null)
+
+    console.log(`[DROP] Addon drop detected: serviceIndex=${serviceIndex}, addonIndex=${addonIndex}`)
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      console.log(`[DROP] Calling handleAddonPhotoSelect with ${e.dataTransfer.files.length} files`)
       handleAddonPhotoSelect(serviceIndex, addonIndex, e.dataTransfer.files)
+    } else {
+      console.warn('[DROP] No files in dataTransfer')
     }
   }
 
@@ -2356,6 +2373,15 @@ function EditRequestForm({
   const handleDrop = (e: React.DragEvent, serviceIndex: number) => {
     e.preventDefault()
     e.stopPropagation()
+
+    // Check if drop happened on an addon zone (don't process if it did)
+    const target = e.target as HTMLElement
+    const addonZone = target.closest('[data-addon-drop-zone]')
+    if (addonZone) {
+      console.log('[DROP] Drop on service zone, but addon zone detected - ignoring')
+      return
+    }
+
     setDraggingServiceIndex(null)
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -2771,6 +2797,7 @@ function EditRequestForm({
 
                             {/* Drag-and-drop zone for addon */}
                             <div
+                              data-addon-drop-zone="true"
                               onDragEnter={(e) => handleAddonDragEnter(e, i, addonIndex)}
                               onDragLeave={handleAddonDragLeave}
                               onDragOver={handleAddonDragOver}
