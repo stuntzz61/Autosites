@@ -256,8 +256,16 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
             payload = request.get('payload', {}) or {}
 
             # Get manager's tg_id for notifications
-            manager = await db.get_user_by_id(str(request.get('user_id', '')))
-            manager_tg_id = manager.get('tg_id') if manager else None
+            user_id = request.get('user_id')
+            manager = None
+            manager_tg_id = None
+            if user_id:
+                try:
+                    manager = await db.get_user_by_id(str(user_id))
+                    manager_tg_id = manager.get('tg_id') if manager else None
+                except Exception as e:
+                    log.warning(f"[GENERATE] Failed to get manager info for user_id {user_id}: {e}")
+                    manager_tg_id = None
 
             # Get additional services for this request
             additional_services = await db.get_request_additional_services(request_id)
@@ -285,7 +293,7 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
 
             webhook_data = {
                 "request_id": request_id,
-                "manager_id": str(request.get('user_id', '')),
+                "manager_id": str(user_id) if user_id else "",
                 "manager_tg_id": manager_tg_id,  # Chat ID for Telegram notifications
                 "tariff": tariff,  # Pass tariff to n8n
                 "client": payload.get('client', {}),
