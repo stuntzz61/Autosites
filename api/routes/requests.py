@@ -413,6 +413,9 @@ async def upload_photos(
     payload = request.get('payload', {}) or {}
     site = payload.get('site', {}) or {}
 
+    # Log received parameters for debugging
+    log.info(f"[UPLOAD] Received photo upload params: service_index={service_index}, service_name={service_name}, addon_index={addon_index}, addon_name={addon_name}, category={category}")
+
     # If service_index is provided, attach photos to specific service or addon
     if service_index is not None and service_name is not None:
         try:
@@ -463,6 +466,8 @@ async def upload_photos(
                     service['addons'] = addons
 
                     log.info(f"Attached {len(uploaded_urls)} photos to addon {addon_idx} ({addon_name}) in service {service_idx} ({service_name})")
+                    log.debug(f"Addon photos after update: {addon.get('photos', [])}")
+                    log.debug(f"Service addons after update: {[a.get('name', '') + ' (photos: ' + str(len(a.get('photos', []))) + ')' for a in addons]}")
                 except (ValueError, IndexError) as e:
                     log.warning(f"Failed to attach photos to addon: {e}, attaching to service instead")
                     # Fall through to service attachment
@@ -509,6 +514,19 @@ async def upload_photos(
         log.info(f"Stored {len(uploaded_urls)} photos as general category '{category}' photos")
 
     payload['site'] = site
+
+    # Debug: log addons with photos before save
+    services_with_addon_photos = []
+    for s in site.get('services', []):
+        if isinstance(s, dict) and s.get('addons'):
+            for a in s.get('addons', []):
+                if isinstance(a, dict) and a.get('photos'):
+                    services_with_addon_photos.append(f"{s.get('name', 'Unknown')} -> {a.get('name', 'Unknown')}: {len(a.get('photos', []))} photos")
+
+    if services_with_addon_photos:
+        log.info(f"[UPLOAD] Saving request with addon photos: {', '.join(services_with_addon_photos)}")
+    else:
+        log.debug(f"[UPLOAD] No addon photos found in services before save")
 
     log.info(f"Updating request {request_id} with photos")
     await db.update_request(request_id, {'payload': payload})

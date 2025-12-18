@@ -2266,6 +2266,8 @@ function EditRequestForm({
       const currentAddon = currentService?.addons?.[addonIndex]
       const addonName = currentAddon?.name || `Addon ${addonIndex + 1}`
 
+      console.log(`[UPLOAD] Uploading photo to addon: serviceIndex=${serviceIndex}, serviceName="${serviceName}", addonIndex=${addonIndex}, addonName="${addonName}"`)
+
       for (const file of fileArray) {
         const uploadFormData = new FormData()
         uploadFormData.append('file', file)
