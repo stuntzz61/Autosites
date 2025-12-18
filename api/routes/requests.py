@@ -259,13 +259,38 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
             manager = await db.get_user_by_id(str(request.get('user_id', '')))
             manager_tg_id = manager.get('tg_id') if manager else None
 
+            # Get additional services for this request
+            additional_services = await db.get_request_additional_services(request_id)
+            # Format additional services for webhook (include code, name, status, notes)
+            formatted_services = [
+                {
+                    "code": s.get('code'),
+                    "name": s.get('name'),
+                    "status": s.get('status'),
+                    "notes": s.get('notes'),
+                    "price": s.get('price')
+                }
+                for s in additional_services
+            ]
+
+            # Check if services have addons (for debugging)
+            site_data = payload.get('site', {})
+            services = site_data.get('services', [])
+            services_with_addons = [s for s in services if isinstance(s, dict) and s.get('addons')]
+            if services_with_addons:
+                log.info(f"[GENERATE] Request {request_id}: Found {len(services_with_addons)} services with addons")
+                for i, s in enumerate(services_with_addons):
+                    addons_count = len(s.get('addons', []))
+                    log.info(f"[GENERATE] Service {i+1} '{s.get('name', 'Unknown')}': {addons_count} addons")
+
             webhook_data = {
                 "request_id": request_id,
                 "manager_id": str(request.get('user_id', '')),
                 "manager_tg_id": manager_tg_id,  # Chat ID for Telegram notifications
                 "tariff": tariff,  # Pass tariff to n8n
                 "client": payload.get('client', {}),
-                "site": payload.get('site', {}),
+                "site": site_data,  # Full site object including services with addons
+                "additional_services": formatted_services,  # Include additional services (e.g., logo_design)
             }
 
             log.info(f"Sending to n8n webhook ({tariff} tariff): {webhook_url}")
