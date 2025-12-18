@@ -21,6 +21,7 @@ class CreateRequest(BaseModel):
     client_name: str
     payload: Optional[dict] = None
     tariff: Optional[str] = 'standard'
+    chat_id: Optional[int] = None  # Telegram chat ID
 
 
 class UpdateRequest(BaseModel):
@@ -120,7 +121,8 @@ async def create_request(data: CreateRequest, user: dict = Depends(get_current_u
         company_name=data.company_name,
         client_name=data.client_name,
         payload=data.payload or {},
-        tariff=data.tariff or 'standard'
+        tariff=data.tariff or 'standard',
+        chat_id=data.chat_id
     )
 
     # Notify bot to offer additional services

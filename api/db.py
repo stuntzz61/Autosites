@@ -322,6 +322,7 @@ async def list_requests(
                            COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) as status,
                            r.payload_json,
                            COALESCE(r.tariff, 'standard') as tariff,
+                           r.chat_id,
                            r.created_at
                     FROM requests r
                     JOIN projects p ON p.id = r.project_id
@@ -354,6 +355,7 @@ async def get_request(request_id: str) -> Optional[Dict]:
                           COALESCE(r.payload_json->'site'->'meta'->>'status', r.status) as status,
                           r.payload_json,
                           COALESCE(r.tariff, 'standard') as tariff,
+                          r.chat_id,
                           p.manager_id as user_id,
                           r.created_at
                    FROM requests r
@@ -383,7 +385,7 @@ async def get_request(request_id: str) -> Optional[Dict]:
             return row
 
 
-async def create_request(user_id: str, company_name: str, client_name: str, payload: Dict, tariff: str = 'standard') -> Dict:
+async def create_request(user_id: str, company_name: str, client_name: str, payload: Dict, tariff: str = 'standard', chat_id: Optional[int] = None) -> Dict:
     async with await get_conn() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             # First, get or create a project for this manager
@@ -408,12 +410,12 @@ async def create_request(user_id: str, company_name: str, client_name: str, payl
                 project = await cur.fetchone()
                 project_id = project['id']
 
-            # Create the request with tariff
+            # Create the request with tariff and chat_id
             await cur.execute(
-                """INSERT INTO requests (project_id, status, payload_json, tariff)
-                   VALUES (%s, 'draft', %s, %s)
-                   RETURNING id, status, payload_json, tariff, created_at""",
-                (project_id, json.dumps(payload), tariff)
+                """INSERT INTO requests (project_id, status, payload_json, tariff, chat_id)
+                   VALUES (%s, 'draft', %s, %s, %s)
+                   RETURNING id, status, payload_json, tariff, chat_id, created_at""",
+                (project_id, json.dumps(payload), tariff, chat_id)
             )
             await conn.commit()
             row = await cur.fetchone()

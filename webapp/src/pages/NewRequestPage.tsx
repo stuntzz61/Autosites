@@ -25,7 +25,7 @@ const steps = [
   { id: 'details', title: 'Детали', icon: Palette },
 ]
 
-const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты']
+const DEFAULT_STRUCTURE = ['Hero', 'О компании', 'Услуги', 'Портфолио', 'Отзывы', 'Контакты', 'Карта']
 
 const photoCategories = [
   { id: 'hero', label: 'Баннер', icon: '🖼️' },
@@ -430,11 +430,28 @@ export default function NewRequestPage() {
         }
       }
 
+      // Get chat_id from Telegram WebApp
+      // For personal chats: chat_id = user.id
+      // For group chats: chat_id = chat.id (if available)
+      const tg = window.Telegram?.WebApp
+      let chatId: number | undefined = undefined
+      if (tg?.initDataUnsafe) {
+        // Try to get chat_id from chat (for group chats)
+        const chat = (tg.initDataUnsafe as any).chat
+        if (chat?.id) {
+          chatId = chat.id
+        } else if (tg.initDataUnsafe.user?.id) {
+          // Fallback to user.id for personal chats
+          chatId = tg.initDataUnsafe.user.id
+        }
+      }
+
       const response = await requestsApi.create({
         company_name: formData.company,
         client_name: formData.client_name,
         payload,
         tariff: formData.tariff,
+        chat_id: chatId,
       })
 
       const requestId = response.data.id
