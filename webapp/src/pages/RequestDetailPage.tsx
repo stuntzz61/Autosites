@@ -2096,7 +2096,7 @@ interface ServiceItem {
   name: string
   summary: string
   priceFrom: string
-  addons?: { name: string; price: string }[]
+  addons?: { name: string; price: string; photos?: string[] }[]
   photos?: string[] // URLs of photos attached to this service
 }
 
@@ -2137,7 +2137,9 @@ function EditRequestForm({
 
   const [saving, setSaving] = useState(false)
   const [uploadingPhotos, setUploadingPhotos] = useState<{ [serviceIndex: number]: boolean }>({})
+  const [uploadingAddonPhotos, setUploadingAddonPhotos] = useState<{ [key: string]: boolean }>({}) // key: "serviceIndex_addonIndex"
   const [draggingServiceIndex, setDraggingServiceIndex] = useState<number | null>(null)
+  const [draggingAddonKey, setDraggingAddonKey] = useState<string | null>(null) // key: "serviceIndex_addonIndex"
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({})
 
   const { haptic } = useTelegram()
@@ -2239,6 +2241,96 @@ function EditRequestForm({
       console.error('Failed to delete photo:', error)
       toast.error('Ошибка удаления фото')
       haptic?.notificationOccurred('error')
+    }
+  }
+
+  const handleAddonPhotoSelect = async (serviceIndex: number, addonIndex: number, files: FileList | null) => {
+    if (!files || files.length === 0) return
+
+    const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'))
+    if (fileArray.length === 0) {
+      toast.error('Выберите изображения')
+      return
+    }
+
+    const addonKey = `${serviceIndex}_${addonIndex}`
+    setUploadingAddonPhotos(prev => ({ ...prev, [addonKey]: true }))
+    haptic?.impactOccurred('light')
+
+    try {
+      const uploadedUrls: string[] = []
+
+      // Get service and addon names
+      const currentService = formData.services[serviceIndex]
+      const serviceName = currentService?.name || `Service ${serviceIndex + 1}`
+      const currentAddon = currentService?.addons?.[addonIndex]
+      const addonName = currentAddon?.name || `Addon ${addonIndex + 1}`
+
+      for (const file of fileArray) {
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', file)
+        uploadFormData.append('category', 'services')
+        uploadFormData.append('service_index', String(serviceIndex))
+        uploadFormData.append('service_name', serviceName)
+        uploadFormData.append('addon_index', String(addonIndex))
+        uploadFormData.append('addon_name', addonName)
+
+        const response = await requestsApi.uploadPhotos(request.id, uploadFormData)
+        if (response.data?.urls?.[0]) {
+          uploadedUrls.push(response.data.urls[0])
+        }
+      }
+
+      // Update addon with new photos
+      setFormData(prev => ({
+        ...prev,
+        services: prev.services.map((s: ServiceItem, si: number) => {
+          if (si !== serviceIndex) return s
+          const addons = s.addons || []
+          const updatedAddons = addons.map((a, ai: number) => {
+            if (ai !== addonIndex) return a
+            return { ...a, photos: [...(a.photos || []), ...uploadedUrls] }
+          })
+          return { ...s, addons: updatedAddons }
+        })
+      }))
+
+      toast.success(`Добавлено ${uploadedUrls.length} фото к доп. услуге`)
+      haptic?.notificationOccurred('success')
+      queryClient.invalidateQueries({ queryKey: ['request', request.id] })
+    } catch (error) {
+      console.error('Failed to upload addon photos:', error)
+      toast.error('Ошибка загрузки фото')
+      haptic?.notificationOccurred('error')
+    } finally {
+      setUploadingAddonPhotos(prev => ({ ...prev, [addonKey]: false }))
+    }
+  }
+
+  const handleAddonDragEnter = (e: React.DragEvent, serviceIndex: number, addonIndex: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDraggingAddonKey(`${serviceIndex}_${addonIndex}`)
+  }
+
+  const handleAddonDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDraggingAddonKey(null)
+  }
+
+  const handleAddonDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleAddonDrop = (e: React.DragEvent, serviceIndex: number, addonIndex: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDraggingAddonKey(null)
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleAddonPhotoSelect(serviceIndex, addonIndex, e.dataTransfer.files)
     }
   }
 
@@ -2567,68 +2659,142 @@ function EditRequestForm({
                     <span className="text-xs text-tg-hint font-semibold">Доп. услуги / опции</span>
                   </div>
                   {service.addons?.length ? (
-                    <div className="space-y-2">
-                      {service.addons.map((addon, addonIndex) => (
-                        <div key={addonIndex} className="flex items-center gap-2">
-                          <input
-                            value={addon.name}
-                            onChange={(e) => {
-                              const name = e.target.value
-                              setFormData(prev => ({
-                                ...prev,
-                                services: prev.services.map((s: ServiceItem, si: number) => {
-                                  if (si !== i) return s
-                                  const addons = s.addons ?? []
-                                  const updated = addons.map((a: { name: string; price: string }, ai: number) =>
-                                    ai === addonIndex ? { ...a, name } : a
-                                  )
-                                  return { ...s, addons: updated }
-                                })
-                              }))
-                            }}
-                            placeholder="Название доп. услуги"
-                            className="input flex-1"
-                          />
-                          <input
-                            value={addon.price}
-                            onChange={(e) => {
-                              const price = e.target.value
-                              setFormData(prev => ({
-                                ...prev,
-                                services: prev.services.map((s: ServiceItem, si: number) => {
-                                  if (si !== i) return s
-                                  const addons = s.addons ?? []
-                                  const updated = addons.map((a: { name: string; price: string }, ai: number) =>
-                                    ai === addonIndex ? { ...a, price } : a
-                                  )
-                                  return { ...s, addons: updated }
-                                })
-                              }))
-                            }}
-                            placeholder="+100"
-                            className="input w-28"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => ({
-                                ...prev,
-                                services: prev.services.map((s: ServiceItem, si: number) => {
-                                  if (si !== i) return s
-                                  const addons = s.addons ?? []
-                                  return {
-                                    ...s,
-                                    addons: addons.filter((_: { name: string; price: string }, ai: number) => ai !== addonIndex)
-                                  }
-                                })
-                              }))
-                            }}
-                            className="p-2 text-red-500"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                    <div className="space-y-3">
+                      {service.addons.map((addon, addonIndex) => {
+                        const addonKey = `${i}_${addonIndex}`
+                        const isDragging = draggingAddonKey === addonKey
+                        const isUploading = uploadingAddonPhotos[addonKey]
+                        return (
+                          <div key={addonIndex} className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                value={addon.name}
+                                onChange={(e) => {
+                                  const name = e.target.value
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    services: prev.services.map((s: ServiceItem, si: number) => {
+                                      if (si !== i) return s
+                                      const addons = s.addons ?? []
+                                      const updated = addons.map((a: { name: string; price: string; photos?: string[] }, ai: number) =>
+                                        ai === addonIndex ? { ...a, name } : a
+                                      )
+                                      return { ...s, addons: updated }
+                                    })
+                                  }))
+                                }}
+                                placeholder="Название доп. услуги"
+                                className="input flex-1"
+                              />
+                              <input
+                                value={addon.price}
+                                onChange={(e) => {
+                                  const price = e.target.value
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    services: prev.services.map((s: ServiceItem, si: number) => {
+                                      if (si !== i) return s
+                                      const addons = s.addons ?? []
+                                      const updated = addons.map((a: { name: string; price: string; photos?: string[] }, ai: number) =>
+                                        ai === addonIndex ? { ...a, price } : a
+                                      )
+                                      return { ...s, addons: updated }
+                                    })
+                                  }))
+                                }}
+                                placeholder="+100"
+                                className="input w-28"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    services: prev.services.map((s: ServiceItem, si: number) => {
+                                      if (si !== i) return s
+                                      const addons = s.addons ?? []
+                                      return {
+                                        ...s,
+                                        addons: addons.filter((_: { name: string; price: string; photos?: string[] }, ai: number) => ai !== addonIndex)
+                                      }
+                                    })
+                                  }))
+                                }}
+                                className="p-2 text-red-500"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* Addon photos */}
+                            {addon.photos && addon.photos.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {addon.photos.map((photoUrl, photoIndex) => (
+                                  <div key={photoIndex} className="relative group">
+                                    <img
+                                      src={photoUrl}
+                                      alt={`Фото доп. услуги ${photoIndex + 1}`}
+                                      className="w-12 h-12 rounded-lg object-cover cursor-pointer"
+                                      onClick={() => window.open(photoUrl, '_blank')}
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'
+                                      }}
+                                    />
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        // Delete addon photo
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          services: prev.services.map((s: ServiceItem, si: number) => {
+                                            if (si !== i) return s
+                                            const addons = s.addons || []
+                                            const updatedAddons = addons.map((a, ai: number) => {
+                                              if (ai !== addonIndex) return a
+                                              return { ...a, photos: (a.photos || []).filter((url: string) => url !== photoUrl) }
+                                            })
+                                            return { ...s, addons: updatedAddons }
+                                          })
+                                        }))
+                                        requestsApi.deletePhoto(request.id, photoUrl).catch(console.error)
+                                      }}
+                                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                    >
+                                      <X className="w-2.5 h-2.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Drag-and-drop zone for addon */}
+                            <div
+                              onDragEnter={(e) => handleAddonDragEnter(e, i, addonIndex)}
+                              onDragLeave={handleAddonDragLeave}
+                              onDragOver={handleAddonDragOver}
+                              onDrop={(e) => handleAddonDrop(e, i, addonIndex)}
+                              className={clsx(
+                                "border-2 border-dashed rounded-lg p-1.5 transition-all cursor-pointer",
+                                isDragging
+                                  ? "border-blue-400 bg-blue-500/10 scale-[1.01]"
+                                  : "border-tg-separator hover:border-blue-400/50"
+                              )}
+                            >
+                              {isUploading ? (
+                                <div className="flex items-center justify-center gap-1.5 py-1 text-xs text-tg-hint">
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <span>Загрузка...</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-1.5 py-1 text-xs text-tg-hint">
+                                  <Camera className="w-3 h-3" />
+                                  <span>Перетащите фото сюда</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-tg-hint">

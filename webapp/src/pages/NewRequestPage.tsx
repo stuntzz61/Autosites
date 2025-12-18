@@ -46,6 +46,7 @@ interface ServiceItem {
 interface AddonItem {
   name: string
   price: string
+  photos?: string[] // URLs of photos attached to this addon
 }
 
 const defaultServiceCategories = [

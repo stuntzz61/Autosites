@@ -301,17 +301,28 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
                 "additional_services": formatted_services,  # Include additional services (e.g., logo_design)
             }
 
+            # Log summary of data being sent
+            webhook_json = json.dumps(webhook_data, default=str, ensure_ascii=False)
+            webhook_size = len(webhook_json.encode('utf-8'))
             log.info(f"Sending to n8n webhook ({tariff} tariff): {webhook_url}")
-            log.debug(f"Webhook data: {webhook_data}")
+            log.info(f"[GENERATE] Webhook payload size: {webhook_size} bytes")
+            log.info(f"[GENERATE] Services count: {len(services)}")
+            log.info(f"[GENERATE] Additional services count: {len(formatted_services)}")
+            log.debug(f"Webhook data: {webhook_json[:500]}..." if len(webhook_json) > 500 else f"Webhook data: {webhook_json}")
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     webhook_url,
                     json=webhook_data,
-                    timeout=30.0
+                    timeout=30.0,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "Autosites-API/1.0"
+                    }
                 )
                 response.raise_for_status()
                 log.info(f"Successfully sent to n8n webhook: {webhook_url}")
+                log.info(f"[GENERATE] Response status: {response.status_code}")
         except httpx.ConnectError as e:
             log.error(f"Failed to connect to n8n at {webhook_url}: {e}")
             log.error(f"Check that N8N_WEBHOOK_URL is correct and n8n container is accessible")
@@ -353,11 +364,14 @@ async def upload_photos(
     file: UploadFile = File(None),
     service_index: Optional[str] = Form(None),
     service_name: Optional[str] = Form(None),
+    addon_index: Optional[str] = Form(None),  # Index of addon within service
+    addon_name: Optional[str] = Form(None),   # Name of addon for validation
     user: dict = Depends(get_current_user)
 ):
     """Upload photos for a request.
 
     If service_index and service_name are provided, photos are attached to a specific service.
+    If addon_index and addon_name are also provided, photos are attached to a specific addon within the service.
     Otherwise, photos are stored as general category photos in assets.images.
     """
     request = await db.get_request(request_id)
@@ -399,7 +413,7 @@ async def upload_photos(
     payload = request.get('payload', {}) or {}
     site = payload.get('site', {}) or {}
 
-    # If service_index is provided, attach photos to specific service
+    # If service_index is provided, attach photos to specific service or addon
     if service_index is not None and service_name is not None:
         try:
             service_idx = int(service_index)
@@ -418,18 +432,61 @@ async def upload_photos(
             if isinstance(service, str):
                 service = {'name': service}
 
-            # Initialize photos array if not exists
-            if 'photos' not in service:
-                service['photos'] = []
+            # If addon_index is provided, attach photos to specific addon within service
+            if addon_index is not None and addon_name is not None:
+                try:
+                    addon_idx = int(addon_index)
+                    addons = service.get('addons', []) or []
 
-            # Add photos to service
-            service['photos'].extend(uploaded_urls)
+                    # Ensure addons is a list
+                    if not isinstance(addons, list):
+                        addons = []
+
+                    # Ensure addon exists at this index
+                    while len(addons) <= addon_idx:
+                        addons.append({'name': '', 'price': ''})
+
+                    # Get or create addon object
+                    addon = addons[addon_idx]
+                    if isinstance(addon, str):
+                        addon = {'name': addon, 'price': ''}
+
+                    # Initialize photos array if not exists
+                    if 'photos' not in addon:
+                        addon['photos'] = []
+
+                    # Add photos to addon
+                    addon['photos'].extend(uploaded_urls)
+
+                    # Update addon in list
+                    addons[addon_idx] = addon
+                    service['addons'] = addons
+
+                    log.info(f"Attached {len(uploaded_urls)} photos to addon {addon_idx} ({addon_name}) in service {service_idx} ({service_name})")
+                except (ValueError, IndexError) as e:
+                    log.warning(f"Failed to attach photos to addon: {e}, attaching to service instead")
+                    # Fall through to service attachment
+                    # Initialize photos array if not exists
+                    if 'photos' not in service:
+                        service['photos'] = []
+                    # Add photos to service
+                    service['photos'].extend(uploaded_urls)
+                    log.info(f"Attached {len(uploaded_urls)} photos to service {service_idx} ({service_name}) instead")
+            else:
+                # Attach photos to service (not addon)
+                # Initialize photos array if not exists
+                if 'photos' not in service:
+                    service['photos'] = []
+
+                # Add photos to service
+                service['photos'].extend(uploaded_urls)
+
+                log.info(f"Attached {len(uploaded_urls)} photos to service {service_idx} ({service_name})")
 
             # Update service in list
             services[service_idx] = service
             site['services'] = services
 
-            log.info(f"Attached {len(uploaded_urls)} photos to service {service_idx} ({service_name})")
         except (ValueError, IndexError) as e:
             log.warning(f"Failed to attach photos to service: {e}, storing as general category photos")
             # Fall through to general category storage
