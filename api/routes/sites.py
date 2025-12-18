@@ -853,8 +853,11 @@ async def generation_callback(data: GenerationCallbackRequest):
         log.warning(f"Request not found: {request_id}")
         raise HTTPException(status_code=404, detail="Request not found")
 
-    # Get user info for notifications
-    user = await db.get_user_by_id(str(request['user_id']))
+    # Get user info for notifications (user_id may be None for anonymous requests)
+    user = None
+    user_id = request.get('user_id')
+    if user_id:
+        user = await db.get_user_by_id(str(user_id))
 
     # Get or create client site
     site = await db.get_client_site_by_request(request_id)
@@ -865,9 +868,20 @@ async def generation_callback(data: GenerationCallbackRequest):
         site_data = payload.get('site', {})
         client_data = payload.get('client', {})
 
+        # If no user_id, try to find first admin as fallback manager
+        manager_id = str(user_id) if user_id else None
+        if not manager_id:
+            admins = await db.list_admins()
+            if admins:
+                manager_id = str(admins[0]['id'])
+                log.warning(f"Request {request_id} has no user_id, using admin {manager_id} as manager")
+            else:
+                log.error(f"Request {request_id} has no user_id and no admins found!")
+                raise HTTPException(status_code=500, detail="Cannot create site: no manager available")
+
         site = await db.create_client_site(
             request_id=request_id,
-            manager_id=str(request['user_id']),
+            manager_id=manager_id,
             company_name=site_data.get('company', client_data.get('company', 'Unknown')),
             client_name=client_data.get('name'),
             client_contact=client_data.get('contact'),
@@ -919,8 +933,9 @@ async def generation_callback(data: GenerationCallbackRequest):
                     })
                     site['archive_s3_key'] = archive_s3_key
 
-                # Trigger deploy
-                await trigger_deploy(site, user_id=str(request['user_id']))
+                # Trigger deploy (user_id may be None for anonymous requests)
+                deploy_user_id = str(user_id) if user_id else None
+                await trigger_deploy(site, user_id=deploy_user_id)
                 log.info(f"Auto-deploy triggered successfully for site {site['id']}")
             except Exception as e:
                 log.error(f"Failed to auto-deploy site {site['id']}: {e}", exc_info=True)
