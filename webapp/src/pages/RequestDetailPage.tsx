@@ -2371,18 +2371,20 @@ function EditRequestForm({
   }
 
   const handleDrop = (e: React.DragEvent, serviceIndex: number) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    // Check if drop happened on an addon zone (don't process if it did)
+    // Check if drop happened on an addon zone FIRST (before preventDefault)
     const target = e.target as HTMLElement
     const addonZone = target.closest('[data-addon-drop-zone]')
     if (addonZone) {
-      console.log('[DROP] Drop on service zone, but addon zone detected - ignoring')
+      console.log('[DROP] Drop on service zone, but addon zone detected - ignoring service drop')
+      // Don't prevent default or stop propagation - let addon handler process it
       return
     }
 
+    e.preventDefault()
+    e.stopPropagation()
     setDraggingServiceIndex(null)
+
+    console.log(`[DROP] Service drop detected: serviceIndex=${serviceIndex}`)
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handlePhotoSelect(serviceIndex, e.dataTransfer.files)
@@ -2640,13 +2642,28 @@ function EditRequestForm({
 
                   {/* Compact drag-and-drop zone */}
                   <div
-                    onDragEnter={(e) => handleDragEnter(e, i)}
+                    data-service-drop-zone="true"
+                    onDragEnter={(e) => {
+                      // Don't handle if dragging over addon zone
+                      const target = e.target as HTMLElement
+                      if (target.closest('[data-addon-drop-zone]')) {
+                        return
+                      }
+                      handleDragEnter(e, i)
+                    }}
                     onDragLeave={handleDragLeave}
-                    onDragOver={handleDragOver}
+                    onDragOver={(e) => {
+                      // Don't handle if dragging over addon zone
+                      const target = e.target as HTMLElement
+                      if (target.closest('[data-addon-drop-zone]')) {
+                        return
+                      }
+                      handleDragOver(e)
+                    }}
                     onDrop={(e) => handleDrop(e, i)}
                     className={clsx(
                       "relative border-2 border-dashed rounded-lg p-2 transition-all cursor-pointer",
-                      draggingServiceIndex === i
+                      draggingServiceIndex === i && !draggingAddonKey
                         ? "border-blue-400 bg-blue-500/10 scale-[1.02]"
                         : "border-tg-separator hover:border-blue-400/50"
                     )}
