@@ -300,6 +300,35 @@ async def register_domain(
             except Exception as e:
                 log.error(f"Failed to update site domain: {e}")
 
+            # Assign domain to Agent (create nginx config + SSL)
+            # This is critical! Without this, domain won't work even after DNS propagation
+            if site.get('deploy_id'):
+                try:
+                    deploy_url = settings.DEPLOY_NODE_URL
+                    async with httpx.AsyncClient(timeout=60.0) as client:
+                        assign_result = await client.post(
+                            f"{deploy_url}/api/sites/by-id/{site['deploy_id']}/domain",
+                            json={
+                                'domain': data.domain,
+                                'enable_ssl': True
+                            }
+                        )
+                        if assign_result.status_code == 200:
+                            assign_data = assign_result.json()
+                            if assign_data.get('success'):
+                                # Update domain status to active
+                                await db.update_client_site(str(site['id']), {
+                                    'domain_status': 'active',
+                                    'ssl_enabled': True
+                                })
+                                log.info(f"Domain {data.domain} assigned to Agent for site {site['id']}")
+                            else:
+                                log.warning(f"Agent returned error for domain assign: {assign_data}")
+                        else:
+                            log.warning(f"Failed to assign domain to Agent: {assign_result.status_code}")
+                except Exception as e:
+                    log.error(f"Error assigning domain {data.domain} to Agent: {e}")
+
         return response
 
     # Handle specific errors

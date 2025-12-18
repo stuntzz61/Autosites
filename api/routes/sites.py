@@ -554,12 +554,24 @@ async def assign_domain(
     await db.assign_domain_to_site(site_id, data.domain, data.enable_ssl)
 
     # If site is deployed, update in deploy-node
-    if site.get('deploy_status') == 'active' and site.get('deploy_id'):
-        result = await assign_domain_to_deploy(site, data.domain, data.enable_ssl)
-        if not result:
+    if site.get('deploy_id'):
+        # Check if site is in a valid state for domain assignment
+        deploy_status = site.get('deploy_status')
+        if deploy_status in ('active', 'deploying', 'pending'):
+            result = await assign_domain_to_deploy(site, data.domain, data.enable_ssl)
+            if not result:
+                return {
+                    "success": True,  # Domain saved locally
+                    "domain": data.domain,
+                    "ssl_enabled": data.enable_ssl,
+                    "warning": "Domain saved but nginx config may not be configured yet. It will be applied when deployment completes."
+                }
+        elif deploy_status == 'stopped':
             return {
-                "success": False,
-                "message": "Domain saved but failed to configure in deploy system"
+                "success": True,
+                "domain": data.domain,
+                "ssl_enabled": data.enable_ssl,
+                "warning": "Site is stopped. Domain saved but won't be active until site is restarted."
             }
 
     return {
