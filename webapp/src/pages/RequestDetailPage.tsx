@@ -2187,6 +2187,8 @@ function EditRequestForm({
 
   // Photo upload handlers
   const handlePhotoSelect = async (serviceIndex: number, files: FileList | null) => {
+    console.log(`[handlePhotoSelect] CALLED for SERVICE (not addon) - serviceIndex=${serviceIndex}, files=${files?.length || 0}`)
+
     if (!files || files.length === 0) return
 
     const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -2204,6 +2206,8 @@ function EditRequestForm({
       // Get service name before loop
       const currentService = formData.services[serviceIndex]
       const serviceName = currentService?.name || `Service ${serviceIndex + 1}`
+
+      console.log(`[handlePhotoSelect] Uploading to SERVICE: serviceIndex=${serviceIndex}, serviceName="${serviceName}" (NO addon_index)`)
 
       for (const file of fileArray) {
         const uploadFormData = new FormData()
@@ -2264,6 +2268,8 @@ function EditRequestForm({
   }
 
   const handleAddonPhotoSelect = async (serviceIndex: number, addonIndex: number, files: FileList | null) => {
+    console.log(`[handleAddonPhotoSelect] CALLED with serviceIndex=${serviceIndex}, addonIndex=${addonIndex}, files=${files?.length || 0}`)
+
     if (!files || files.length === 0) return
 
     const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -2285,7 +2291,7 @@ function EditRequestForm({
       const currentAddon = currentService?.addons?.[addonIndex]
       const addonName = currentAddon?.name || `Addon ${addonIndex + 1}`
 
-      console.log(`[UPLOAD] Uploading photo to addon: serviceIndex=${serviceIndex}, serviceName="${serviceName}", addonIndex=${addonIndex}, addonName="${addonName}"`)
+      console.log(`[handleAddonPhotoSelect] Uploading photo: serviceIndex=${serviceIndex}, serviceName="${serviceName}", addonIndex=${addonIndex}, addonName="${addonName}"`)
 
       for (const file of fileArray) {
         const uploadFormData = new FormData()
@@ -2295,6 +2301,9 @@ function EditRequestForm({
         uploadFormData.append('service_name', serviceName)
         uploadFormData.append('addon_index', String(addonIndex))
         uploadFormData.append('addon_name', addonName)
+
+        // Log FormData contents for debugging
+        console.log(`[handleAddonPhotoSelect] FormData: addon_index=${addonIndex}, addon_name=${addonName}`)
 
         const response = await requestsApi.uploadPhotos(request.id, uploadFormData)
         if (response.data?.urls?.[0]) {
@@ -2356,19 +2365,19 @@ function EditRequestForm({
   }
 
   const handleAddonDrop = (e: React.DragEvent, serviceIndex: number, addonIndex: number) => {
+    console.log(`[ADDON DROP] Called for serviceIndex=${serviceIndex}, addonIndex=${addonIndex}`)
+
     e.preventDefault()
     e.stopPropagation()
     e.nativeEvent.stopImmediatePropagation()
     setDraggingAddonKey(null)
     setDraggingServiceIndex(null)
 
-    console.log(`[DROP] Addon drop detected: serviceIndex=${serviceIndex}, addonIndex=${addonIndex}`)
-
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      console.log(`[DROP] Calling handleAddonPhotoSelect with ${e.dataTransfer.files.length} files`)
+      console.log(`[ADDON DROP] Processing ${e.dataTransfer.files.length} files for addon`)
       handleAddonPhotoSelect(serviceIndex, addonIndex, e.dataTransfer.files)
     } else {
-      console.warn('[DROP] No files in dataTransfer')
+      console.warn('[ADDON DROP] No files in dataTransfer')
     }
   }
 
@@ -2390,12 +2399,15 @@ function EditRequestForm({
   }
 
   const handleDrop = (e: React.DragEvent, serviceIndex: number) => {
-    // Check if drop happened on an addon zone FIRST (before preventDefault)
+    // Log for debugging
     const target = e.target as HTMLElement
+    console.log(`[SERVICE DROP] Called for serviceIndex=${serviceIndex}, target:`, target.tagName, target.className)
+
+    // Check if drop happened on an addon zone FIRST (before preventDefault)
     const addonZone = target.closest('[data-addon-drop-zone]')
     if (addonZone) {
       // Let the addon's own onDrop handler handle this event
-      console.log(`[DROP] Drop on service zone (${serviceIndex}), but addon zone detected - letting addon handler process it`)
+      console.log(`[SERVICE DROP] Addon zone detected - ignoring, letting addon handler process it`)
       return
     }
 
@@ -2403,7 +2415,7 @@ function EditRequestForm({
     const currentTarget = e.currentTarget as HTMLElement
     const addonZoneInCurrent = currentTarget.querySelector('[data-addon-drop-zone]')
     if (addonZoneInCurrent && addonZoneInCurrent.contains(target)) {
-      console.log('[DROP] Drop originated from addon zone within service zone - ignoring service drop')
+      console.log('[SERVICE DROP] Drop originated from addon zone within service zone - ignoring')
       return
     }
 
@@ -2412,7 +2424,7 @@ function EditRequestForm({
     e.nativeEvent.stopImmediatePropagation()
     setDraggingServiceIndex(null)
 
-    console.log(`[DROP] Service drop detected: serviceIndex=${serviceIndex}`)
+    console.log(`[SERVICE DROP] Processing photo upload for service ${serviceIndex}`)
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handlePhotoSelect(serviceIndex, e.dataTransfer.files)
@@ -2688,7 +2700,10 @@ function EditRequestForm({
                       }
                       handleDragOver(e)
                     }}
-                    onDrop={(e) => handleDrop(e, i)}
+                    onDrop={(e) => {
+                      console.log(`[INLINE SERVICE DROP] onDrop called for service ${i}`)
+                      handleDrop(e, i)
+                    }}
                     className={clsx(
                       "relative border-2 border-dashed rounded-lg p-2 transition-all cursor-pointer",
                       draggingServiceIndex === i && !draggingAddonKey
@@ -2862,6 +2877,7 @@ function EditRequestForm({
                                 handleAddonDragOver(e)
                               }}
                               onDrop={(e) => {
+                                console.log(`[INLINE ADDON DROP] onDrop called for service ${i}, addon ${addonIndex}`)
                                 e.preventDefault()
                                 e.stopPropagation()
                                 e.nativeEvent.stopImmediatePropagation()
