@@ -154,6 +154,7 @@ interface DraftFormData {
   phone: string
   email: string
   address: string
+  yandex_map_link: string
   work_hours: string
   social_links: SocialLinks
   services: ServiceItem[]
@@ -173,6 +174,7 @@ interface FormData {
   phone: string
   email: string
   address: string
+  yandex_map_link: string
   work_hours: string
   social_links: SocialLinks
   services: ServiceItem[]
@@ -200,6 +202,7 @@ const getInitialFormData = (): FormData => ({
   phone: '',
   email: '',
   address: '',
+  yandex_map_link: '',
   work_hours: '',
   social_links: {
     telegram: '',
@@ -227,6 +230,7 @@ const saveDraft = (formData: FormData, currentStep: number): void => {
       phone: formData.phone,
       email: formData.email,
       address: formData.address,
+      yandex_map_link: formData.yandex_map_link,
       work_hours: formData.work_hours,
       social_links: formData.social_links,
       services: formData.services,
@@ -273,6 +277,7 @@ const loadDraft = (): { formData: Partial<FormData>; currentStep: number } | nul
         phone: draft.phone,
         email: draft.email,
         address: draft.address,
+        yandex_map_link: draft.yandex_map_link || '',
         work_hours: draft.work_hours,
         social_links: draft.social_links || {
           telegram: '',
@@ -532,6 +537,7 @@ export default function NewRequestPage() {
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
+          yandex_map_link: formData.yandex_map_link || null,
           work_hours: formData.work_hours,
           social_links: formData.social_links,
           services: formData.services.filter(s => s.name.trim()),
@@ -1418,6 +1424,17 @@ export default function NewRequestPage() {
                     placeholder="г. Москва, ул..."
                     className="input"
                   />
+                </div>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Ссылка на Яндекс карты</label>
+                  <input
+                    type="text"
+                    value={formData.yandex_map_link}
+                    onChange={(e) => updateField('yandex_map_link', e.target.value)}
+                    placeholder="https://yandex.ru/maps/..."
+                    className="input"
+                  />
+                  <p className="text-xs text-tg-hint mt-1">Если не указано, карта будет создана по адресу</p>
                 </div>
                 <div>
                   <label className="text-sm text-tg-hint mb-1 block">Часы работы</label>

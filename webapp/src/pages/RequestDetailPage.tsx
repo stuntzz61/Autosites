@@ -612,6 +612,7 @@ export default function RequestDetailPage() {
   const phone = site.phone || ''
   const email = site.email || ''
   const address = site.address || ''
+  const yandexMapLink = site.yandex_map_link || ''
   const businessType = site.business_type || ''
   const summary = site.summary || ''
   const services = (site.services || []).map((s: any) => typeof s === 'string' ? { name: s } : s)
@@ -920,11 +921,12 @@ export default function RequestDetailPage() {
           </Section>
         )}
 
-        {(phone || email || address) && (
+        {(phone || email || address || yandexMapLink) && (
           <Section title="Контакты сайта">
             {phone && <InfoItem icon={<Phone className="w-5 h-5" />} label="Телефон" value={phone} />}
             {email && <InfoItem icon={<Mail className="w-5 h-5" />} label="Email" value={email} />}
             {address && <InfoItem icon={<MapPin className="w-5 h-5" />} label="Адрес" value={address} />}
+            {yandexMapLink && <InfoItem icon={<MapPin className="w-5 h-5" />} label="Ссылка на Яндекс карты" value={yandexMapLink} />}
           </Section>
         )}
 
@@ -2288,6 +2290,7 @@ function EditRequestForm({
     phone: site.phone || '',
     email: site.email || '',
     address: site.address || '',
+    yandex_map_link: site.yandex_map_link || '',
     work_hours: site.work_hours || '',
     social_links: site.social_links || {
       telegram: '',
@@ -2472,6 +2475,7 @@ function EditRequestForm({
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
+          yandex_map_link: formData.yandex_map_link || null,
           work_hours: formData.work_hours,
           social_links: formData.social_links,
           summary: formData.summary,
@@ -2615,6 +2619,18 @@ function EditRequestForm({
               className="input"
               placeholder="г. Москва, ул..."
             />
+          </div>
+
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Ссылка на Яндекс карты</label>
+            <input
+              type="text"
+              value={formData.yandex_map_link}
+              onChange={(e) => setFormData(prev => ({ ...prev, yandex_map_link: e.target.value }))}
+              className="input"
+              placeholder="https://yandex.ru/maps/..."
+            />
+            <p className="text-xs text-tg-hint mt-1">Если не указано, карта будет создана по адресу</p>
           </div>
 
           <div>
