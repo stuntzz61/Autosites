@@ -5,7 +5,7 @@ import {
   Building2, User, Briefcase, Phone, Mail,
   ArrowRight, ArrowLeft, Check, Loader2, Plus, X,
   Palette, Camera, Upload, AlertCircle,
-  RotateCcw, Crown
+  RotateCcw, Crown, MessageCircle, Instagram, Youtube, Share2
 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTelegram } from '@/contexts/TelegramContext'
@@ -64,6 +64,15 @@ interface PhotoItem {
   serviceIndex?: number
 }
 
+interface SocialLinks {
+  telegram: string
+  instagram: string
+  whatsapp: string
+  vk: string
+  youtube: string
+  tiktok: string
+}
+
 interface DraftFormData {
   company: string
   business_type: string
@@ -75,6 +84,7 @@ interface DraftFormData {
   email: string
   address: string
   work_hours: string
+  social_links: SocialLinks
   services: ServiceItem[]
   color_palette: string
   tariff: string
@@ -93,6 +103,7 @@ interface FormData {
   email: string
   address: string
   work_hours: string
+  social_links: SocialLinks
   services: ServiceItem[]
   photos: PhotoItem[]
   color_palette: string
@@ -119,6 +130,14 @@ const getInitialFormData = (): FormData => ({
   email: '',
   address: '',
   work_hours: '',
+  social_links: {
+    telegram: '',
+    instagram: '',
+    whatsapp: '',
+    vk: '',
+    youtube: '',
+    tiktok: '',
+  },
   services: [{ name: '', summary: '', priceFrom: '', addons: [] }],
   photos: [],
   color_palette: 'На усмотрение дизайнера',
@@ -138,6 +157,7 @@ const saveDraft = (formData: FormData, currentStep: number): void => {
       email: formData.email,
       address: formData.address,
       work_hours: formData.work_hours,
+      social_links: formData.social_links,
       services: formData.services,
       color_palette: formData.color_palette,
       tariff: formData.tariff,
@@ -183,6 +203,14 @@ const loadDraft = (): { formData: Partial<FormData>; currentStep: number } | nul
         email: draft.email,
         address: draft.address,
         work_hours: draft.work_hours,
+        social_links: draft.social_links || {
+          telegram: '',
+          instagram: '',
+          whatsapp: '',
+          vk: '',
+          youtube: '',
+          tiktok: '',
+        },
         services: draft.services,
         color_palette: draft.color_palette,
         tariff: draft.tariff || 'standard',
@@ -423,6 +451,7 @@ export default function NewRequestPage() {
           email: formData.email,
           address: formData.address,
           work_hours: formData.work_hours,
+          social_links: formData.social_links,
           services: formData.services.filter(s => s.name.trim()),
           color_palette: formData.color_palette,
           structure: DEFAULT_STRUCTURE,
@@ -1317,6 +1346,123 @@ export default function NewRequestPage() {
                     placeholder="Пн-Пт 9:00-18:00"
                     className="input"
                   />
+                </div>
+
+                {/* Social Networks Section */}
+                <div className="pt-4 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Share2 className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} />
+                    <span className="text-sm font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>
+                      Социальные сети
+                    </span>
+                    <span className="text-xs" style={{ color: 'var(--tg-theme-hint-color)' }}>
+                      (необязательно)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* Telegram */}
+                    <div className="relative">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center">
+                        <svg className="w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        value={formData.social_links.telegram}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          social_links: { ...prev.social_links, telegram: e.target.value }
+                        }))}
+                        placeholder="@username или t.me/..."
+                        className="input pl-12"
+                      />
+                    </div>
+
+                    {/* Instagram */}
+                    <div className="relative">
+                      <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} />
+                      <input
+                        type="text"
+                        value={formData.social_links.instagram}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          social_links: { ...prev.social_links, instagram: e.target.value }
+                        }))}
+                        placeholder="@instagram_username"
+                        className="input pl-12"
+                      />
+                    </div>
+
+                    {/* WhatsApp */}
+                    <div className="relative">
+                      <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} />
+                      <input
+                        type="text"
+                        value={formData.social_links.whatsapp}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          social_links: { ...prev.social_links, whatsapp: e.target.value }
+                        }))}
+                        placeholder="+7... (WhatsApp)"
+                        className="input pl-12"
+                      />
+                    </div>
+
+                    {/* VK */}
+                    <div className="relative">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center">
+                        <svg className="w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1.033-1.49-1.171-1.744-1.171-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.2C4.624 10.857 4 8.602 4 8.178c0-.254.102-.492.593-.492h1.744c.44 0 .61.203.78.678.847 2.525 2.27 4.742 2.864 4.742.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.204.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.322-.492.763-.492h1.744c.525 0 .644.27.525.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .78.186.254.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.05.17.49-.085.744-.576.744z"/>
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        value={formData.social_links.vk}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          social_links: { ...prev.social_links, vk: e.target.value }
+                        }))}
+                        placeholder="vk.com/..."
+                        className="input pl-12"
+                      />
+                    </div>
+
+                    {/* YouTube */}
+                    <div className="relative">
+                      <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} />
+                      <input
+                        type="text"
+                        value={formData.social_links.youtube}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          social_links: { ...prev.social_links, youtube: e.target.value }
+                        }))}
+                        placeholder="youtube.com/@channel"
+                        className="input pl-12"
+                      />
+                    </div>
+
+                    {/* TikTok */}
+                    <div className="relative">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center">
+                        <svg className="w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        value={formData.social_links.tiktok}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          social_links: { ...prev.social_links, tiktok: e.target.value }
+                        }))}
+                        placeholder="@tiktok_username"
+                        className="input pl-12"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
