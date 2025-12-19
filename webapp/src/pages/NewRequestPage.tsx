@@ -57,6 +57,77 @@ const defaultServiceCategories = [
   { id: 'custom', label: 'Другое' },
 ]
 
+const socialNetworkOptions = [
+  {
+    id: 'telegram',
+    label: 'Telegram',
+    placeholder: '@username или t.me/...',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+      </svg>
+    )
+  },
+  {
+    id: 'instagram',
+    label: 'Instagram',
+    placeholder: '@instagram_username',
+    icon: <Instagram className="w-5 h-5" />
+  },
+  {
+    id: 'whatsapp',
+    label: 'WhatsApp',
+    placeholder: '+7... (WhatsApp)',
+    icon: <MessageCircle className="w-5 h-5" />
+  },
+  {
+    id: 'vk',
+    label: 'ВКонтакте',
+    placeholder: 'vk.com/...',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1.033-1.49-1.171-1.744-1.171-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.2C4.624 10.857 4 8.602 4 8.178c0-.254.102-.492.593-.492h1.744c.44 0 .61.203.78.678.847 2.525 2.27 4.742 2.864 4.742.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.204.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.322-.492.763-.492h1.744c.525 0 .644.27.525.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .78.186.254.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.05.17.49-.085.744-.576.744z"/>
+      </svg>
+    )
+  },
+  {
+    id: 'youtube',
+    label: 'YouTube',
+    placeholder: 'youtube.com/@channel',
+    icon: <Youtube className="w-5 h-5" />
+  },
+  {
+    id: 'tiktok',
+    label: 'TikTok',
+    placeholder: '@tiktok_username',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+      </svg>
+    )
+  },
+  {
+    id: 'facebook',
+    label: 'Facebook',
+    placeholder: 'facebook.com/...',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+      </svg>
+    )
+  },
+  {
+    id: 'odnoklassniki',
+    label: 'Одноклассники',
+    placeholder: 'ok.ru/...',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M14.505 17.44a11.599 11.599 0 0 0 3.6-1.49 1.371 1.371 0 0 0-1.4-2.36 8.806 8.806 0 0 1-9.4 0 1.371 1.371 0 0 0-1.4 2.36 11.599 11.599 0 0 0 3.6 1.49l-3.225 3.224a1.372 1.372 0 1 0 1.94 1.94L12 18.884l3.78 3.78a1.372 1.372 0 1 0 1.94-1.94l-3.215-3.284zM12 12.514a6.257 6.257 0 1 0 0-12.514 6.257 6.257 0 0 0 0 12.514zm0-9.143a2.886 2.886 0 1 1 0 5.772 2.886 2.886 0 0 1 0-5.772z"/>
+      </svg>
+    )
+  },
+]
+
 interface PhotoItem {
   file: File
   preview: string
@@ -394,6 +465,10 @@ export default function NewRequestPage() {
   const [pendingDragFiles, setPendingDragFiles] = useState<File[]>([])
   const [showCategorySelectModal, setShowCategorySelectModal] = useState(false)
 
+  // State for social networks selector
+  const [showSocialNetworkSelector, setShowSocialNetworkSelector] = useState(false)
+  const [activeSocialNetworks, setActiveSocialNetworks] = useState<string[]>([])
+
   useEffect(() => {
     const draft = loadDraft()
     if (draft) {
@@ -410,6 +485,13 @@ export default function NewRequestPage() {
         photos: [],
       }))
       setCurrentStep(draftData.currentStep)
+      // Restore active social networks from draft
+      if (draftData.formData.social_links) {
+        const activeNetworks = Object.entries(draftData.formData.social_links)
+          .filter(([_, value]) => value && value.trim())
+          .map(([key]) => key)
+        setActiveSocialNetworks(activeNetworks)
+      }
       setShowDraftPrompt(false)
       setDraftData(null)
       toast.success('Черновик восстановлен')
@@ -1350,120 +1432,170 @@ export default function NewRequestPage() {
 
                 {/* Social Networks Section */}
                 <div className="pt-4 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Share2 className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} />
-                    <span className="text-sm font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>
-                      Социальные сети
-                    </span>
-                    <span className="text-xs" style={{ color: 'var(--tg-theme-hint-color)' }}>
-                      (необязательно)
-                    </span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Share2 className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} />
+                      <span className="text-sm font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>
+                        Социальные сети
+                      </span>
+                      <span className="text-xs" style={{ color: 'var(--tg-theme-hint-color)' }}>
+                        (необязательно)
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    {/* Telegram */}
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center">
-                        <svg className="w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        value={formData.social_links.telegram}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          social_links: { ...prev.social_links, telegram: e.target.value }
-                        }))}
-                        placeholder="@username или t.me/..."
-                        className="input pl-12"
-                      />
-                    </div>
+                  {/* Added social networks */}
+                  <div className="space-y-3">
+                    {activeSocialNetworks.map(networkId => {
+                      const network = socialNetworkOptions.find(n => n.id === networkId)
+                      if (!network) return null
+                      return (
+                        <div key={networkId} className="relative group">
+                          <div
+                            className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center"
+                            style={{ color: 'var(--tg-theme-hint-color)' }}
+                          >
+                            {network.icon}
+                          </div>
+                          <input
+                            type="text"
+                            value={(formData.social_links as any)[networkId] || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              social_links: { ...prev.social_links, [networkId]: e.target.value }
+                            }))}
+                            placeholder={network.placeholder}
+                            className="input pl-12 pr-10"
+                            autoFocus={activeSocialNetworks[activeSocialNetworks.length - 1] === networkId}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveSocialNetworks(prev => prev.filter(id => id !== networkId))
+                              setFormData(prev => ({
+                                ...prev,
+                                social_links: { ...prev.social_links, [networkId]: '' }
+                              }))
+                              haptic?.impactOccurred('light')
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full opacity-60 hover:opacity-100 transition-opacity"
+                            style={{ color: 'var(--tg-theme-destructive-text-color)' }}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )
+                    })}
 
-                    {/* Instagram */}
-                    <div className="relative">
-                      <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} />
-                      <input
-                        type="text"
-                        value={formData.social_links.instagram}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          social_links: { ...prev.social_links, instagram: e.target.value }
-                        }))}
-                        placeholder="@instagram_username"
-                        className="input pl-12"
-                      />
-                    </div>
-
-                    {/* WhatsApp */}
-                    <div className="relative">
-                      <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} />
-                      <input
-                        type="text"
-                        value={formData.social_links.whatsapp}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          social_links: { ...prev.social_links, whatsapp: e.target.value }
-                        }))}
-                        placeholder="+7... (WhatsApp)"
-                        className="input pl-12"
-                      />
-                    </div>
-
-                    {/* VK */}
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center">
-                        <svg className="w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1.033-1.49-1.171-1.744-1.171-.356 0-.458.102-.458.593v1.575c0 .424-.135.678-1.253.678-1.846 0-3.896-1.118-5.335-3.2C4.624 10.857 4 8.602 4 8.178c0-.254.102-.492.593-.492h1.744c.44 0 .61.203.78.678.847 2.525 2.27 4.742 2.864 4.742.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.204.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.322-.492.763-.492h1.744c.525 0 .644.27.525.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .78.186.254.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.05.17.49-.085.744-.576.744z"/>
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        value={formData.social_links.vk}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          social_links: { ...prev.social_links, vk: e.target.value }
-                        }))}
-                        placeholder="vk.com/..."
-                        className="input pl-12"
-                      />
-                    </div>
-
-                    {/* YouTube */}
-                    <div className="relative">
-                      <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} />
-                      <input
-                        type="text"
-                        value={formData.social_links.youtube}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          social_links: { ...prev.social_links, youtube: e.target.value }
-                        }))}
-                        placeholder="youtube.com/@channel"
-                        className="input pl-12"
-                      />
-                    </div>
-
-                    {/* TikTok */}
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center">
-                        <svg className="w-5 h-5" style={{ color: 'var(--tg-theme-hint-color)' }} viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        value={formData.social_links.tiktok}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          social_links: { ...prev.social_links, tiktok: e.target.value }
-                        }))}
-                        placeholder="@tiktok_username"
-                        className="input pl-12"
-                      />
-                    </div>
+                    {/* Add social network button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSocialNetworkSelector(true)
+                        haptic?.impactOccurred('light')
+                      }}
+                      className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed transition-all hover:border-solid"
+                      style={{
+                        borderColor: 'var(--border-subtle)',
+                        color: 'var(--tg-theme-hint-color)',
+                        background: 'transparent'
+                      }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span className="text-sm">Добавить соц. сеть</span>
+                    </button>
                   </div>
                 </div>
+
+                {/* Social Network Selector Modal */}
+                <AnimatePresence>
+                  {showSocialNetworkSelector && (
+                    <>
+                      <motion.div
+                        className="fixed inset-0 z-50"
+                        style={{ background: 'rgba(0, 0, 0, 0.7)' }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowSocialNetworkSelector(false)}
+                      />
+                      <motion.div
+                        className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-[60] safe-bottom"
+                        style={{
+                          background: 'var(--bg-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          borderBottom: 'none'
+                        }}
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                      >
+                        <div className="p-5">
+                          <div
+                            className="w-10 h-1 rounded-full mx-auto mb-5"
+                            style={{ background: 'var(--bg-tertiary)' }}
+                          />
+
+                          <div className="text-center mb-5">
+                            <div
+                              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                              style={{
+                                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-dark) 100%)',
+                                boxShadow: '0 4px 16px -4px rgba(59, 130, 246, 0.5)'
+                              }}
+                            >
+                              <Share2 className="w-7 h-7 text-white" />
+                            </div>
+                            <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                              Выберите соц. сеть
+                            </h3>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 mb-4 max-h-[50vh] overflow-y-auto">
+                            {socialNetworkOptions
+                              .filter(network => !activeSocialNetworks.includes(network.id))
+                              .map(network => (
+                                <button
+                                  key={network.id}
+                                  onClick={() => {
+                                    setActiveSocialNetworks(prev => [...prev, network.id])
+                                    setShowSocialNetworkSelector(false)
+                                    haptic?.notificationOccurred('success')
+                                  }}
+                                  className="flex items-center gap-3 p-4 rounded-xl text-left transition-all active:scale-[0.98] hover:scale-[1.01]"
+                                  style={{
+                                    background: 'var(--bg-surface)',
+                                    border: '1px solid var(--border-default)'
+                                  }}
+                                >
+                                  <div style={{ color: 'var(--accent-primary)' }}>
+                                    {network.icon}
+                                  </div>
+                                  <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
+                                    {network.label}
+                                  </span>
+                                </button>
+                              ))}
+                          </div>
+
+                          {socialNetworkOptions.filter(n => !activeSocialNetworks.includes(n.id)).length === 0 && (
+                            <p className="text-center text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+                              Все социальные сети уже добавлены
+                            </p>
+                          )}
+
+                          <button
+                            onClick={() => setShowSocialNetworkSelector(false)}
+                            className="btn btn-secondary w-full"
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 
