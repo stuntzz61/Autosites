@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from config import settings
 from routes.auth import get_current_user
+from routes.reviews import fetch_reviews_for_generation
 import db
 import s3
 
@@ -305,6 +306,25 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
                 site_data['structure'] = structure
                 log.info(f"[GENERATE] Added 'Карта' to structure for request {request_id}")
 
+            # Fetch reviews from reviews-digger before sending to n8n
+            # This is a hidden process - reviews are automatically fetched
+            reviews_data = {}
+            company_name = request.get('company_name', '')
+            client_data = payload.get('client', {})
+            address = client_data.get('address', '')
+
+            if company_name:
+                log.info(f"[GENERATE] Fetching reviews for: {company_name}")
+                try:
+                    reviews_data = await fetch_reviews_for_generation(company_name, address)
+                    if reviews_data.get('success'):
+                        log.info(f"[GENERATE] Successfully fetched {len(reviews_data.get('reviews', []))} reviews")
+                    else:
+                        log.warning(f"[GENERATE] Failed to fetch reviews: {reviews_data.get('error')}")
+                except Exception as e:
+                    log.error(f"[GENERATE] Error fetching reviews: {e}")
+                    reviews_data = {"success": False, "error": str(e), "reviews": []}
+
             webhook_data = {
                 "request_id": request_id,
                 "manager_id": manager_id_str,
@@ -314,6 +334,7 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
                 "client": payload.get('client', {}),
                 "site": site_data,  # Full site object including services with addons
                 "additional_services": formatted_services,  # Include additional services (e.g., logo_design)
+                "reviews": reviews_data,  # Reviews from reviews-digger service
             }
 
             # Log summary of data being sent
@@ -323,6 +344,7 @@ async def generate_site(request_id: str, user: dict = Depends(get_current_user))
             log.info(f"[GENERATE] Webhook payload size: {webhook_size} bytes")
             log.info(f"[GENERATE] Services count: {len(services)}")
             log.info(f"[GENERATE] Additional services count: {len(formatted_services)}")
+            log.info(f"[GENERATE] Reviews count: {len(reviews_data.get('reviews', []))}")
             log.debug(f"Webhook data: {webhook_json[:500]}..." if len(webhook_json) > 500 else f"Webhook data: {webhook_json}")
 
             async with httpx.AsyncClient() as client:

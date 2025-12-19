@@ -413,10 +413,12 @@ export const revisionsApi = {
   getStats: (siteId: string) => api.get(`/revisions/site/${siteId}/stats`),
 }
 
-// Reviews API (Yandex Maps reviews scraping)
+// Reviews API (uses reviews-digger service for Yandex Maps reviews)
+// Note: Reviews are automatically fetched during site generation
 export const reviewsApi = {
-  // Scrape reviews from Yandex Maps
+  // Get reviews by search query (company name + optional address)
   scrape: (data: {
+    query?: string  // Direct search query like "Ki-ki nail Ростов"
     yandex_maps_url?: string
     organization_name?: string
     city?: string

@@ -17,3 +17,7 @@ UPDATE requests SET tariff = 'standard' WHERE tariff IS NULL;
 
 
 
+
+
+
+

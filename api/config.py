@@ -66,7 +66,11 @@ class Settings(BaseSettings):
     PAYMENT_BASE_URL: str = ""  # URL for payment system (e.g. https://pay.example.com)
     PAYMENT_BANK_ACCOUNT: str = ""  # Bank account for SBP payments
 
-    # Apify (for Yandex Maps reviews scraping)
+    # Reviews Digger (self-hosted service for Yandex Maps reviews scraping)
+    # URL of reviews-digger service (uses browser automation, no API keys needed)
+    REVIEWS_DIGGER_URL: str = ""  # e.g. http://reviews-digger:8083
+
+    # Legacy: Apify (deprecated, use REVIEWS_DIGGER_URL instead)
     APIFY_API_TOKEN: str = ""  # Get from https://console.apify.com/account/integrations
 
     # CORS
