@@ -169,38 +169,64 @@ export default function DomainModal({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 bg-black/50 z-40"
+        className="fixed inset-0 z-[9998]"
+        style={{ background: 'rgba(0, 0, 0, 0.7)' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
       />
       <motion.div
-        className="fixed bottom-0 left-0 right-0 bg-tg-bg rounded-t-3xl p-4 z-50 safe-bottom max-h-[85vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-[9999] safe-bottom max-h-[85vh] overflow-y-auto"
+        style={{
+          background: 'var(--bg-elevated)',
+          borderTop: '1px solid var(--border-subtle)',
+          boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.4)',
+          paddingTop: '1.25rem',
+          paddingLeft: '1.25rem',
+          paddingRight: '1.25rem',
+          paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom, 0) + 1.25rem)'
+        }}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
       >
-        <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
+        <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'var(--bg-tertiary)' }} />
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-purple-500" />
-            <p className="text-lg font-semibold">Подключить домен</p>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                border: '1px solid rgba(139, 92, 246, 0.3)'
+              }}
+            >
+              <Globe className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Подключить домен</h2>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Регистрация и настройка DNS</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-tg-secondary-bg rounded-lg transition-colors"
+            className="p-2.5 rounded-xl transition-all hover:scale-105"
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)'
+            }}
           >
-            <X className="w-5 h-5 text-tg-hint" />
+            <X className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
           </button>
         </div>
 
         <div className="space-y-4">
           {/* Domain Input */}
           <div>
-            <label className="text-xs text-tg-hint mb-1 block">Домен</label>
+            <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--text-muted)' }}>Домен</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -219,7 +245,7 @@ export default function DomainModal({
               <button
                 onClick={handleCheck}
                 disabled={checkMutation.isPending || status === 'registering' || status === 'configuring'}
-                className="btn btn-primary px-4"
+                className="btn btn-primary px-4 flex-shrink-0"
               >
                 {checkMutation.isPending ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -228,38 +254,58 @@ export default function DomainModal({
                 )}
               </button>
             </div>
-            <p className="text-xs text-tg-hint mt-1">
+            <p className="text-xs mt-2" style={{ color: 'var(--text-subtle)' }}>
               Укажите домен без http:// и www
             </p>
           </div>
 
           {/* Status Messages */}
           {status === 'checking' && (
-            <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-              <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-              <span className="text-sm text-blue-600 dark:text-blue-400">
+            <div
+              className="flex items-center gap-3 p-4 rounded-xl"
+              style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.2)'
+              }}
+            >
+              <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--accent-primary-light)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--accent-primary-light)' }}>
                 Проверяем доступность...
               </span>
             </div>
           )}
 
           {status === 'available' && (
-            <div className="p-4 bg-blue-950/40 border border-blue-700/60 rounded-xl">
-              <div className="flex items-center gap-3 mb-3">
-                <CheckCircle2 className="w-6 h-6 text-sky-400" />
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(16, 185, 129, 0.2)' }}
+                >
+                  <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--success-light)' }} />
+                </div>
                 <div>
-                  <p className="font-medium text-sky-100">
+                  <p className="font-semibold" style={{ color: 'var(--success-light)' }}>
                     Домен свободен
                   </p>
-                  <p className="text-sm text-sky-200/80">
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                     {domainInput}
                   </p>
                 </div>
               </div>
               {price && (
-                <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg mb-3">
-                  <span className="text-sm text-tg-hint">Стоимость регистрации:</span>
-                  <span className="font-bold text-lg text-tg-text">
+                <div
+                  className="flex items-center justify-between p-3 rounded-lg mb-4"
+                  style={{ background: 'rgba(0, 0, 0, 0.2)' }}
+                >
+                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Стоимость регистрации:</span>
+                  <span className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
                     {price.amount} {price.currency === 'RUB' ? '₽' : price.currency}/год
                   </span>
                 </div>
@@ -282,17 +328,23 @@ export default function DomainModal({
           )}
 
           {status === 'taken' && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                <XCircle className="w-5 h-5 text-red-500" />
-                <span className="text-sm text-red-600 dark:text-red-400">
+            <div className="space-y-4">
+              <div
+                className="flex items-center gap-3 p-4 rounded-xl"
+                style={{
+                  background: 'var(--error-bg)',
+                  border: '1px solid var(--error-border)'
+                }}
+              >
+                <XCircle className="w-5 h-5" style={{ color: 'var(--error-light)' }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--error-light)' }}>
                   Домен <strong>{domainInput}</strong> уже занят
                 </span>
               </div>
 
               {alternatives.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium text-tg-text mb-2">
+                  <p className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
                     Доступные варианты:
                   </p>
                   <div className="space-y-2 max-h-[200px] overflow-y-auto">
@@ -300,19 +352,23 @@ export default function DomainModal({
                       <button
                         key={i}
                         onClick={() => handleSelectAlternative(alt)}
-                        className="w-full flex items-center justify-between p-3 bg-tg-secondary-bg hover:bg-tg-hint/10 rounded-xl transition-colors text-left"
+                        className="w-full flex items-center justify-between p-3 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99] text-left"
+                        style={{
+                          background: 'var(--bg-surface)',
+                          border: '1px solid var(--border-default)'
+                        }}
                       >
                         <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-sky-400" />
-                          <span className="font-medium text-tg-text">{alt.domain}</span>
+                          <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--success-light)' }} />
+                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{alt.domain}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           {alt.price && (
-                            <span className="text-sm text-tg-hint">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                               {alt.price.amount} ₽
                             </span>
                           )}
-                          <ChevronRight className="w-4 h-4 text-tg-hint" />
+                          <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-subtle)' }} />
                         </div>
                       </button>
                     ))}
@@ -323,61 +379,90 @@ export default function DomainModal({
           )}
 
           {status === 'invalid' && (
-            <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-              <AlertCircle className="w-5 h-5 text-orange-500" />
-              <span className="text-sm text-orange-600 dark:text-orange-400">
+            <div
+              className="flex items-center gap-3 p-4 rounded-xl"
+              style={{
+                background: 'var(--warning-bg)',
+                border: '1px solid var(--warning-border)'
+              }}
+            >
+              <AlertCircle className="w-5 h-5" style={{ color: 'var(--warning-light)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--warning-light)' }}>
                 {errorMessage}
               </span>
             </div>
           )}
 
           {status === 'registering' && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                <span className="font-medium text-blue-600 dark:text-blue-400">
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.2)'
+              }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--accent-primary-light)' }} />
+                <span className="font-medium" style={{ color: 'var(--accent-primary-light)' }}>
                   Создаём заявку в REG.RU...
                 </span>
               </div>
-              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
-                <div className="bg-blue-500 h-2 rounded-full w-1/3 animate-pulse" />
+              <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-tertiary)' }}>
+                <div className="h-2 rounded-full w-1/3 animate-pulse" style={{ background: 'var(--accent-primary)' }} />
               </div>
             </div>
           )}
 
           {status === 'configuring' && (
-            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
-                <span className="font-medium text-purple-600 dark:text-purple-400">
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: 'rgba(139, 92, 246, 0.1)',
+                border: '1px solid rgba(139, 92, 246, 0.2)'
+              }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--info-light)' }} />
+                <span className="font-medium" style={{ color: 'var(--info-light)' }}>
                   Настраиваем DNS...
                 </span>
               </div>
-              <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2">
-                <div className="bg-purple-500 h-2 rounded-full w-2/3 animate-pulse" />
+              <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-tertiary)' }}>
+                <div className="h-2 rounded-full w-2/3 animate-pulse" style={{ background: 'var(--info)' }} />
               </div>
             </div>
           )}
 
           {status === 'connected' && (
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: 'var(--success-bg)',
+                border: '1px solid var(--success-border)'
+              }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(16, 185, 129, 0.2)' }}
+                >
+                  <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--success-light)' }} />
+                </div>
                 <div>
-                  <p className="font-medium text-green-700 dark:text-green-400">
+                  <p className="font-semibold" style={{ color: 'var(--success-light)' }}>
                     Домен подключён!
                   </p>
-                  <p className="text-sm text-green-600 dark:text-green-500">
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                     {registeredDomain}
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-tg-hint mt-3">
+              <p className="text-xs mb-4" style={{ color: 'var(--text-subtle)' }}>
                 DNS записи настроены. Полная активация может занять до 24 часов.
               </p>
               <button
                 onClick={onClose}
-                className="w-full btn btn-primary mt-3"
+                className="w-full btn btn-primary"
               >
                 Готово
               </button>
@@ -385,51 +470,66 @@ export default function DomainModal({
           )}
 
           {status === 'bill_created' && (
-            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl">
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: 'var(--warning-bg)',
+                border: '1px solid var(--warning-border)'
+              }}
+            >
               <div className="flex items-center gap-3 mb-3">
-                <CreditCard className="w-6 h-6 text-orange-500" />
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(245, 158, 11, 0.2)' }}
+                >
+                  <CreditCard className="w-5 h-5" style={{ color: 'var(--warning-light)' }} />
+                </div>
                 <div>
-                  <p className="font-medium text-orange-700 dark:text-orange-400">
+                  <p className="font-semibold" style={{ color: 'var(--warning-light)' }}>
                     Создан счёт на оплату
                   </p>
                   {billId && (
-                    <p className="text-sm text-orange-600 dark:text-orange-500">
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                       Счёт №{billId}
                     </p>
                   )}
                 </div>
               </div>
-              <p className="text-sm text-tg-hint mb-3">
+              <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
                 {errorMessage || 'Недостаточно средств на балансе REG.RU. Оплатите счёт в личном кабинете REG.RU.'}
               </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleRefreshStatus}
-                  disabled={checkMutation.isPending}
-                  className="btn btn-secondary flex-1"
-                >
-                  {checkMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Обновить статус
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                onClick={handleRefreshStatus}
+                disabled={checkMutation.isPending}
+                className="btn btn-secondary w-full"
+              >
+                {checkMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Обновить статус
+                  </>
+                )}
+              </button>
             </div>
           )}
 
           {status === 'error' && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <AlertCircle className="w-5 h-5 text-red-500" />
-                <span className="font-medium text-red-600 dark:text-red-400">
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: 'var(--error-bg)',
+                border: '1px solid var(--error-border)'
+              }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <AlertCircle className="w-5 h-5" style={{ color: 'var(--error-light)' }} />
+                <span className="font-semibold" style={{ color: 'var(--error-light)' }}>
                   Произошла ошибка
                 </span>
               </div>
-              <p className="text-sm text-tg-hint mb-3">
+              <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
                 {errorMessage || 'Попробуйте ещё раз или обратитесь в поддержку.'}
               </p>
               <button
@@ -444,13 +544,19 @@ export default function DomainModal({
 
           {/* Info Block */}
           {status === 'idle' && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                <strong>Как это работает:</strong>
-                <br />1. Введите желаемый домен и нажмите «Проверить»
-                <br />2. Если домен свободен — оформите регистрацию
-                <br />3. Если занят — выберите из предложенных вариантов
-                <br />4. Домен будет автоматически подключён к вашему сайту
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.15)'
+              }}
+            >
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                <strong style={{ color: 'var(--accent-primary-light)' }}>Как это работает:</strong>
+                <br /><span style={{ color: 'var(--text-subtle)' }}>1.</span> Введите желаемый домен и нажмите «Проверить»
+                <br /><span style={{ color: 'var(--text-subtle)' }}>2.</span> Если домен свободен — оформите регистрацию
+                <br /><span style={{ color: 'var(--text-subtle)' }}>3.</span> Если занят — выберите из предложенных вариантов
+                <br /><span style={{ color: 'var(--text-subtle)' }}>4.</span> Домен будет автоматически подключён к вашему сайту
               </p>
             </div>
           )}

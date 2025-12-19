@@ -412,3 +412,22 @@ export const revisionsApi = {
   // Get site revision stats
   getStats: (siteId: string) => api.get(`/revisions/site/${siteId}/stats`),
 }
+
+// Reviews API (Yandex Maps reviews scraping)
+export const reviewsApi = {
+  // Scrape reviews from Yandex Maps
+  scrape: (data: {
+    yandex_maps_url?: string
+    organization_name?: string
+    city?: string
+    max_reviews?: number
+  }) => api.post('/reviews/scrape', data),
+
+  // Get reviews by Yandex Maps URL
+  getByUrl: (url: string, maxReviews?: number) =>
+    api.get('/reviews/by-url', { params: { url, max_reviews: maxReviews } }),
+
+  // Search for organization and get reviews
+  search: (name: string, city?: string, maxReviews?: number) =>
+    api.get('/reviews/search', { params: { name, city, max_reviews: maxReviews } }),
+}

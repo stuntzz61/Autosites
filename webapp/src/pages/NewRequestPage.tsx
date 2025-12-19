@@ -77,7 +77,7 @@ const socialNetworkOptions = [
   {
     id: 'whatsapp',
     label: 'WhatsApp',
-    placeholder: '+7... (WhatsApp)',
+    placeholder: '+7 (999) 123-45-67',
     icon: <MessageCircle className="w-5 h-5" />
   },
   {
@@ -154,6 +154,10 @@ interface DraftFormData {
   phone: string
   email: string
   address: string
+  legal_address: string
+  actual_address: string
+  inn: string
+  ogrn: string
   yandex_map_link: string
   work_hours: string
   social_links: SocialLinks
@@ -174,6 +178,10 @@ interface FormData {
   phone: string
   email: string
   address: string
+  legal_address: string
+  actual_address: string
+  inn: string
+  ogrn: string
   yandex_map_link: string
   work_hours: string
   social_links: SocialLinks
@@ -202,6 +210,10 @@ const getInitialFormData = (): FormData => ({
   phone: '',
   email: '',
   address: '',
+  legal_address: '',
+  actual_address: '',
+  inn: '',
+  ogrn: '',
   yandex_map_link: '',
   work_hours: '',
   social_links: {
@@ -230,6 +242,10 @@ const saveDraft = (formData: FormData, currentStep: number): void => {
       phone: formData.phone,
       email: formData.email,
       address: formData.address,
+      legal_address: formData.legal_address,
+      actual_address: formData.actual_address,
+      inn: formData.inn,
+      ogrn: formData.ogrn,
       yandex_map_link: formData.yandex_map_link,
       work_hours: formData.work_hours,
       social_links: formData.social_links,
@@ -277,6 +293,10 @@ const loadDraft = (): { formData: Partial<FormData>; currentStep: number } | nul
         phone: draft.phone,
         email: draft.email,
         address: draft.address,
+        legal_address: draft.legal_address || '',
+        actual_address: draft.actual_address || '',
+        inn: draft.inn || '',
+        ogrn: draft.ogrn || '',
         yandex_map_link: draft.yandex_map_link || '',
         work_hours: draft.work_hours,
         social_links: draft.social_links || {
@@ -537,6 +557,10 @@ export default function NewRequestPage() {
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
+          legal_address: formData.legal_address || null,
+          actual_address: formData.actual_address || null,
+          inn: formData.inn || null,
+          ogrn: formData.ogrn || null,
           yandex_map_link: formData.yandex_map_link || null,
           work_hours: formData.work_hours,
           social_links: formData.social_links,
@@ -1351,7 +1375,7 @@ export default function NewRequestPage() {
                       type="text"
                       value={formData.client_contact}
                       onChange={(e) => updateField('client_contact', e.target.value)}
-                      placeholder="+7... или @telegram"
+                      placeholder="+7 (999) 123-45-67 или @telegram"
                       className="input pl-12"
                     />
                   </div>
@@ -1373,7 +1397,7 @@ export default function NewRequestPage() {
                       inputMode="numeric"
                       value={formData.phone}
                       onChange={handlePhoneChange}
-                      placeholder="+7 (XXX) XXX-XX-XX"
+                      placeholder="+7 (999) 123-45-67"
                       maxLength={18}
                       className={clsx('input pl-12', errors.phone && 'input-error field-error-shake')}
                       autoFocus
@@ -1388,7 +1412,7 @@ export default function NewRequestPage() {
                       {errors.phone}
                     </p>
                   ) : (
-                    <p className="text-xs text-tg-hint/70 mt-1.5">Формат: +7 (XXX) XXX-XX-XX</p>
+                    <p className="text-xs text-tg-hint/70 mt-1.5">Формат: +7 (999) 123-45-67</p>
                   )}
                 </div>
                 <div>
@@ -1416,15 +1440,81 @@ export default function NewRequestPage() {
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-tg-hint mb-1 block">Адрес</label>
+                  <label className="text-sm text-tg-hint mb-1 block">Адрес (для отображения на сайте)</label>
                   <input
                     type="text"
                     value={formData.address}
                     onChange={(e) => updateField('address', e.target.value)}
-                    placeholder="г. Москва, ул..."
+                    placeholder="г. Москва, ул. Примерная, д. 1, офис 101"
                     className="input"
                   />
                 </div>
+
+                {/* Organization Details Section */}
+                <div className="pt-4 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Building2 className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} />
+                    <span className="text-sm font-medium" style={{ color: 'var(--tg-theme-text-color)' }}>
+                      Реквизиты организации
+                    </span>
+                    <span className="text-xs" style={{ color: 'var(--tg-theme-hint-color)' }}>
+                      (необязательно)
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm text-tg-hint mb-1 block">ИНН</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formData.inn}
+                          onChange={(e) => updateField('inn', e.target.value.replace(/\D/g, '').slice(0, 12))}
+                          placeholder="1234567890"
+                          maxLength={12}
+                          className="input"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-tg-hint mb-1 block">ОГРН</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formData.ogrn}
+                          onChange={(e) => updateField('ogrn', e.target.value.replace(/\D/g, '').slice(0, 15))}
+                          placeholder="1234567890123"
+                          maxLength={15}
+                          className="input"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-tg-hint mb-1 block">Юридический адрес</label>
+                      <input
+                        type="text"
+                        value={formData.legal_address}
+                        onChange={(e) => updateField('legal_address', e.target.value)}
+                        placeholder="123456, г. Москва, ул. Примерная, д. 1, офис 101"
+                        className="input"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-tg-hint mb-1 block">Фактический адрес</label>
+                      <input
+                        type="text"
+                        value={formData.actual_address}
+                        onChange={(e) => updateField('actual_address', e.target.value)}
+                        placeholder="123456, г. Москва, ул. Другая, д. 5"
+                        className="input"
+                      />
+                      <p className="text-xs text-tg-hint mt-1">Заполните, если отличается от юридического</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-sm text-tg-hint mb-1 block">Ссылка на Яндекс карты</label>
                   <input

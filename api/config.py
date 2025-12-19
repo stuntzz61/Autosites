@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     PAYMENT_BASE_URL: str = ""  # URL for payment system (e.g. https://pay.example.com)
     PAYMENT_BANK_ACCOUNT: str = ""  # Bank account for SBP payments
 
+    # Apify (for Yandex Maps reviews scraping)
+    APIFY_API_TOKEN: str = ""  # Get from https://console.apify.com/account/integrations
+
     # CORS
     CORS_ORIGINS: List[str] = ["*"]
 

@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routes import auth, requests, admin, profile, services, sites, payments, revisions, domains, manager
+from routes import auth, requests, admin, profile, services, sites, payments, revisions, domains, manager, reviews
 from db import init_pool, close_pool
 import cron_jobs
 
@@ -64,6 +64,7 @@ app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
 app.include_router(revisions.router, prefix="/api/revisions", tags=["revisions"])
 app.include_router(domains.router, prefix="/api/requests", tags=["domains"])
 app.include_router(manager.router, prefix="/api/manager", tags=["manager"])
+app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
 
 
 @app.get("/api/health")
