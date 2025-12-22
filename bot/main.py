@@ -11,6 +11,7 @@ Handles:
 import os
 import logging
 import asyncio
+import time
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
@@ -18,6 +19,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiohttp import web
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 import db
 
@@ -33,6 +35,42 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://your-webapp-url.com")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
 BOT_WEBHOOK_PORT = int(os.getenv("BOT_WEBHOOK_PORT", "8081"))
+
+# Prometheus metrics
+telegram_messages_processed = Counter(
+    'telegram_messages_processed_total',
+    'Total processed messages',
+    ['command']
+)
+
+telegram_message_processing_duration = Histogram(
+    'telegram_message_processing_seconds',
+    'Message processing duration',
+    ['command']
+)
+
+telegram_active_users = Gauge(
+    'telegram_active_users_count',
+    'Number of active users'
+)
+
+telegram_registrations = Counter(
+    'telegram_registrations_total',
+    'Total user registrations',
+    ['status']
+)
+
+telegram_notifications_sent = Counter(
+    'telegram_notifications_sent_total',
+    'Total notifications sent',
+    ['type', 'status']
+)
+
+telegram_webhook_requests = Counter(
+    'telegram_webhook_requests_total',
+    'Total webhook requests',
+    ['action', 'status']
+)
 
 # Bot setup
 bot = Bot(token=BOT_TOKEN)
@@ -146,7 +184,10 @@ def get_more_services_keyboard(request_id: str, selected_codes: list) -> InlineK
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message, state: FSMContext):
     """Handle /start command with optional invite code deep link."""
+    start_time = time.time()
     await state.clear()
+
+    telegram_messages_processed.labels(command="start").inc()
 
     tg_id = message.from_user.id
     user = await db.get_user_by_tg_id(tg_id)
@@ -300,6 +341,9 @@ async def cmd_start(message: types.Message, state: FSMContext):
         reply_markup=get_main_keyboard(is_approved=True)
     )
 
+    duration = time.time() - start_time
+    telegram_message_processing_duration.labels(command="start").observe(duration)
+
 
 @dp.message(Command("admin"))
 async def cmd_admin(message: types.Message, state: FSMContext):
@@ -387,6 +431,8 @@ async def cb_register(callback: types.CallbackQuery, state: FSMContext):
         role="manager",
         approval_status="pending"
     )
+
+    telegram_registrations.labels(status="pending").inc()
 
     await callback.message.edit_text(
         "✅ Заявка на регистрацию отправлена!\n\n"
@@ -763,9 +809,11 @@ async def send_notification(tg_id: int, text: str, keyboard: InlineKeyboardMarku
     """Send notification to user."""
     try:
         await bot.send_message(tg_id, text, reply_markup=keyboard)
+        telegram_notifications_sent.labels(type="generic", status="success").inc()
         return True
     except Exception as e:
         logger.error(f"Failed to send notification to {tg_id}: {e}")
+        telegram_notifications_sent.labels(type="generic", status="failed").inc()
         return False
 
 
@@ -971,11 +1019,23 @@ async def send_hosting_warning_notification(tg_id: int, site_id: str, company_na
         return False
 
 
+async def metrics_handler(request):
+    """Handle Prometheus metrics endpoint."""
+    return web.Response(
+        body=generate_latest(),
+        content_type=CONTENT_TYPE_LATEST
+    )
+
+
 async def handle_webhook(request):
     """Handle webhook requests from API."""
+    start_time = time.time()
     try:
         data = await request.json()
         action = data.get("action")
+
+        # Record webhook request
+        telegram_webhook_requests.labels(action=action or "unknown", status="received").inc()
 
         if action == "request_created":
             # Send additional services offer
@@ -985,6 +1045,7 @@ async def handle_webhook(request):
 
             if tg_id and request_id:
                 await send_additional_services_offer(tg_id, request_id, company_name)
+                telegram_webhook_requests.labels(action=action, status="success").inc()
                 return web.json_response({"success": True})
 
         elif action == "deploy_status":
@@ -1007,6 +1068,7 @@ async def handle_webhook(request):
                     domain=domain,
                     error=error
                 )
+                telegram_webhook_requests.labels(action=action, status="success").inc()
                 return web.json_response({"success": True})
 
         elif action == "generation_complete":
@@ -1025,6 +1087,7 @@ async def handle_webhook(request):
                     status=status,
                     error=error
                 )
+                telegram_webhook_requests.labels(action=action, status="success").inc()
                 return web.json_response({"success": True})
 
         elif action == "hosting_warning":
@@ -1041,6 +1104,7 @@ async def handle_webhook(request):
                     company_name=company_name,
                     days_remaining=days_remaining
                 )
+                telegram_webhook_requests.labels(action=action, status="success").inc()
                 return web.json_response({"success": True})
 
         elif action == "feedback_response":
@@ -1051,6 +1115,7 @@ async def handle_webhook(request):
 
             if tg_id and response:
                 await send_feedback_response_notification(tg_id, subject, response)
+                telegram_webhook_requests.labels(action=action, status="success").inc()
                 return web.json_response({"success": True})
 
         elif action == "new_feedback":
@@ -1060,6 +1125,7 @@ async def handle_webhook(request):
             priority = data.get("priority", "normal")
 
             await notify_admins_new_feedback(manager_name, subject, priority)
+            telegram_webhook_requests.labels(action=action, status="success").inc()
             return web.json_response({"success": True})
 
         elif action == "send_message":
@@ -1069,13 +1135,19 @@ async def handle_webhook(request):
 
             if tg_id and text:
                 await send_notification(tg_id, text)
+                telegram_webhook_requests.labels(action=action, status="success").inc()
                 return web.json_response({"success": True})
 
+        telegram_webhook_requests.labels(action=action or "unknown", status="unknown").inc()
         return web.json_response({"success": False, "error": "Unknown action"})
 
     except Exception as e:
         logger.error(f"Webhook error: {e}")
+        telegram_webhook_requests.labels(action="error", status="failed").inc()
         return web.json_response({"success": False, "error": str(e)}, status=500)
+    finally:
+        duration = time.time() - start_time
+        telegram_message_processing_duration.labels(command="webhook").observe(duration)
 
 
 async def start_webhook_server():
@@ -1083,6 +1155,7 @@ async def start_webhook_server():
     app = web.Application()
     app.router.add_post("/webhook", handle_webhook)
     app.router.add_get("/health", lambda r: web.json_response({"status": "ok"}))
+    app.router.add_get("/metrics", metrics_handler)
 
     runner = web.AppRunner(app)
     await runner.setup()

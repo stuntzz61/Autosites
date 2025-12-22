@@ -1,8 +1,11 @@
 import logging
 import asyncio
+import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Counter, Histogram, Gauge
 
 from config import settings
 from routes import auth, requests, admin, profile, services, sites, payments, revisions, domains, manager, reviews
@@ -14,6 +17,46 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Prometheus metrics
+http_requests_total = Counter(
+    'autosites_http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status_code']
+)
+
+http_request_duration_seconds = Histogram(
+    'autosites_http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint']
+)
+
+requests_created = Counter(
+    'autosites_requests_created_total',
+    'Total site requests created'
+)
+
+sites_deployed = Counter(
+    'autosites_sites_deployed_total',
+    'Total sites deployed',
+    ['status']
+)
+
+active_requests = Gauge(
+    'autosites_active_requests_count',
+    'Number of active requests'
+)
+
+users_registered = Counter(
+    'autosites_users_registered_total',
+    'Total users registered'
+)
+
+payments_processed = Counter(
+    'autosites_payments_processed_total',
+    'Total payments processed',
+    ['status']
+)
 
 
 @asynccontextmanager
@@ -43,6 +86,35 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Prometheus instrumentation
+Instrumentator().instrument(app).expose(app)
+
+# Custom metrics middleware
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    start_time = time.time()
+    active_requests.inc()
+
+    try:
+        response = await call_next(request)
+        duration = time.time() - start_time
+
+        # Record metrics
+        http_requests_total.labels(
+            method=request.method,
+            endpoint=request.url.path,
+            status_code=response.status_code
+        ).inc()
+
+        http_request_duration_seconds.labels(
+            method=request.method,
+            endpoint=request.url.path
+        ).observe(duration)
+
+        return response
+    finally:
+        active_requests.dec()
 
 # CORS
 app.add_middleware(
