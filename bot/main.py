@@ -1023,7 +1023,7 @@ async def metrics_handler(request):
     """Handle Prometheus metrics endpoint."""
     return web.Response(
         body=generate_latest(),
-        content_type=CONTENT_TYPE_LATEST
+        content_type='text/plain'
     )
 
 
