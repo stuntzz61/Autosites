@@ -1685,8 +1685,13 @@ export default function RequestDetailPage() {
                 onClick={() => setShowNewRevisionModal(false)}
               />
               <motion.div
-                className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-50 safe-bottom max-h-[90vh] flex flex-col"
-                style={{ background: '#1E222B' }}
+                className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-50 safe-bottom flex flex-col"
+                style={{
+                  background: '#1E222B',
+                  maxHeight: '90vh',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
@@ -1700,7 +1705,7 @@ export default function RequestDetailPage() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4">
+                <div className="flex-1 overflow-y-auto px-4 min-h-0">
                   <div className="space-y-4 pb-4">
                   <p className="text-sm text-tg-hint">
                     Опишите, что нужно изменить на сайте. Вы можете добавить несколько правок.
@@ -1854,7 +1859,16 @@ export default function RequestDetailPage() {
                 </div>
 
                 {/* Actions - Fixed at bottom */}
-                <div className="flex-shrink-0 p-4 pt-2 border-t" style={{ borderColor: 'rgba(100, 116, 139, 0.15)' }}>
+                <div
+                  className="flex-shrink-0 p-4 pt-3 border-t"
+                  style={{
+                    borderColor: 'rgba(100, 116, 139, 0.15)',
+                    background: '#1E222B',
+                    position: 'sticky',
+                    bottom: 0,
+                    zIndex: 10
+                  }}
+                >
                   <div className="flex gap-3">
                     <button
                       onClick={() => setShowNewRevisionModal(false)}
@@ -2600,7 +2614,7 @@ function EditRequestForm({
               placeholder="2020"
               maxLength={4}
             />
-            <p className="text-xs text-tg-hint/70 mt-1">Необязательное поле</p>
+            <p className="text-xs text-tg-hint/70 mt-1.5">Необязательное поле</p>
           </div>
 
           <div>
