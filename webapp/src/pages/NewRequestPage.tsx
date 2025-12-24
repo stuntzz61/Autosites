@@ -148,6 +148,7 @@ interface DraftFormData {
   company: string
   business_type: string
   summary: string
+  founded_year: string
   client_name: string
   client_company: string
   client_contact: string
@@ -172,6 +173,7 @@ interface FormData {
   company: string
   business_type: string
   summary: string
+  founded_year: string
   client_name: string
   client_company: string
   client_contact: string
@@ -204,6 +206,7 @@ const getInitialFormData = (): FormData => ({
   company: '',
   business_type: '',
   summary: '',
+  founded_year: '',
   client_name: '',
   client_company: '',
   client_contact: '',
@@ -236,6 +239,7 @@ const saveDraft = (formData: FormData, currentStep: number): void => {
       company: formData.company,
       business_type: formData.business_type,
       summary: formData.summary,
+      founded_year: formData.founded_year,
       client_name: formData.client_name,
       client_company: formData.client_company,
       client_contact: formData.client_contact,
@@ -287,6 +291,7 @@ const loadDraft = (): { formData: Partial<FormData>; currentStep: number } | nul
         company: draft.company,
         business_type: draft.business_type,
         summary: draft.summary,
+        founded_year: draft.founded_year || '',
         client_name: draft.client_name,
         client_company: draft.client_company,
         client_contact: draft.client_contact,
@@ -554,6 +559,7 @@ export default function NewRequestPage() {
           company: formData.company,
           business_type: formData.business_type,
           summary: formData.summary,
+          founded_year: formData.founded_year || null,
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
@@ -1323,6 +1329,22 @@ export default function NewRequestPage() {
                     placeholder="О компании..."
                     className="input min-h-[100px] resize-none"
                   />
+                </div>
+                <div>
+                  <label className="text-sm text-tg-hint mb-1 block">Год основания компании</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.founded_year}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 4)
+                      updateField('founded_year', value)
+                    }}
+                    placeholder="2020"
+                    maxLength={4}
+                    className="input"
+                  />
+                  <p className="text-xs text-tg-hint/70 mt-1">Необязательное поле</p>
                 </div>
               </div>
             )}

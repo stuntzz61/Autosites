@@ -1323,7 +1323,7 @@ export default function RequestDetailPage() {
                   <div>
                     <p className="font-medium text-tg-text">Статус деплоя</p>
                     <p className="text-sm text-tg-hint flex items-center gap-1.5">
-                      {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running') && <><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Активен</>}
+                      {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running' || clientSite.deploy_status === 'completed') && <><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Активен</>}
                       {(clientSite.deploy_status === 'deploying' || clientSite.deploy_status === 'building' || clientSite.deploy_status === 'uploading') && <><Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" /> Деплоится...</>}
                       {clientSite.deploy_status === 'pending' && <><Clock className="w-3.5 h-3.5 text-amber-400" /> Ожидает деплоя</>}
                       {(clientSite.deploy_status === 'failed' || clientSite.deploy_status === 'error') && <><AlertCircle className="w-3.5 h-3.5 text-red-400" /> Ошибка</>}
@@ -1362,7 +1362,7 @@ export default function RequestDetailPage() {
                     </Tooltip>
                   )}
 
-                  {(['none', 'stopped', 'failed', 'error'].includes(clientSite.deploy_status || '') || !clientSite.deploy_status) && clientSite.archive_s3_key && (
+                  {(['none', 'stopped', 'failed', 'error', 'completed'].includes(clientSite.deploy_status || '') || !clientSite.deploy_status) && clientSite.archive_s3_key && (
                     <Tooltip content="Запустить деплой сайта" position="left">
                       <button
                         onClick={() => deployMutation.mutate()}
@@ -1378,7 +1378,7 @@ export default function RequestDetailPage() {
                     </Tooltip>
                   )}
 
-                  {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running') && (
+                  {(clientSite.deploy_status === 'active' || clientSite.deploy_status === 'running' || clientSite.deploy_status === 'completed') && (
                     <Tooltip content="Остановить сайт" position="left">
                       <button
                         onClick={() => stopMutation.mutate()}
@@ -1401,7 +1401,7 @@ export default function RequestDetailPage() {
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
                   <p className="text-sm text-red-600 dark:text-red-400">
                     <AlertCircle className="w-4 h-4 inline mr-1" />
-                    {clientSite.last_error}
+                    Произошла ошибка деплоя
                   </p>
                 </div>
               )}
@@ -1690,6 +1690,7 @@ export default function RequestDetailPage() {
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
+                onClick={(e) => e.stopPropagation()}
               >
                 <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
                 <div className="flex items-center gap-2 mb-4">
@@ -2301,6 +2302,7 @@ function EditRequestForm({
   const [formData, setFormData] = useState({
     company: site.company || request.company_name || '',
     business_type: site.business_type || '',
+    founded_year: site.founded_year || '',
     phone: site.phone || '',
     email: site.email || '',
     address: site.address || '',
@@ -2490,6 +2492,7 @@ function EditRequestForm({
           ...site,
           company: formData.company,
           business_type: formData.business_type,
+          founded_year: formData.founded_year || null,
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
@@ -2575,6 +2578,23 @@ function EditRequestForm({
               className="input"
               placeholder="Создание сайтов"
             />
+          </div>
+
+          <div>
+            <label className="text-xs text-tg-hint mb-1 block">Год основания компании</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formData.founded_year}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 4)
+                setFormData(prev => ({ ...prev, founded_year: value }))
+              }}
+              className="input"
+              placeholder="2020"
+              maxLength={4}
+            />
+            <p className="text-xs text-tg-hint/70 mt-1">Необязательное поле</p>
           </div>
 
           <div>
