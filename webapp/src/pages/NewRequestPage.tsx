@@ -1331,7 +1331,7 @@ export default function NewRequestPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block" style={{ color: 'var(--text-muted)' }}>
+                  <label className="text-sm text-tg-hint mb-1.5 block">
                     Год основания компании
                   </label>
                   <input
@@ -1346,7 +1346,7 @@ export default function NewRequestPage() {
                     maxLength={4}
                     className="input"
                   />
-                  <p className="text-xs text-tg-hint/70 mt-1.5">Необязательное поле</p>
+                  <p className="text-xs text-tg-hint/70 mt-1">Необязательное поле</p>
                 </div>
               </div>
             )}

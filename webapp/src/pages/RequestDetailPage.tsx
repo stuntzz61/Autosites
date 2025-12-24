@@ -1685,18 +1685,20 @@ export default function RequestDetailPage() {
                 onClick={() => setShowNewRevisionModal(false)}
               />
               <motion.div
-                className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-50 safe-bottom flex flex-col"
+                className="fixed bottom-0 left-0 right-0 rounded-t-3xl z-50 safe-bottom"
                 style={{
                   background: '#1E222B',
                   maxHeight: '90vh',
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  height: 'auto'
                 }}
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* Header - Fixed */}
                 <div className="flex-shrink-0 p-4 pb-2">
                   <div className="w-12 h-1 bg-tg-hint/30 rounded-full mx-auto mb-4" />
                   <div className="flex items-center gap-2 mb-4">
@@ -1705,7 +1707,14 @@ export default function RequestDetailPage() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 min-h-0">
+                {/* Scrollable Content */}
+                <div
+                  className="flex-1 overflow-y-auto px-4"
+                  style={{
+                    minHeight: 0,
+                    maxHeight: 'calc(90vh - 180px)'
+                  }}
+                >
                   <div className="space-y-4 pb-4">
                   <p className="text-sm text-tg-hint">
                     Опишите, что нужно изменить на сайте. Вы можете добавить несколько правок.
@@ -1864,9 +1873,7 @@ export default function RequestDetailPage() {
                   style={{
                     borderColor: 'rgba(100, 116, 139, 0.15)',
                     background: '#1E222B',
-                    position: 'sticky',
-                    bottom: 0,
-                    zIndex: 10
+                    boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.3)'
                   }}
                 >
                   <div className="flex gap-3">
