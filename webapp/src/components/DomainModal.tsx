@@ -177,14 +177,14 @@ export default function DomainModal({
         onClick={onClose}
       />
       <motion.div
-        className="fixed left-0 right-0 rounded-t-3xl z-[9999] max-h-[80vh] overflow-y-auto"
+        className="fixed left-0 right-0 rounded-t-3xl z-[9999] max-h-[85vh] overflow-y-auto"
         style={{
-          bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+          bottom: 0,
           background: 'var(--bg-elevated)',
           borderTop: '1px solid var(--border-subtle)',
           boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.4)',
           padding: '1.25rem',
-          paddingBottom: '1.5rem'
+          paddingBottom: 'calc(100px + env(safe-area-inset-bottom, 0px))'
         }}
         initial={{ y: '100%', opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

@@ -748,10 +748,8 @@ async def deploy_callback(data: DeployCallbackRequest):
         'uploading': 'deploying',
         'building': 'deploying',
         'deploying': 'deploying',
-        # Контейнер запущен, но деплой ещё может не быть полностью завершён,
-        # поэтому считаем это стадией "deploying", чтобы первое уведомление
-        # в Telegram сообщало о процессе деплоя, а не об успешном завершении.
-        'running': 'deploying',
+        # 'running' означает что контейнер успешно запущен и сайт активен
+        'running': 'active',
         'completed': 'active',
         'active': 'active',
         'stopped': 'stopped',
@@ -1335,10 +1333,8 @@ async def sync_site_status(
                 'uploading': 'deploying',
                 'building': 'deploying',
                 'deploying': 'deploying',
-                # Контейнер запущен, но деплой ещё может не быть полностью завершён,
-                # поэтому считаем это стадией "deploying" (как и в webhook/callback),
-                # чтобы первое уведомление в Telegram было «в процессе деплоя».
-                'running': 'deploying',
+                # 'running' означает что контейнер успешно запущен и сайт активен
+                'running': 'active',
                 'completed': 'active',
                 'active': 'active',
                 'stopped': 'stopped',

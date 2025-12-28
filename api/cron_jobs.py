@@ -207,10 +207,8 @@ async def sync_deploy_statuses():
                         'uploading': 'deploying',
                         'building': 'deploying',
                         'deploying': 'deploying',
-                        # См. комментарий в routes/sites.py: стадия "running"
-                        # считается "deploying", чтобы первое уведомление
-                        # в Telegram было о процессе деплоя.
-                        'running': 'deploying',
+                        # 'running' означает что контейнер успешно запущен и сайт активен
+                        'running': 'active',
                         'completed': 'active',
                         'active': 'active',
                         'stopped': 'stopped',
