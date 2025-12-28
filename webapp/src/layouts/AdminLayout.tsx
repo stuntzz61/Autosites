@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Users, FileText, BarChart3, Radio, ChevronLeft, MessageSquare, Globe, Link2, Users2, Shield, Crown } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, BarChart3, Radio, ChevronLeft, MessageSquare, Globe, Link2, Users2, Shield, Crown, UserCheck } from 'lucide-react'
 import { useTelegram } from '@/contexts/TelegramContext'
 import { useEffect } from 'react'
 import clsx from 'clsx'
@@ -16,6 +16,7 @@ const baseNavItems = [
   // Content management
   { path: '/admin/requests', icon: FileText, label: 'Заявки' },
   { path: '/admin/sites', icon: Globe, label: 'Сайты' },
+  { path: '/admin/clients', icon: UserCheck, label: 'Клиенты' },
   // Communication & Analytics
   { path: '/admin/feedback', icon: MessageSquare, label: 'Обращения' },
   { path: '/admin/stats', icon: BarChart3, label: 'Статистика' },

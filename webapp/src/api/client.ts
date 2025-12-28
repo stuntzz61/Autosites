@@ -433,3 +433,45 @@ export const reviewsApi = {
   search: (name: string, city?: string, maxReviews?: number) =>
     api.get('/reviews/search', { params: { name, city, max_reviews: maxReviews } }),
 }
+
+// Clients API (CMS clients for site editing - auth-service integration)
+export const clientsApi = {
+  // List all clients (for supervisors)
+  list: (params?: { page?: number; limit?: number; search?: string }) =>
+    api.get('/clients', { params }),
+
+  // Get client by site ID
+  getBySite: (siteId: string) =>
+    api.get(`/clients/${siteId}`),
+
+  // Register client for a site
+  register: (data: {
+    site_id: string
+    company_name: string
+    client_name?: string
+    client_contact?: string
+    telegram_id?: string
+    login?: string
+    password?: string
+  }) => api.post('/clients/register', data),
+
+  // Generate a random password
+  generatePassword: (length?: number) =>
+    api.get('/clients/generate-password', { params: { length } }),
+
+  // Generate login from company name
+  generateLogin: (companyName: string) =>
+    api.get('/clients/generate-login', { params: { company_name: companyName } }),
+
+  // Complete client setup (register + provision CMS)
+  setupComplete: (siteId: string, initialConfig?: any) =>
+    api.post(`/clients/setup-complete/${siteId}`, { initial_config: initialConfig }),
+
+  // Reset client password
+  resetPassword: (siteId: string, newPassword?: string) =>
+    api.post(`/clients/${siteId}/reset-password`, { new_password: newPassword }),
+
+  // Delete client
+  delete: (siteId: string) =>
+    api.delete(`/clients/${siteId}`),
+}

@@ -416,6 +416,102 @@ async def complete_client_setup(
     }
 
 
+@router.get("/generate-password")
+async def generate_random_password(
+    length: int = 12,
+    user: dict = Depends(get_current_user)
+):
+    """Generate a random secure password."""
+    if user['role'] not in ('supervisor', 'director', 'owner', 'manager'):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    password = generate_password(length)
+    return {"password": password}
+
+
+@router.get("/generate-login")
+async def generate_login_from_name(
+    company_name: str,
+    user: dict = Depends(get_current_user)
+):
+    """Generate login from company name (transliteration)."""
+    if user['role'] not in ('supervisor', 'director', 'owner', 'manager'):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    login = generate_login(company_name)
+    return {"login": login}
+
+
+@router.get("")
+async def list_clients(
+    page: int = 1,
+    limit: int = 50,
+    search: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """List all registered clients."""
+    if user['role'] not in ('supervisor', 'director', 'owner'):
+        raise HTTPException(status_code=403, detail="Supervisor access required")
+
+    clients = await db.list_site_clients(page=page, limit=limit, search=search)
+    return {
+        "items": clients,
+        "page": page,
+        "limit": limit
+    }
+
+
+@router.post("/{site_id}/reset-password")
+async def reset_client_password(
+    site_id: str,
+    new_password: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Reset client password via auth-service."""
+    if user['role'] not in ('supervisor', 'director', 'owner'):
+        raise HTTPException(status_code=403, detail="Supervisor access required")
+
+    client = await db.get_client_by_site_id(site_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Generate new password if not provided
+    password = new_password or generate_password()
+
+    # Reset password in auth-service
+    if not settings.AUTH_SERVICE_URL:
+        raise HTTPException(status_code=500, detail="AUTH_SERVICE_URL not configured")
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
+            response = await http_client.post(
+                f"{settings.AUTH_SERVICE_URL}/api/admin/users/{client.get('auth_user_id')}/reset-password",
+                json={"new_password": password},
+                headers={
+                    "X-Admin-Secret": settings.AUTH_SERVICE_ADMIN_SECRET
+                } if settings.AUTH_SERVICE_ADMIN_SECRET else {}
+            )
+
+            if response.status_code >= 400:
+                log.error(f"Failed to reset password: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed to reset password in auth-service: {response.text}"
+                )
+
+    except httpx.RequestError as e:
+        log.error(f"Auth-service request failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Auth-service unavailable: {str(e)}")
+
+    log.info(f"Password reset for client {client.get('login')} (site {site_id})")
+
+    return {
+        "success": True,
+        "new_password": password,
+        "login": client.get('login')
+    }
+
+
 @router.get("/{site_id}")
 async def get_client_info(
     site_id: str,
@@ -439,6 +535,6 @@ async def get_client_info(
         "client_name": client.get('client_name'),
         "created_at": client.get('created_at'),
         "cms_site_id": client.get('cms_site_id'),
-        "editor_url": "https://wenlix.ru/editor/"
+        "editor_url": "https://studio.wenlix.ru/"
     }
 

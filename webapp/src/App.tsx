@@ -39,6 +39,7 @@ import ManagerRegistrationPage from './pages/ManagerRegistrationPage'
 // Admin Pages
 import AdminSites from './pages/admin/AdminSites'
 import AdminInviteCodes from './pages/admin/AdminInviteCodes'
+import AdminClients from './pages/admin/AdminClients'
 
 // Loading
 import LoadingScreen from './components/LoadingScreen'
@@ -225,6 +226,7 @@ function App() {
             <Route path="broadcast" element={<AdminBroadcast />} />
             <Route path="feedback" element={<AdminFeedback />} />
             <Route path="sites" element={<AdminSites />} />
+            <Route path="clients" element={<AdminClients />} />
             <Route path="invite-codes" element={<AdminInviteCodes />} />
           </Route>
         ) : (

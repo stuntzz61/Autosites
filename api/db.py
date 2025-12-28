@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 import psycopg
@@ -7,7 +8,18 @@ from psycopg_pool import AsyncConnectionPool
 
 from config import settings
 
+logger = logging.getLogger(__name__)
+
 pool: Optional[AsyncConnectionPool] = None
+
+
+async def check_connection(conn: psycopg.AsyncConnection) -> None:
+    """Health check function for connection pool.
+
+    Runs a simple query to verify the connection is alive.
+    Raises an exception if the connection is broken.
+    """
+    await conn.execute("SELECT 1")
 
 
 async def init_pool():
@@ -17,8 +29,17 @@ async def init_pool():
         min_size=2,
         max_size=10,
         open=False,
+        # Health check: verify connection is alive before use
+        check=check_connection,
+        # Max lifetime of a connection (prevents stale connections) - 30 min
+        max_lifetime=1800.0,
+        # Max time a connection can be idle before being closed - 5 min
+        max_idle=300.0,
+        # Timeout for reconnection attempts
+        reconnect_timeout=30.0,
     )
     await pool.open()
+    logger.info("Database connection pool initialized with health checks")
 
 
 async def close_pool():
@@ -2931,6 +2952,37 @@ async def get_client_by_site_id(site_id: str) -> Optional[Dict]:
                 (site_id,)
             )
             return await cur.fetchone()
+
+
+async def list_site_clients(page: int = 1, limit: int = 50, search: Optional[str] = None) -> List[Dict]:
+    """List all registered editor clients with optional search."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            offset = (page - 1) * limit
+
+            if search:
+                search_pattern = f"%{search}%"
+                await cur.execute(
+                    """SELECT sec.*, cs.domain, cs.preview_url, cs.deploy_status
+                       FROM site_editor_clients sec
+                       LEFT JOIN client_sites cs ON cs.id = sec.site_id
+                       WHERE sec.login ILIKE %s
+                          OR sec.company_name ILIKE %s
+                          OR sec.client_name ILIKE %s
+                       ORDER BY sec.created_at DESC
+                       LIMIT %s OFFSET %s""",
+                    (search_pattern, search_pattern, search_pattern, limit, offset)
+                )
+            else:
+                await cur.execute(
+                    """SELECT sec.*, cs.domain, cs.preview_url, cs.deploy_status
+                       FROM site_editor_clients sec
+                       LEFT JOIN client_sites cs ON cs.id = sec.site_id
+                       ORDER BY sec.created_at DESC
+                       LIMIT %s OFFSET %s""",
+                    (limit, offset)
+                )
+            return await cur.fetchall()
 
 
 async def update_site_cms_id(site_id: str, cms_site_id: str) -> None:
