@@ -8,7 +8,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Counter, Histogram, Gauge
 
 from config import settings
-from routes import auth, requests, admin, profile, services, sites, payments, revisions, domains, manager, reviews
+from routes import auth, requests, admin, profile, services, sites, payments, revisions, domains, manager, reviews, clients
 from db import init_pool, close_pool
 import cron_jobs
 
@@ -137,6 +137,7 @@ app.include_router(revisions.router, prefix="/api/revisions", tags=["revisions"]
 app.include_router(domains.router, prefix="/api/requests", tags=["domains"])
 app.include_router(manager.router, prefix="/api/manager", tags=["manager"])
 app.include_router(reviews.router, prefix="/api/reviews", tags=["reviews"])
+app.include_router(clients.router, prefix="/api/clients", tags=["clients"])
 
 
 @app.get("/api/health")

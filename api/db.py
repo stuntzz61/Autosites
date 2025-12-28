@@ -2886,3 +2886,65 @@ async def create_user_with_invite(
 
             await conn.commit()
             return user
+
+
+# ==================== Site Editor Clients ====================
+
+async def register_site_client(
+    site_id: str,
+    auth_user_id: Optional[str],
+    login: str,
+    company_name: str,
+    client_name: Optional[str] = None,
+    client_contact: Optional[str] = None,
+    telegram_id: Optional[str] = None
+) -> Dict:
+    """Register a client for site editing in auth-service."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """INSERT INTO site_editor_clients
+                   (site_id, auth_user_id, login, company_name, client_name, client_contact, telegram_id)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (site_id) DO UPDATE SET
+                       auth_user_id = EXCLUDED.auth_user_id,
+                       login = EXCLUDED.login,
+                       company_name = EXCLUDED.company_name,
+                       client_name = EXCLUDED.client_name,
+                       client_contact = EXCLUDED.client_contact,
+                       telegram_id = EXCLUDED.telegram_id,
+                       updated_at = NOW()
+                   RETURNING *""",
+                (site_id, auth_user_id, login, company_name, client_name, client_contact, telegram_id)
+            )
+            result = await cur.fetchone()
+            await conn.commit()
+            return result
+
+
+async def get_client_by_site_id(site_id: str) -> Optional[Dict]:
+    """Get registered editor client by site ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT * FROM site_editor_clients WHERE site_id = %s",
+                (site_id,)
+            )
+            return await cur.fetchone()
+
+
+async def update_site_cms_id(site_id: str, cms_site_id: str) -> None:
+    """Update client_sites with CMS site ID."""
+    async with await get_conn() as conn:
+        async with conn.cursor() as cur:
+            # Update in client_sites
+            await cur.execute(
+                "UPDATE client_sites SET cms_site_id = %s WHERE id = %s",
+                (cms_site_id, site_id)
+            )
+            # Also update in site_editor_clients
+            await cur.execute(
+                "UPDATE site_editor_clients SET cms_site_id = %s WHERE site_id = %s",
+                (cms_site_id, site_id)
+            )
+            await conn.commit()

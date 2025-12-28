@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     # API Public URL (for callbacks from n8n)
     API_PUBLIC_URL: str = ""  # e.g. https://api.autosites.ru
 
+    # CMS Service Integration (для client-editor-ui)
+    CMS_SERVICE_URL: str = ""  # e.g. http://cms-service:8090
+    AUTH_SERVICE_URL: str = ""  # e.g. http://auth-service:8087
+    AUTH_SERVICE_ADMIN_SECRET: str = ""  # Secret for internal API calls
+
     # Payment Settings
     PAYMENT_BASE_URL: str = ""  # URL for payment system (e.g. https://pay.example.com)
     PAYMENT_BANK_ACCOUNT: str = ""  # Bank account for SBP payments
